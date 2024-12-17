@@ -1,20 +1,24 @@
 package com.capstone.navicamp
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+
+        val showRegisterButton = findViewById<Button>(R.id.show_register_button)
+        showRegisterButton.setOnClickListener {
+            val registerBottomSheet = RegisterBottomSheet()
+            registerBottomSheet.show(supportFragmentManager, "RegisterBottomSheet")
+        }
+
+        val showLoginButton = findViewById<Button>(R.id.show_login_button)
+        showLoginButton.setOnClickListener {
+            val loginBottomSheet = LoginBottomSheet()
+            loginBottomSheet.show(supportFragmentManager, "LoginBottomSheet")
         }
     }
 }
