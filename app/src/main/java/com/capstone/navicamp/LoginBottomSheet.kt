@@ -45,6 +45,10 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         dialog.setOnShowListener {
             val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheet?.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
+
+            // Set the gradient background
+            val gradientBackground = dialog.findViewById<View>(com.google.android.material.R.id.container)
+            gradientBackground?.background = ContextCompat.getDrawable(requireContext(), R.drawable.gradient_background)
         }
         return dialog
     }
