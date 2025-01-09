@@ -38,13 +38,76 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Welcome, User with Locomotor Disability"
-                android:textSize="24sp"
+                android:text="Welcome!"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cristian Jay Delos Santos!"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
-            <!-- Add more UI elements as needed -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="\nHow may we assist you today?"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
+            <!-- Container for images and buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="16dp">
+
+                <!-- First Image and Button -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:layout_width="150dp"
+                        android:layout_height="150dp"
+                        android:src="@drawable/assistance"
+                        android:scaleType="centerCrop" />
+
+                    <Button
+                        android:layout_width="150dp"
+                        android:layout_height="wrap_content"
+                        android:text="Assistance"
+                        android:layout_marginTop="8dp" />
+                </LinearLayout>
+
+                <!-- Second Image and Button -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:layout_width="150dp"
+                        android:layout_height="150dp"
+                        android:src="@drawable/feedback"
+                        android:scaleType="centerCrop" />
+
+                    <Button
+                        android:id="@+id/feedback_button"
+                        android:layout_width="150dp"
+                        android:layout_height="wrap_content"
+                        android:text="Feedback"
+                        android:layout_marginTop="8dp" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- Navigation Drawer -->
