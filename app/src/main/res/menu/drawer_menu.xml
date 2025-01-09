@@ -1,0 +1,9 @@
+<!-- res/menu/drawer_menu.xml -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_item1"
+        android:title="Main Menu" />
+    <item
+        android:id="@+id/nav_item2"
+        android:title="Log out" />
+</menu>
