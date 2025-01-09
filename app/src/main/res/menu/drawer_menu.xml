@@ -1,9 +1,25 @@
 <!-- res/menu/drawer_menu.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group
+        android:id="@+id/menu_top"
+        android:checkableBehavior="single">
     <item
-        android:id="@+id/nav_item1"
-        android:title="Main Menu" />
+        android:id="@+id/nav_name_header"
+        android:title="Cristian Jay Delos Santos"
+        android:enabled="false" />
+    </group>
+
+    <group
+        android:id="@+id/menu_bottom"
+        android:checkableBehavior="none">
+        <item
+            android:id="@+id/nav_item1"
+            android:title="Account Settings" />
     <item
         android:id="@+id/nav_item2"
+        android:title="Main Menu" />
+    <item
+        android:id="@+id/nav_item3"
         android:title="Log out" />
+    </group>
 </menu>
