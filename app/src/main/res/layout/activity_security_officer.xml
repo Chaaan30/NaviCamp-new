@@ -40,7 +40,8 @@
                 android:layout_height="wrap_content"
                 android:text="Welcome, Security Officer"
                 android:textSize="24sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:fontFamily="@font/inter"/>
 
             <!-- Add more UI elements as needed -->
 
@@ -54,6 +55,8 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        android:background="@android:color/white"
-        app:menu="@menu/drawer_menu" />
+        android:background="@color/primaryColor"
+        app:itemTextColor="@color/onPrimaryColor"
+        app:menu="@menu/drawer_menu"
+        android:fontFamily="@font/inter"/>
 </androidx.drawerlayout.widget.DrawerLayout>

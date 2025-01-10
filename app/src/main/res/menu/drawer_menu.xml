@@ -3,10 +3,11 @@
     <group
         android:id="@+id/menu_top"
         android:checkableBehavior="single">
-    <item
-        android:id="@+id/nav_name_header"
-        android:title="Cristian Jay Delos Santos"
-        android:enabled="false" />
+        <item
+            android:id="@+id/nav_name_header"
+            android:title="Cristian Jay Delos Santos"
+            android:enabled="false"
+            android:textColor="@color/onPrimaryColor" />
     </group>
 
     <group
@@ -14,12 +15,15 @@
         android:checkableBehavior="none">
         <item
             android:id="@+id/nav_item1"
-            android:title="Account Settings" />
-    <item
-        android:id="@+id/nav_item2"
-        android:title="Main Menu" />
-    <item
-        android:id="@+id/nav_item3"
-        android:title="Log out" />
+            android:title="Account Settings"
+            android:textColor="@color/onPrimaryColor" />
+        <item
+            android:id="@+id/nav_item2"
+            android:title="Main Menu"
+            android:textColor="@color/onPrimaryColor" />
+        <item
+            android:id="@+id/nav_item3"
+            android:title="Log out"
+            android:textColor="@color/onPrimaryColor" />
     </group>
 </menu>

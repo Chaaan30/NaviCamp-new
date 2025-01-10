@@ -34,7 +34,8 @@
             android:text="Register"
             android:layout_marginBottom="8dp"
             android:background="@drawable/button_filled"
-            android:textColor="@color/onPrimaryColor" />
+            android:textColor="@color/onPrimaryColor"
+            android:fontFamily="@font/inter"/>
 
 
         <Button
@@ -44,7 +45,8 @@
             android:text="Login"
             android:layout_marginBottom="8dp"
             android:background="@drawable/button_outline"
-            android:textColor="@color/custom_blue" />
+            android:textColor="@color/custom_blue"
+            android:fontFamily="@font/inter"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -12,7 +12,8 @@
         <!-- Text field colors. -->
         <item name="colorControlNormal">@color/primaryColor</item>
         <item name="colorControlActivated">@color/primaryColor</item>
-        <item name="colorControlHighlight">@color/secondaryColor</item>
-        <!-- Customize your theme here. -->
+        <item name="colorControlHighlight">#4E69B4</item>
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">@color/primaryColor</item>
     </style>
 </resources>
