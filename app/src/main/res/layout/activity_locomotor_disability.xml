@@ -4,7 +4,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/drawer_layout">
+    android:id="@+id/drawer_layout"
+    android:background="#F0F3FD">
 
     <!-- Main Content -->
     <androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -39,21 +40,25 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Welcome!"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:textColor="#000000"
+                android:fontFamily="@font/inter_bold"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_bold"
                 android:text="Cristian Jay Delos Santos!"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textColor="#000000"
+                android:textSize="20sp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="\nHow may we assist you today?"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/inter_bold"
+                android:text="\n\nHow may we assist you today?"
+                android:textColor="#000000"
+                android:textSize="18sp" />
 
             <!-- Container for images and buttons -->
             <LinearLayout
@@ -69,41 +74,55 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:layout_marginEnd="8dp">
 
                     <ImageView
-                        android:layout_width="150dp"
-                        android:layout_height="150dp"
-                        android:src="@drawable/assistance"
-                        android:scaleType="centerCrop" />
+                        android:layout_width="130dp"
+                     android:layout_height="150dp"
+                     android:src="@drawable/assistance_image"
+                     android:scaleType="centerCrop"
+                     android:background="@drawable/rounded_logo_background"
+                        android:clipToOutline="true" />
 
                     <Button
-                        android:layout_width="150dp"
+                        android:layout_width="130dp"
                         android:layout_height="wrap_content"
-                        android:text="Assistance"
-                        android:layout_marginTop="8dp" />
+                        android:text="Ask for assistance"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/button_filled"
+                        android:textColor="@color/onPrimaryColor"
+                        android:textSize="10dp"
+                        android:fontFamily="@font/inter"/>
                 </LinearLayout>
 
-                <!-- Second Image and Button -->
+
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:layout_marginStart="8dp">
 
                     <ImageView
-                        android:layout_width="150dp"
+                        android:layout_width="130dp"
                         android:layout_height="150dp"
-                        android:src="@drawable/feedback"
-                        android:scaleType="centerCrop" />
+                        android:src="@drawable/feedback_image"
+                        android:scaleType="centerCrop"
+                        android:background="@drawable/rounded_logo_background"
+                        android:clipToOutline="true" />
 
                     <Button
                         android:id="@+id/feedback_button"
-                        android:layout_width="150dp"
+                        android:layout_width="130dp"
                         android:layout_height="wrap_content"
                         android:text="Feedback"
-                        android:layout_marginTop="8dp" />
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/button_filled"
+                        android:textColor="@color/onPrimaryColor"
+                        android:textSize="10dp"
+                        android:fontFamily="@font/inter"/>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -117,6 +136,8 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        android:background="@android:color/white"
+        android:background="@color/primaryColor"
+        android:fontFamily="@font/inter"
+        app:itemTextColor="@color/onPrimaryColor"
         app:menu="@menu/drawer_menu" />
 </androidx.drawerlayout.widget.DrawerLayout>
