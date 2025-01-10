@@ -23,7 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 android:background="?attr/colorPrimary"
-                android:title="User Feedback"
+                android:title="Assistance"
                 android:titleTextColor="@android:color/white" />
         </com.google.android.material.appbar.AppBarLayout>
 
@@ -36,60 +36,63 @@
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
             android:gravity="top">
 
-            <!-- ImageView at the top -->
+            <!-- ImageView for ask_assistance.png -->
             <ImageView
+                android:id="@+id/ask_assistance_image"
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
-                android:src="@drawable/listenfeedback"
-                android:layout_gravity="top"/>
+                android:layout_marginTop="32dp"
+                android:contentDescription="Ask Assistance"
+                android:src="@drawable/ask_assistance"
+                android:layout_gravity="center"/>
 
-            <!-- TextViews below the image -->
+            <!-- TextView 1 -->
             <TextView
+                android:id="@+id/textView1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="16dp"
                 android:fontFamily="@font/inter_bold"
-                android:text="Help us improve the accessibility on the app and IoT-assisted wheelchair!"
+                android:text="Do you need assistance?"
                 android:textColor="#000000"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                android:textSize="24sp" />
 
+            <!-- TextView 2 -->
             <TextView
-                android:layout_width="wrap_content"
+                android:id="@+id/textView2"
+                android:layout_width="350dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:layout_marginTop="8dp"
                 android:fontFamily="@font/inter"
-                android:text="Notice any issues or would like to suggest features to our app? Let us know so we can address it quickly and maintain a more inclusive environment for everyone. \n\nDescribe the issue below:"
+                android:text="Pressing the button will share your full name, contact number, e-mail, and current location with the safety officers."
+                android:textAlignment="center"
                 android:textColor="#000000"
-                android:textSize="13sp" />
-
-            <!-- EditText for description input -->
-            <EditText
-                android:id="@+id/issue_description"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:layout_marginTop="16dp"
-                android:fontFamily="@font/inter"
-                android:gravity="top|start"
-                android:hint="Enter your feedback here"
-                android:inputType="textMultiLine"
-                android:padding="10dp" />
-
-            <!-- Submit Button -->
-            <Button
-                android:id="@+id/submit_button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/button_filled"
-                android:fontFamily="@font/inter"
-                android:text="Submit"
-                android:textColor="@color/onPrimaryColor"
                 android:textSize="14sp" />
 
         </LinearLayout>
+
+        <!-- FrameLayout to push the button to the bottom -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp">
+            <!-- Button for submitting the assistance request -->
+            <Button
+                android:id="@+id/requestAssistanceButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/button_filled"
+                android:text="Request Assistance"
+                android:textColor="@color/onPrimaryColor"
+                android:fontFamily="@font/inter"
+                android:layout_marginBottom="30dp"
+                android:textSize="14sp" />
+        </FrameLayout>
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- Navigation Drawer -->
