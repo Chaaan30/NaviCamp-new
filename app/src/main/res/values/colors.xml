@@ -1,9 +1,11 @@
 <resources>
-    <color name="primaryColor">#303030</color>
+    <color name="primaryColor">#678AE7</color>
     <color name="primaryDarkColor">#202020</color>
     <color name="onPrimaryColor">#FFFFFF</color>
 
     <color name="secondaryColor">#acacac</color>
     <color name="secondaryDarkColor">#dfdfdf</color>
     <color name="onSecondaryColor">#000000</color>
+
+    <color name="custom_blue">#678AE7</color>
 </resources>

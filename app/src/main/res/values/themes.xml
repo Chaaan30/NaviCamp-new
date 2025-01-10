@@ -11,7 +11,7 @@
         <item name="colorOnSecondary">@color/onSecondaryColor</item>
         <!-- Text field colors. -->
         <item name="colorControlNormal">@color/primaryColor</item>
-        <item name="colorControlActivated">@color/primaryDarkColor</item>
+        <item name="colorControlActivated">@color/primaryColor</item>
         <item name="colorControlHighlight">@color/secondaryColor</item>
         <!-- Customize your theme here. -->
     </style>

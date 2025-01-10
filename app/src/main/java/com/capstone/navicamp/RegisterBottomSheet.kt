@@ -35,7 +35,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val termsConditionsText = view.findViewById<TextView>(R.id.terms_conditions_text)
         val fullText = "I agree to the Terms and Conditions"
         val spannableString = SpannableString(fullText)
-        val blueColor = ContextCompat.getColor(requireContext(), android.R.color.holo_blue_light)
+        val blueColor = ContextCompat.getColor(requireContext(), R.color.custom_blue)
         spannableString.setSpan(
             ForegroundColorSpan(blueColor),
             fullText.indexOf("Terms and Conditions"),
