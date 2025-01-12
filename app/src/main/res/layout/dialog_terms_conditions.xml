@@ -5,14 +5,140 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Fixed Title -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Terms &amp; Conditions"
-        android:textSize="18sp"
+        android:textColor="@color/primaryColor"
+        android:text="Terms and Agreements"
+        android:textSize="25sp"
         android:layout_marginBottom="16dp"
-        android:fontFamily="@font/inter"/>
+        android:fontFamily="@font/inter_bold"
+        android:gravity="center" />
 
-    <!-- Add your terms and conditions content here -->
+    <!-- Scrollable Content with Max Height -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="500dp"
+        android:fillViewport="true">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="By signing up, you agree to the following terms and conditions:"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="1. Purpose of the Mobile App"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="This mobile app is for locomotor disabled users for asking assistance alerts and authorized campus security officers to monitor users' locations, and manage assistance alerts, and keep logs of campus assistance alerts."
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="2. Data Usage and Privacy"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="The app collects and displays sensitive information such as users' locations and personal details during assistance solely for safety and operational purposes. Safety Officers must adhere to strict confidentiality protocols and are prohibited from sharing user data with unauthorized individuals or entities."
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="3. Access Restrictions"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="Sharing login credentials is strictly prohibited. You are responsible for securing your login credentials and ensuring unauthorized parties cannot access your account."
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="4. Monitoring and Logging"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="All actions performed on the mobile app (e.g., handling assistance alerts) are logged for accountability and auditing purposes."
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="5. Disclaimer of Liability"
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#000000"
+                android:text="While the system aims for high accuracy and reliability, we are not liable for technical failures or errors that may impact monitoring and assistance."
+                android:textSize="15sp"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center" />
+
+            <!-- Add more terms and conditions content here -->
+
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

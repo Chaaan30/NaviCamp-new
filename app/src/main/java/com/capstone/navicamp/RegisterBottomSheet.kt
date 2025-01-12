@@ -33,6 +33,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val termsConditionsCheckBox = view.findViewById<CheckBox>(R.id.terms_conditions_checkbox)
 
         val termsConditionsText = view.findViewById<TextView>(R.id.terms_conditions_text)
+
         val fullText = "I agree to the Terms and Conditions"
         val spannableString = SpannableString(fullText)
         val blueColor = ContextCompat.getColor(requireContext(), R.color.custom_blue)
@@ -61,10 +62,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         dialog.setOnShowListener {
             val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheet?.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
-
-            // Set the gradient background
-            val gradientBackground = dialog.findViewById<View>(com.google.android.material.R.id.container)
-            gradientBackground?.background = ContextCompat.getDrawable(requireContext(), R.drawable.gradient_background)
         }
         return dialog
     }

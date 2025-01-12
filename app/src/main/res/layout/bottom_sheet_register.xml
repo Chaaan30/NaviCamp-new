@@ -7,34 +7,41 @@
     android:orientation="vertical"
     tools:context=".RegisterBottomSheet">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:text="Create Account"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/primaryColor"
+        android:textSize="25dp" />
+
     <EditText
         android:id="@+id/fullname"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Full Name"
-        android:textColor="?attr/colorOnPrimary"
+        android:fontFamily="@font/inter"
         android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
+        android:layout_marginEnd="16dp" />
 
     <EditText
         android:id="@+id/username"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Username"
-        android:textColor="?attr/colorOnPrimary"
+        android:fontFamily="@font/inter"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
+        android:layout_marginEnd="16dp" />
 
     <EditText
         android:id="@+id/contact_number"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Contact Number"
-        android:textColor="?attr/colorOnPrimary"
         android:fontFamily="@font/inter"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
@@ -45,35 +52,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="E-mail"
-        android:textColor="?attr/colorOnPrimary"
+        android:fontFamily="@font/inter"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
+        android:layout_marginEnd="16dp" />
 
     <EditText
         android:id="@+id/password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Password"
+        android:fontFamily="@font/inter"
         android:inputType="textPassword"
-        android:textColor="?attr/colorOnPrimary"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
+        android:layout_marginEnd="16dp" />
 
     <EditText
         android:id="@+id/confirm_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Confirm Password"
+        android:fontFamily="@font/inter"
         android:inputType="textPassword"
-        android:textColor="?attr/colorOnPrimary"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
+        android:layout_marginEnd="16dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -101,7 +105,7 @@
         android:id="@+id/create_account"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Create Account"
+        android:text="Register"
         android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
@@ -111,7 +115,7 @@
         android:id="@+id/login"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Login"
+        android:text="I already have an account."
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
