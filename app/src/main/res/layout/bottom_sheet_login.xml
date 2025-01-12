@@ -7,11 +7,22 @@
     android:orientation="vertical"
     tools:context=".LoginBottomSheet">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:text="Login"
+        android:fontFamily="@font/inter_bold"
+        android:textColor="@color/primaryColor"
+        android:textSize="25dp" />
+
     <EditText
         android:id="@+id/username"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Username"
+        android:fontFamily="@font/inter"
         android:layout_marginTop="16dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
@@ -31,11 +42,12 @@
         android:id="@+id/forgot_password"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Forgot Password?"
+        android:text="Forgot Password"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:clickable="true"
         android:fontFamily="@font/inter"
+        android:textColor="@color/custom_blue"
         android:layout_gravity="end" />
 
 
@@ -53,7 +65,7 @@
         android:id="@+id/create_account_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Create Account"
+        android:text="Create an account"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
