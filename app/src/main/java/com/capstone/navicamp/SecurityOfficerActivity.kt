@@ -7,6 +7,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import android.widget.TextView
+import androidx.compose.runtime.Composable
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
@@ -14,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
 val supabase = createSupabaseClient(
     supabaseUrl = "https://dulyrxwwhvwaqvqfepvw.supabase.co",
@@ -47,14 +49,21 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
     }
 
+    @Serializable
+    data class Monitoring (
+        val userID: Int,
+        val userType: String
+    )
+
     private fun fetchRegisteredUserCount() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Query the user table to count rows with user_type "student", "personnel", or "visitor"
                 val response = supabase.postgrest
                     .from("user_table")
-                    .select("useriD", count = "exact") // Use "exact" to get the row count
-                    .or("user_type.eq.student,user_type.eq.personnel,user_type.eq.visitor")
+                    .select(columns = Columns.list("id, name"))
+                    .or("userType.eq.Student, userType.eq.Personnel, userType.eq.Visitor") // Use correct "or" syntax
+                    .count("exact") // Use the correct method to get exact row count
                     .execute()
 
                 if (response.status == 200 && response.count != null) {
