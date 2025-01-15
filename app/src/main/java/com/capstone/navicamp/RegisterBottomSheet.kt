@@ -14,8 +14,6 @@ import android.widget.*
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,12 +23,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.mindrot.jbcrypt.BCrypt
 
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://dulyrxwwhvwaqvqfepvw.supabase.co",
-    supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bHlyeHd3aHZ3YXF2cWZlcHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY5MTY5MTEsImV4cCI6MjA1MjQ5MjkxMX0.3qEMlGM2Oj3gHKEUkaSG-WaY39yVWW6KYz7rV_XjIsk"
-) {
-    install(Postgrest)
-}
+val supabase = SupabaseClientSingleton.supabase
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
@@ -53,6 +46,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val termsConditionsCheckBox = registerView.findViewById<CheckBox>(R.id.terms_conditions_checkbox)
         val termsConditionsText = registerView.findViewById<TextView>(R.id.terms_conditions_text)
         val loginButton = registerView.findViewById<Button>(R.id.login)
+
 
         // Set up Terms and Conditions text with clickable span
         val fullText = "I agree to the Terms and Conditions"
@@ -83,15 +77,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     val password = passwordInput.text.toString()
     val confirmPassword = confirmPasswordInput.text.toString()
     val userType = userTypeSpinner.selectedItem.toString()
-
-    // Debug logs to check input values
-    Log.d("RegisterBottomSheet", "Fullname: $fullname")
-    Log.d("RegisterBottomSheet", "Username: $username")
-    Log.d("RegisterBottomSheet", "Contact Number: $contactNumberStr")
-    Log.d("RegisterBottomSheet", "Email: $email")
-    Log.d("RegisterBottomSheet", "Password: $password")
-    Log.d("RegisterBottomSheet", "Confirm Password: $confirmPassword")
-    Log.d("RegisterBottomSheet", "User Type: $userType")
 
     if (userType == "User Type") {
         Toast.makeText(context, "Please choose a user type", Toast.LENGTH_SHORT).show()
@@ -166,6 +151,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return registerView
     }
 
+
     private fun switchToLoginBottomSheet() {
         val loginBottomSheet = LoginBottomSheet() // Assuming you have a LoginBottomSheet class for login
         loginBottomSheet.show(parentFragmentManager, loginBottomSheet.tag)
@@ -182,3 +168,5 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return dialog
     }
 }
+
+
