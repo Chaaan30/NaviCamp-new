@@ -4,7 +4,7 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string-array name="user_types">
-        <item>User Types</item>
+        <item>User Type</item>
         <item>Security Officer</item>
         <item>Student/Personnel/Visitor</item>
     </string-array>
