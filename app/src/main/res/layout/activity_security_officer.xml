@@ -173,20 +173,22 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Number of people with locomotor disability in MMCL"
                                 android:fontFamily="@font/inter"
+                                android:text="Number of registered people with locomotor disability in MMCL"
+                                android:textColor="#FFFFFF"
                                 android:textSize="16sp"
-                                android:textColor="#FFFFFF" />
+                                android:textStyle="bold" />
 
                             <TextView
+                                android:id="@+id/registeredLDUserCount"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="5"
-                                android:fontFamily="@font/inter"
+                                android:fontFamily="@font/inter_bold"
                                 android:gravity="center"
                                 android:paddingTop="16dp"
-                                android:textSize="32sp"
-                                android:textColor="#FFFFFF" />
+                                android:text="5"
+                                android:textColor="#FFFFFF"
+                                android:textSize="40sp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -208,20 +210,22 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Number of currently IoT-modified wheelchairs"
                                 android:fontFamily="@font/inter"
+                                android:text="Number of currently IoT-modified wheelchairs"
+                                android:textColor="#FFFFFF"
                                 android:textSize="16sp"
-                                android:textColor="#FFFFFF" />
+                                android:textStyle="bold" />
 
                             <TextView
+                                android:id="@+id/iotWheelchairCount"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="7"
-                                android:fontFamily="@font/inter"
+                                android:fontFamily="@font/inter_bold"
                                 android:gravity="center"
                                 android:paddingTop="16dp"
-                                android:textSize="32sp"
-                                android:textColor="#FFFFFF" />
+                                android:text="7"
+                                android:textColor="#FFFFFF"
+                                android:textSize="40sp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
