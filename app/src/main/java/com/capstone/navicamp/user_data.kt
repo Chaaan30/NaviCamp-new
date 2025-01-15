@@ -10,7 +10,7 @@ data class User(
     val userType: String,
     val fullName: String,
     val email: String,
-    val contactNumber: String,
+    val contactNumber: Long,
     val password: String,
     val createdOn: String,
     val updatedOn: String

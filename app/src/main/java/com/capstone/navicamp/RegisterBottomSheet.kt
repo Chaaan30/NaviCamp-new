@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,7 +21,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.mindrot.jbcrypt.BCrypt
@@ -74,79 +74,88 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 .show()
         }
 
-        // Register Button onClick Logic
         registerButton.setOnClickListener {
-            val fullname = fullnameInput.text.toString()
-            val username = usernameInput.text.toString()
-            val contactNumber = contactNumberInput.text.toString()
-            val email = emailInput.text.toString()
-            val password = passwordInput.text.toString()
-            val confirmPassword = confirmPasswordInput.text.toString()
-            val userType = userTypeSpinner.selectedItem.toString()
+    val fullname = fullnameInput.text.toString()
+    val username = usernameInput.text.toString()
+    val contactNumberStr = contactNumberInput.text.toString()
+    val contactNumber = if (contactNumberStr.isNotBlank() && contactNumberStr.all { it.isDigit() }) contactNumberStr.toLongOrNull() else null
+    val email = emailInput.text.toString()
+    val password = passwordInput.text.toString()
+    val confirmPassword = confirmPasswordInput.text.toString()
+    val userType = userTypeSpinner.selectedItem.toString()
 
-            if (userType == "User Type") {
-                Toast.makeText(context, "Please choose a user type", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+    // Debug logs to check input values
+    Log.d("RegisterBottomSheet", "Fullname: $fullname")
+    Log.d("RegisterBottomSheet", "Username: $username")
+    Log.d("RegisterBottomSheet", "Contact Number: $contactNumberStr")
+    Log.d("RegisterBottomSheet", "Email: $email")
+    Log.d("RegisterBottomSheet", "Password: $password")
+    Log.d("RegisterBottomSheet", "Confirm Password: $confirmPassword")
+    Log.d("RegisterBottomSheet", "User Type: $userType")
+
+    if (userType == "User Type") {
+        Toast.makeText(context, "Please choose a user type", Toast.LENGTH_SHORT).show()
+        return@setOnClickListener
+    }
+
+    if (fullname.isBlank() || username.isBlank() || contactNumberStr.isBlank() || contactNumber == null ||
+        email.isBlank() || password.isBlank() || confirmPassword.isBlank()
+    ) {
+        Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+        return@setOnClickListener
+    }
+
+    if (!termsConditionsCheckBox.isChecked) {
+        Toast.makeText(context, "You must agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
+        return@setOnClickListener
+    }
+
+    if (password != confirmPassword) {
+        Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+        return@setOnClickListener
+    }
+
+    // Insert data into Supabase
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            // Format the current time as a string
+            val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+            val currentTimeString = LocalDateTime.now().format(formatter)
+
+            // Hash the password using bcrypt
+            val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
+
+            // Use the hashed password in your User data
+            val user = User(
+                userName = username,
+                userType = userType,
+                fullName = fullname,
+                email = email,
+                contactNumber = contactNumber, // Use parsed Long
+                password = hashedPassword,  // Store hashed password
+                createdOn = currentTimeString,
+                updatedOn = currentTimeString
+            )
+
+            // Insert into Supabase
+            val result = supabase.postgrest["user_table"].insert(user)
+
+            // Update UI on main thread
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Register successful", Toast.LENGTH_SHORT).show()
+                dismiss() // Close the BottomSheet
             }
-
-            if (fullname.isBlank() || username.isBlank() || contactNumber.isBlank() ||
-                email.isBlank() || password.isBlank() || confirmPassword.isBlank()
-            ) {
-                Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (!termsConditionsCheckBox.isChecked) {
-                Toast.makeText(context, "You must agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (password != confirmPassword) {
-                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // Insert data into Supabase
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    // Format the current time as a string
-                    val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
-                    val currentTimeString = LocalDateTime.now().format(formatter)
-
-                    // Hash the password using bcrypt
-                    val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
-
-                    // Use the hashed password in your User data
-                    val user = User(
-                        userName = username,
-                        userType = userType,
-                        fullName = fullname,
-                        email = email,
-                        contactNumber = contactNumber,
-                        password = hashedPassword,  // Store hashed password
-                        createdOn = currentTimeString,
-                        updatedOn = currentTimeString
-                    )
-
-                    // Insert into Supabase
-                    val result = supabase.postgrest["user_table"].insert(user)
-
-                    // Update UI on main thread
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Register successful", Toast.LENGTH_SHORT).show()
-                        dismiss() // Close the BottomSheet
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            "Error registering user: ${e.localizedMessage}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    "Error registering user: ${e.localizedMessage}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
+    }
+}
 
         // Switch to Login screen when "I already have an account" is clicked
         loginButton.setOnClickListener {
