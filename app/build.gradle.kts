@@ -15,7 +15,6 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -28,9 +27,9 @@ android {
             )
         }
     }
-    
+
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15" // Update to a version compatible with Kotlin 1.9.0
+        kotlinCompilerExtensionVersion = "1.5.15" // Ensure compatibility with Kotlin 1.9.0
     }
 
     buildFeatures {
@@ -41,10 +40,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    // Adding packaging options to handle duplicate files
+    packagingOptions {
+        pickFirst("META-INF/AL2.0")  // Pick the first occurrence of the AL2.0 file
+        pickFirst("META-INF/LGPL2.1") // Pick the first occurrence of the LGPL2.1 file
+    }
 }
+
 
 dependencies {
 
@@ -56,6 +63,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    //database
+    implementation ("mysql:mysql-connector-java:8.0.33")
+    implementation ("org.mariadb.jdbc:mariadb-java-client:3.5.1")
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
