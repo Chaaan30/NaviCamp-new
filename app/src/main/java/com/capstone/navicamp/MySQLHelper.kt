@@ -1,7 +1,11 @@
+import android.util.Log
 import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.SQLException
+import java.sql.ResultSet
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 object MySQLHelper {
 
@@ -11,7 +15,7 @@ object MySQLHelper {
     private const val PASSWORD = "navicamp"
 
     // Get the connection to the database
-    fun getConnection(): Connection? {
+    private fun getConnection(): Connection? {
         return try {
             DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD)
         } catch (e: SQLException) {
@@ -19,6 +23,47 @@ object MySQLHelper {
             null
         }
     }
+
+    // Validate user credentials and fetch user type
+    suspend fun validateUser(username: String, password: String): String? {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            var resultSet: ResultSet? = null
+            try {
+                connection = getConnection()
+
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext null
+                }
+
+                // SQL query to validate credentials
+                val checkCredentialsQuery =
+                    "SELECT userType FROM user_table WHERE userName = ? AND password = ?"
+                statement = connection.prepareStatement(checkCredentialsQuery)
+                statement.setString(1, username)
+                statement.setString(2, password)
+
+                resultSet = statement.executeQuery()
+
+                if (resultSet.next()) {
+                    resultSet.getString("userType")
+                } else {
+                    null
+                }
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                null
+            } finally {
+                resultSet?.close()
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+
 
     // Insert user data into the database
     fun insertUser(

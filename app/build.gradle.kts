@@ -67,6 +67,8 @@ dependencies {
     //database
     implementation ("mysql:mysql-connector-java:8.0.33")
     implementation ("org.mariadb.jdbc:mariadb-java-client:3.5.1")
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
