@@ -98,10 +98,10 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
 
         // Execute background task to insert user data into MySQL
-        InsertUserTask(view).execute(fullName, userName, password, userType, email, contactNumber)
+        InsertUserTask(view, this).execute(fullName, userName, password, userType, email, contactNumber)
     }
 
-    private class InsertUserTask(val view: View) : AsyncTask<String, Void, Boolean>() {
+    private class InsertUserTask(val view: View, val fragment: RegisterBottomSheet) : AsyncTask<String, Void, Boolean>() {
         override fun doInBackground(vararg params: String?): Boolean {
             val fullName = params[0] ?: ""
             val userName = params[1] ?: ""
@@ -124,6 +124,9 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         override fun onPostExecute(result: Boolean) {
             if (result) {
                 Toast.makeText(view.context, "Registration Successful!", Toast.LENGTH_SHORT).show()
+                fragment.dismiss()
+                val loginBottomSheet = LoginBottomSheet()
+                loginBottomSheet.show(fragment.parentFragmentManager, "LoginBottomSheet")
             } else {
                 Toast.makeText(view.context, "Registration Failed!", Toast.LENGTH_SHORT).show()
             }
