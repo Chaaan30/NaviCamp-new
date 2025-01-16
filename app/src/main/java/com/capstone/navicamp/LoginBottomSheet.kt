@@ -10,16 +10,11 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.room.util.query
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
-
-    private val supabase = SupabaseClientSingleton.supabase // Using the singleton instance
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -27,7 +22,6 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.bottom_sheet_login, container, false)
 
         val usernameEditText = view.findViewById<EditText>(R.id.username)
-        val passwordEditText = view.findViewById<EditText>(R.id.password)
         val loginButton = view.findViewById<Button>(R.id.login_button)
         val createAccountButton = view.findViewById<Button>(R.id.create_account_button)
         val forgotPasswordText = view.findViewById<TextView>(R.id.forgot_password)
@@ -35,12 +29,20 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         // Handle Login Button Click
         loginButton.setOnClickListener {
             val username = usernameEditText.text.toString()
-            val password = passwordEditText.text.toString()
-
-            // Check if fields are empty
-            if (username.isEmpty() || password.isEmpty()) {
-                Toast.makeText(requireContext(), "Please fill in both fields", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+            when (username) {
+                "1" -> {
+                    val intent = Intent(activity, SecurityOfficerActivity::class.java)
+                    startActivity(intent)
+                    dismiss()
+                }
+                "2" -> {
+                    val intent = Intent(activity, LocomotorDisabilityActivity::class.java)
+                    startActivity(intent)
+                    dismiss()
+                }
+                else -> {
+                    // Handle invalid username
+                }
             }
         }
 
@@ -60,6 +62,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 .create()
                 .show()
         }
+
         return view
     }
 
