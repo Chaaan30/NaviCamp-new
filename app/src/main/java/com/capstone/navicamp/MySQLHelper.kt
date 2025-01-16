@@ -6,6 +6,7 @@ import java.sql.SQLException
 import java.sql.ResultSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.mindrot.jbcrypt.BCrypt
 
 object MySQLHelper {
 
@@ -38,17 +39,24 @@ object MySQLHelper {
                     return@withContext null
                 }
 
-                // SQL query to validate credentials
+                // SQL query to fetch the hashed password and user type with case-sensitive username comparison
                 val checkCredentialsQuery =
-                    "SELECT userType FROM user_table WHERE userName = ? AND password = ?"
+                    "SELECT password, userType FROM user_table WHERE BINARY userName = ?"
                 statement = connection.prepareStatement(checkCredentialsQuery)
                 statement.setString(1, username)
-                statement.setString(2, password)
 
                 resultSet = statement.executeQuery()
 
                 if (resultSet.next()) {
-                    resultSet.getString("userType")
+                    val hashedPassword = resultSet.getString("password")
+                    val userType = resultSet.getString("userType")
+
+                    // Verify the password
+                    if (BCrypt.checkpw(password, hashedPassword)) {
+                        userType
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -62,8 +70,6 @@ object MySQLHelper {
             }
         }
     }
-
-
 
     // Insert user data into the database
     fun insertUser(

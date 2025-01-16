@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import org.mindrot.jbcrypt.BCrypt
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
     override fun onCreateView(
@@ -97,8 +98,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        // Hash the password
+        val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
+
         // Execute background task to insert user data into MySQL
-        InsertUserTask(view, this).execute(fullName, userName, password, userType, email, contactNumber)
+        InsertUserTask(view, this).execute(fullName, userName, hashedPassword, userType, email, contactNumber)
     }
 
     private class InsertUserTask(val view: View, val fragment: RegisterBottomSheet) : AsyncTask<String, Void, Boolean>() {
