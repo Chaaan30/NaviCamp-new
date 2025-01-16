@@ -4,11 +4,8 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string-array name="user_types">
-        <item>User Type</item>
+        <item>User Types</item>
         <item>Security Officer</item>
-        <item>Student</item>
-        <item>Personnel</item>
-        <item>Visitor</item>
-
+        <item>Student/Personnel/Visitor</item>
     </string-array>
 </resources>
