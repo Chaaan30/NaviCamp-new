@@ -6,9 +6,6 @@
     <string-array name="user_types">
         <item>User Type</item>
         <item>Security Officer</item>
-        <item>Student</item>
-        <item>Personnel</item>
-        <item>Visitor</item>
-
+        <item>Student/Personnel/Visitor</item>
     </string-array>
 </resources>
