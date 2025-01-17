@@ -25,81 +25,94 @@ object MySQLHelper {
         }
     }
 
-    // Validate user credentials and fetch user type
-    suspend fun validateUser(username: String, password: String): String? {
-        return withContext(Dispatchers.IO) {
-            var connection: Connection? = null
-            var statement: PreparedStatement? = null
-            var resultSet: ResultSet? = null
-            try {
-                connection = getConnection()
-
-                if (connection == null) {
-                    println("Database connection failed.")
-                    return@withContext null
-                }
-
-                // SQL query to fetch the hashed password and user type with case-sensitive username comparison
-                val checkCredentialsQuery =
-                    "SELECT password, userType FROM user_table WHERE BINARY userName = ?"
-                statement = connection.prepareStatement(checkCredentialsQuery)
-                statement.setString(1, username)
-
-                resultSet = statement.executeQuery()
-
-                if (resultSet.next()) {
-                    val hashedPassword = resultSet.getString("password")
-                    val userType = resultSet.getString("userType")
-
-                    // Verify the password
-                    if (BCrypt.checkpw(password, hashedPassword)) {
-                        userType
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            } catch (e: SQLException) {
-                e.printStackTrace()
-                null
-            } finally {
-                resultSet?.close()
-                statement?.close()
-                connection?.close()
+    // Validate access code and fetch user type
+    fun getUserTypeByAccessCode(accessCode: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
             }
+
+            val query = "SELECT userType FROM user_table WHERE accessCode = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, accessCode)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("userType")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
         }
     }
 
-    // Insert user data into the database
-    fun insertUser(
-        fullName: String,
-        userName: String,
-        password: String,
-        userType: String,
-        email: String,
-        contactNumber: String
-    ): Boolean {
-        val connection = getConnection() ?: return false // Return false if the connection is null
+    fun getUserTypeIfFullNameExists(accessCode: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
         return try {
-            val sql = "INSERT INTO user_table (fullName, userName, password, userType, email, contactNumber, createdOn, updatedOn) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())"
-            val statement: PreparedStatement = connection.prepareStatement(sql)
-            statement.setString(1, fullName)
-            statement.setString(2, userName)
-            statement.setString(3, password)
-            statement.setString(4, userType)
-            statement.setString(5, email)
-            statement.setString(6, contactNumber)
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
 
-            // Execute the statement and check the result
-            val rowsAffected = statement.executeUpdate()
-            rowsAffected > 0 // Return true if one or more rows were affected
+            val query = "SELECT userType FROM user_table WHERE accessCode = ? AND fullName IS NOT NULL AND fullName != ''"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, accessCode)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("userType")
+            } else {
+                null
+            }
         } catch (e: SQLException) {
             e.printStackTrace()
-            false // Return false in case of error
+            null
         } finally {
-            connection.close() // Use safe call to close the connection
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    // Update user data in the database
+    fun updateUser(fullName: String, accessCode: String): Boolean {
+        val connection = getConnection() ?: return false
+        return try {
+            // Check if fullName is already set for the given accessCode
+            val checkQuery = "SELECT fullName FROM user_table WHERE accessCode = ?"
+            val checkStatement: PreparedStatement = connection.prepareStatement(checkQuery)
+            checkStatement.setString(1, accessCode)
+            val resultSet = checkStatement.executeQuery()
+            if (resultSet.next() && resultSet.getString("fullName").isNotEmpty()) {
+                return false // Full name already exists
+            }
+
+            val sql = "UPDATE user_table SET fullName = ?, CreatedOn = NOW() WHERE accessCode = ?"
+            val statement: PreparedStatement = connection.prepareStatement(sql)
+            statement.setString(1, fullName)
+            statement.setString(2, accessCode)
+
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            connection.close()
         }
     }
 }

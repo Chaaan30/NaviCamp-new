@@ -4,13 +4,11 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -28,41 +26,12 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     ): View? {
         val view = inflater.inflate(R.layout.bottom_sheet_login, container, false)
 
-        val usernameEditText = view.findViewById<EditText>(R.id.username)
-        val passwordEditText = view.findViewById<EditText>(R.id.password)
         val loginButton = view.findViewById<Button>(R.id.login_button)
         val createAccountButton = view.findViewById<Button>(R.id.create_account_button)
-        val forgotPasswordText = view.findViewById<TextView>(R.id.forgot_password)
 
         // Handle Login Button Click
         loginButton.setOnClickListener {
-            val username = usernameEditText.text.toString()
-            val password = passwordEditText.text.toString()
-
-            if (username.isNotBlank() && password.isNotBlank()) {
-                // Use Coroutines for database operations
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        val userType = withContext(Dispatchers.IO) {
-                            MySQLHelper.validateUser(username, password)
-                        }
-
-                        if (userType != null) {
-                            // Login successful, navigate to the appropriate activity
-                            navigateToActivity(userType)
-                        } else {
-                            // Show an error if the username or password is incorrect
-                            showToast("Invalid Username or Password")
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        showToast("An error occurred: ${e.message}")
-                    }
-                }
-            } else {
-                // Show a message to prompt user to enter username and password
-                showToast("Please enter both Username and Password")
-            }
+            loginUser(view)
         }
 
         // Handle Create Account Button Click
@@ -72,17 +41,30 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             dismiss() // Close the current LoginBottomSheet
         }
 
-        // Handle Forgot Password Click
-        forgotPasswordText.setOnClickListener {
-            val dialogView = inflater.inflate(R.layout.dialog_forgot_password, null)
-            AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton("OK", null)
-                .create()
-                .show()
+        return view
+    }
+
+    private fun loginUser(view: View) {
+        val accessCode = view.findViewById<EditText>(R.id.logged_access_code).text.toString()
+
+        // Validation
+        if (accessCode.isEmpty()) {
+            Toast.makeText(context, "Please enter the access code", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        return view
+        // Check access code and navigate based on user type
+        CoroutineScope(Dispatchers.Main).launch {
+            val userType = withContext(Dispatchers.IO) {
+                MySQLHelper.getUserTypeIfFullNameExists(accessCode)
+            }
+
+            if (userType != null) {
+                navigateToActivity(userType)
+            } else {
+                Toast.makeText(view.context, "Invalid Access Code or Full Name not set", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun navigateToActivity(userType: String) {
