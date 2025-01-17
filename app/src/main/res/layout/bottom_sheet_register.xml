@@ -30,6 +30,7 @@
         android:id="@+id/access_code"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:inputType="textPassword"
         android:hint="Access Code"
         android:fontFamily="@font/inter"
         android:layout_marginTop="8dp"

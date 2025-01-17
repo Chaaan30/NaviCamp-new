@@ -8,6 +8,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import android.widget.Button
+import android.widget.TextView
 
 class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -23,7 +24,13 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
-        toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
+        toggle = ActionBarDrawerToggle(
+            this,
+            drawerLayout,
+            toolbar,
+            R.string.navigation_drawer_open,
+            R.string.navigation_drawer_close
+        )
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
@@ -39,6 +46,19 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         assistanceButton.setOnClickListener {
             val intent = Intent(this, AssistanceActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Update user_fullname
+        findViewById<TextView>(R.id.user_fullname)?.text = UserSingleton.fullName
+
+        // Update nav_name_header in NavigationView
+        val navigationView = findViewById<NavigationView>(R.id.navigation_view)
+        navigationView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
     }
 }
