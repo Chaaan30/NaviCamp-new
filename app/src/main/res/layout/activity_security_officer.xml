@@ -50,9 +50,10 @@
                     android:fontFamily="@font/inter_bold" />
 
                 <TextView
+                    android:id="@+id/secoff_fullname"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="[Full Name Security Officer]"
+                    android:text="Full Name Security Officer!"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#000000"

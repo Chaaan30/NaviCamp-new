@@ -4,9 +4,6 @@ import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.SQLException
 import java.sql.ResultSet
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.mindrot.jbcrypt.BCrypt
 
 object MySQLHelper {
 
@@ -57,6 +54,37 @@ object MySQLHelper {
         }
     }
 
+    fun getFullNameByAccessCode(accessCode: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT fullName FROM user_table WHERE accessCode = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, accessCode)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("fullName")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun getUserTypeIfFullNameExists(accessCode: String): String? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -88,31 +116,30 @@ object MySQLHelper {
         }
     }
 
-    // Update user data in the database
-    fun updateUser(fullName: String, accessCode: String): Boolean {
-        val connection = getConnection() ?: return false
+    fun updateUser(accessCode: String, newFullName: String?): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
         return try {
-            // Check if fullName is already set for the given accessCode
-            val checkQuery = "SELECT fullName FROM user_table WHERE accessCode = ?"
-            val checkStatement: PreparedStatement = connection.prepareStatement(checkQuery)
-            checkStatement.setString(1, accessCode)
-            val resultSet = checkStatement.executeQuery()
-            if (resultSet.next() && resultSet.getString("fullName").isNotEmpty()) {
-                return false // Full name already exists
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
             }
 
-            val sql = "UPDATE user_table SET fullName = ?, CreatedOn = NOW() WHERE accessCode = ?"
-            val statement: PreparedStatement = connection.prepareStatement(sql)
-            statement.setString(1, fullName)
+            val query = "UPDATE user_table SET fullName = ? WHERE accessCode = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, newFullName)
             statement.setString(2, accessCode)
 
             val rowsAffected = statement.executeUpdate()
+            Log.d("MySQLHelper", "User updated: $rowsAffected rows affected.")
             rowsAffected > 0
         } catch (e: SQLException) {
             e.printStackTrace()
             false
         } finally {
-            connection.close()
+            statement?.close()
+            connection?.close()
         }
     }
 }
