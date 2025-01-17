@@ -62,7 +62,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             if (userType != null) {
                 navigateToActivity(userType)
             } else {
-                Toast.makeText(view.context, "Invalid Access Code or Full Name not set", Toast.LENGTH_SHORT).show()
+                Toast.makeText(view.context, "Invalid Access Code or Name not set", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -54,6 +55,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private fun registerUser(view: View) {
         val fullName = view.findViewById<EditText>(R.id.fullname).text.toString()
         val accessCode = view.findViewById<EditText>(R.id.access_code).text.toString()
+        val termsConditionsCheckbox = view.findViewById<CheckBox>(R.id.terms_conditions_checkbox)
 
         // Validation
         if (fullName.isEmpty() || accessCode.isEmpty()) {
@@ -61,15 +63,22 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        if (!termsConditionsCheckbox.isChecked) {
+            Toast.makeText(context, "Please read and agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         // Check access code and update user
         CoroutineScope(Dispatchers.Main).launch {
-            val userType = withContext(Dispatchers.IO) {
-                MySQLHelper.getUserTypeByAccessCode(accessCode)
+            val existingFullName = withContext(Dispatchers.IO) {
+                MySQLHelper.getFullNameByAccessCode(accessCode)
             }
 
-            if (userType != null) {
+            if (existingFullName != null && existingFullName.isNotEmpty()) {
+                Toast.makeText(view.context, "Access Code is already taken", Toast.LENGTH_SHORT).show()
+            } else {
                 val result = withContext(Dispatchers.IO) {
-                    MySQLHelper.updateUser(fullName, accessCode)
+                    MySQLHelper.updateUser(accessCode, fullName)
                 }
                 if (result) {
                     Toast.makeText(view.context, "Registration Successful!", Toast.LENGTH_SHORT).show()
@@ -77,10 +86,8 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                     val loginBottomSheet = LoginBottomSheet()
                     loginBottomSheet.show(parentFragmentManager, "LoginBottomSheet")
                 } else {
-                    Toast.makeText(view.context, "Access Code is already taken", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(view.context, "Failed to register user", Toast.LENGTH_SHORT).show()
                 }
-            } else {
-                Toast.makeText(view.context, "Invalid Access Code", Toast.LENGTH_SHORT).show()
             }
         }
     }
