@@ -4,6 +4,11 @@ import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.SQLException
 import java.sql.ResultSet
+import java.text.SimpleDateFormat
+import java.util.*
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.ZoneId
 
 object MySQLHelper {
 
@@ -126,10 +131,15 @@ object MySQLHelper {
                 return false
             }
 
-            val query = "UPDATE user_table SET fullName = ? WHERE accessCode = ?"
+            // Get current datetime in UTC+8 and format it to 24-hour format
+            val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            val query = "UPDATE user_table SET fullName = ?, createdOn = ? WHERE accessCode = ?"
             statement = connection.prepareStatement(query)
             statement.setString(1, newFullName)
-            statement.setString(2, accessCode)
+            statement.setString(2, currentDateTime)
+            statement.setString(3, accessCode)
 
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "User updated: $rowsAffected rows affected.")

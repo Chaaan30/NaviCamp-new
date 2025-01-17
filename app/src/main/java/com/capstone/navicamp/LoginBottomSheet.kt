@@ -9,10 +9,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,10 +62,30 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             }
 
             if (userType != null) {
+                val fullName = withContext(Dispatchers.IO) {
+                    MySQLHelper.getFullNameByAccessCode(accessCode)
+                }
+                UserSingleton.fullName = fullName
+                updateUIWithFullName(fullName)
                 navigateToActivity(userType)
             } else {
                 Toast.makeText(view.context, "Invalid Access Code or Name not set", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun updateUIWithFullName(fullName: String?) {
+        fullName?.let {
+            // Update user_fullname in LocomotorDisabilityActivity
+            activity?.findViewById<TextView>(R.id.user_fullname)?.text = it
+
+            // Update secoff_fullname in SecurityOfficerActivity
+            activity?.findViewById<TextView>(R.id.secoff_fullname)?.text = it
+
+            // Update nav_name_header in NavigationView
+            val navigationView = activity?.findViewById<NavigationView>(R.id.navigation_view)
+            val headerView = navigationView?.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = it
         }
     }
 
