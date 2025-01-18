@@ -77,16 +77,24 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             if (existingFullName != null && existingFullName.isNotEmpty()) {
                 Toast.makeText(view.context, "Access Code is already taken", Toast.LENGTH_SHORT).show()
             } else {
-                val result = withContext(Dispatchers.IO) {
-                    MySQLHelper.updateUser(accessCode, fullName)
+                val userID = withContext(Dispatchers.IO) {
+                    MySQLHelper.generateUserID()
                 }
-                if (result) {
-                    Toast.makeText(view.context, "Registration Successful!", Toast.LENGTH_SHORT).show()
-                    dismiss()
-                    val loginBottomSheet = LoginBottomSheet()
-                    loginBottomSheet.show(parentFragmentManager, "LoginBottomSheet")
+
+                if (userID != null) {
+                    val result = withContext(Dispatchers.IO) {
+                        MySQLHelper.updateUserWithUserID(accessCode, fullName, userID)
+                    }
+                    if (result) {
+                        Toast.makeText(view.context, "Registration Successful!", Toast.LENGTH_SHORT).show()
+                        dismiss()
+                        val loginBottomSheet = LoginBottomSheet()
+                        loginBottomSheet.show(parentFragmentManager, "LoginBottomSheet")
+                    } else {
+                        Toast.makeText(view.context, "Failed to register user", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    Toast.makeText(view.context, "Failed to register user", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(view.context, "Failed to generate userID", Toast.LENGTH_SHORT).show()
                 }
             }
         }
