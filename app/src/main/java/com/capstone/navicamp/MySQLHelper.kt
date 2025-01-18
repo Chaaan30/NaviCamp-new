@@ -96,4 +96,43 @@ object MySQLHelper {
             connection.close() // Use safe call to close the connection
         }
     }
+
+    fun getUserCount(): Int {
+        val connection = getConnection() ?: return 0
+        return try {
+            val sql = "SELECT COUNT(*) AS count FROM user_table WHERE userType IN ('Student', 'Personnel', 'Visitor')"
+            val statement = connection.createStatement()
+            val resultSet = statement.executeQuery(sql)
+            if (resultSet.next()) {
+                resultSet.getInt("count") // Retrieve the count from the result set
+            } else {
+                0 // Return 0 if no data found
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            0 // Return 0 in case of error
+        } finally {
+            connection.close() // Always close the connection
+        }
+    }
+
+    fun getIoTWheelchairCount(): Int {
+        val connection = getConnection() ?: return 0
+        return try {
+            val sql = "SELECT COUNT(*) AS count FROM devices_table"
+            val statement = connection.createStatement()
+            val resultSet = statement.executeQuery(sql)
+            if (resultSet.next()) {
+                resultSet.getInt("count") // Retrieve the count from the result set
+            } else {
+                0 // Return 0 if no data found
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            0 // Return 0 in case of error
+        } finally {
+            connection.close() // Always close the connection
+        }
+    }
+
 }
