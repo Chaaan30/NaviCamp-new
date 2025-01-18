@@ -1,7 +1,7 @@
 package com.capstone.navicamp
 
-import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
 
@@ -66,6 +67,17 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                     MySQLHelper.getFullNameByAccessCode(accessCode)
                 }
                 UserSingleton.fullName = fullName
+
+                // Generate a token
+                val token = UUID.randomUUID().toString()
+
+                // Save fullName and token in SharedPreferences
+                val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                val editor = sharedPreferences.edit()
+                editor.putString("fullName", fullName)
+                editor.putString("token", token)
+                editor.apply()
+
                 updateUIWithFullName(fullName)
                 navigateToActivity(userType)
             } else {
@@ -94,11 +106,13 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             "Security Officer" -> {
                 val intent = Intent(activity, SecurityOfficerActivity::class.java)
                 startActivity(intent)
+                activity?.finish() // Prevent back navigation
                 dismiss()
             }
             "Personnel", "Student", "Visitor" -> {
                 val intent = Intent(activity, LocomotorDisabilityActivity::class.java)
                 startActivity(intent)
+                activity?.finish() // Prevent back navigation
                 dismiss()
             }
             else -> {
