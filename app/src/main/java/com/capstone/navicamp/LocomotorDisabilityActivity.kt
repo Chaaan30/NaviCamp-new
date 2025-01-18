@@ -13,10 +13,14 @@ import android.widget.TextView
 class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
+    private lateinit var navigationView: NavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_locomotor_disability)
+
+        // Initialize navigationView
+        navigationView = findViewById(R.id.navigation_view)
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -34,6 +38,26 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_logout -> {
+                    // Clear SharedPreferences
+                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.clear()
+                    editor.apply()
+
+                    // Navigate to MainActivity
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
+
         // Set up the Feedback button to navigate to UserFeedbackActivity
         val feedbackButton: Button = findViewById(R.id.feedback_button)
         feedbackButton.setOnClickListener {
@@ -47,6 +71,14 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             val intent = Intent(this, AssistanceActivity::class.java)
             startActivity(intent)
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        val sharedPreferences = getSharedPreferences("LastActivity", MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        editor.putString("lastActivity", "LocomotorDisabilityActivity")
+        editor.apply()
     }
 
     override fun onResume() {
