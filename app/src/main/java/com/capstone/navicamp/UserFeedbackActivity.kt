@@ -1,11 +1,18 @@
 package com.capstone.navicamp
 
 import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class UserFeedbackActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -24,5 +31,44 @@ class UserFeedbackActivity : AppCompatActivity() {
         toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
+
+        // Set up the Submit button
+        val submitButton: Button = findViewById(R.id.submit_button)
+        submitButton.setOnClickListener {
+            submitFeedback()
+        }
+    }
+
+    private fun submitFeedback() {
+        val feedbackEditText: EditText = findViewById(R.id.issue_description)
+        val feedbackDescription = feedbackEditText.text.toString()
+
+        if (feedbackDescription.isEmpty()) {
+            Toast.makeText(this, "Please enter your feedback", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Retrieve userID from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val userID = sharedPreferences.getString("userID", null)
+
+        if (userID == null) {
+            Toast.makeText(this, "User ID not found. Please log in again.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Insert feedback into the database
+        CoroutineScope(Dispatchers.Main).launch {
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.insertFeedback(userID, feedbackDescription)
+            }
+
+            if (success) {
+                Toast.makeText(this@UserFeedbackActivity, "Feedback submitted successfully", Toast.LENGTH_SHORT).show()
+                feedbackEditText.text.clear()
+            } else {
+                Toast.makeText(this@UserFeedbackActivity, "Failed to submit feedback. Please try again.", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

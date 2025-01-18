@@ -66,15 +66,19 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 val fullName = withContext(Dispatchers.IO) {
                     MySQLHelper.getFullNameByAccessCode(accessCode)
                 }
+                val userID = withContext(Dispatchers.IO) {
+                    MySQLHelper.getUserIDByAccessCode(accessCode)
+                }
                 UserSingleton.fullName = fullName
 
                 // Generate a token
                 val token = UUID.randomUUID().toString()
 
-                // Save fullName and token in SharedPreferences
+                // Save fullName, userID, and token in SharedPreferences
                 val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
                 val editor = sharedPreferences.edit()
                 editor.putString("fullName", fullName)
+                editor.putString("userID", userID)
                 editor.putString("token", token)
                 editor.apply()
 
