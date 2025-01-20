@@ -2,13 +2,19 @@ package com.capstone.navicamp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
-import android.widget.Button
-import android.widget.TextView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AssistanceActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -33,10 +39,36 @@ class AssistanceActivity : AppCompatActivity() {
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
 
+        // Retrieve userID from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+
         // Set up the Request Assistance button
         val assistanceButton: Button = findViewById(R.id.requestAssistanceButton)
         assistanceButton.setOnClickListener {
-            // Handle button click logic here (e.g., open a dialog or perform an action)
+            Log.d("AssistanceActivity", "Request Assistance button clicked")
+
+            val userID = sharedPreferences.getString("userID", null)
+            val fullName = UserSingleton.fullName
+
+            Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
+
+            if (userID != null && fullName != null) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val success = withContext(Dispatchers.IO) {
+                        MySQLHelper.insertLocationData(userID, fullName)
+                    }
+                    if (success) {
+                        Log.d("AssistanceActivity", "Location data inserted successfully")
+                        Toast.makeText(this@AssistanceActivity, "Assistance requested successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Log.e("AssistanceActivity", "Failed to insert location data")
+                        Toast.makeText(this@AssistanceActivity, "Failed to request assistance. Please try again.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                Log.e("AssistanceActivity", "User ID or Full Name is null")
+                Toast.makeText(this, "User ID or Full Name is missing. Please log in again.", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Set up NavigationView item click listener
@@ -44,7 +76,6 @@ class AssistanceActivity : AppCompatActivity() {
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
                     // Clear SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
                     editor.clear()
                     editor.apply()
