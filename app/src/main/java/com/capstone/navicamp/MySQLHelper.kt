@@ -9,6 +9,9 @@ import java.util.*
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
+import com.capstone.navicamp.LocationItem
+import android.content.Context
+import android.content.Intent
 
 object MySQLHelper {
 
@@ -52,6 +55,75 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun countPendingItems(location: String): Int {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return 0
+            }
+
+            val query = "SELECT COUNT(*) AS count FROM location_table WHERE floorLevel = ? AND status = 'pending'"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, location)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getInt("count")
+            } else {
+                0
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            0
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getPendingItems(): List<LocationItem> {
+        val pendingItems = mutableListOf<LocationItem>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return pendingItems
+            }
+
+            val query = "SELECT * FROM location_table WHERE status = 'pending'"
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            while (resultSet.next()) {
+                val locationItem = LocationItem(
+                    resultSet.getString("locationID"),
+                    resultSet.getString("userID"),
+                    resultSet.getString("fullName"),
+                    resultSet.getString("floorLevel"),
+                    resultSet.getString("status"),
+                    resultSet.getDouble("latitude"),
+                    resultSet.getDouble("longitude")
+                )
+                pendingItems.add(locationItem)
+            }
+            pendingItems
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            pendingItems
         } finally {
             resultSet?.close()
             statement?.close()
@@ -188,7 +260,7 @@ object MySQLHelper {
         }
     }
 
-    fun insertLocationData(userID: String, fullName: String): Boolean {
+    fun insertLocationData(context: Context, userID: String, fullName: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         return try {
@@ -223,6 +295,13 @@ object MySQLHelper {
 
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "Location data inserted: $rowsAffected rows affected.")
+
+            if (rowsAffected > 0) {
+                // Send broadcast
+                val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
+                context.sendBroadcast(intent)
+            }
+
             rowsAffected > 0
         } catch (e: SQLException) {
             e.printStackTrace()

@@ -1,18 +1,39 @@
 package com.capstone.navicamp
 
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.LayoutInflater
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
-import android.widget.TextView
+import androidx.activity.viewModels
+import androidx.lifecycle.Observer
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+    private lateinit var assistanceLayout: LinearLayout
+
+    private val viewModel: SecurityOfficerViewModel by viewModels()
+    private lateinit var dataChangeReceiver: DataChangeReceiver
+    private val handler = Handler(Looper.getMainLooper())
+    private val refreshInterval = 1000L // 5 seconds
+
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            viewModel.fetchPendingItems()
+            handler.postDelayed(this, refreshInterval)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,14 +91,23 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 else -> false
             }
         }
-    }
 
-    override fun onPause() {
-        super.onPause()
-        val sharedPreferences = getSharedPreferences("LastActivity", MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.putString("lastActivity", "SecurityOfficerActivity")
-        editor.apply()
+        assistanceLayout = findViewById(R.id.assistance_layout)
+
+        // Observe the LiveData from the ViewModel
+        viewModel.pendingItems.observe(this, Observer { pendingItems ->
+            updateAssistanceCards(pendingItems)
+        })
+
+        // Fetch the initial data
+        viewModel.fetchPendingItems()
+
+        // Register the BroadcastReceiver
+        dataChangeReceiver = DataChangeReceiver {
+            viewModel.fetchPendingItems()
+        }
+        val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
+        registerReceiver(dataChangeReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
     }
 
     override fun onResume() {
@@ -90,6 +120,41 @@ class SecurityOfficerActivity : AppCompatActivity() {
         navigationView?.let {
             val headerView = it.getHeaderView(0)
             headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+        }
+
+        // Fetch pending items and update UI
+        viewModel.fetchPendingItems()
+
+        // Start the refresh timer
+        handler.post(refreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop the refresh timer
+        handler.removeCallbacks(refreshRunnable)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(dataChangeReceiver)
+    }
+
+    private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
+        assistanceLayout.removeAllViews()
+        for (item in pendingItems) {
+            val cardView = LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
+            val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
+            val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
+            val respondButton = cardView.findViewById<Button>(R.id.respond_button)
+
+            fullNameTextView.text = item.fullName
+            floorLevelTextView.text = item.floorLevel
+            respondButton.setOnClickListener {
+                // Handle respond button click
+            }
+
+            assistanceLayout.addView(cardView)
         }
     }
 }
