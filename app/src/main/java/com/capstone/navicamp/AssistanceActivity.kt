@@ -55,7 +55,7 @@ class AssistanceActivity : AppCompatActivity() {
             if (userID != null && fullName != null) {
                 CoroutineScope(Dispatchers.Main).launch {
                     val success = withContext(Dispatchers.IO) {
-                        MySQLHelper.insertLocationData(userID, fullName)
+                        MySQLHelper.insertLocationData(this@AssistanceActivity, userID, fullName)
                     }
                     if (success) {
                         Log.d("AssistanceActivity", "Location data inserted successfully")

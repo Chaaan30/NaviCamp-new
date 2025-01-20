@@ -13,28 +13,24 @@ class MainActivity : AppCompatActivity() {
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val token = userPrefs.getString("token", null)
         val fullName = userPrefs.getString("fullName", null)
+        val userType = userPrefs.getString("userType", null)
 
-        if (token != null && fullName != null) {
-            // Token and fullName exist, set the fullName in UserSingleton
+        if (token != null && fullName != null && userType != null) {
+            // Token, fullName, and userType exist, set the fullName in UserSingleton
             UserSingleton.fullName = fullName
 
-            // Navigate to the last activity
-            val lastActivityPrefs = getSharedPreferences("LastActivity", MODE_PRIVATE)
-            val lastActivity = lastActivityPrefs.getString("lastActivity", null)
-
-            if (lastActivity != null) {
-                val intent = when (lastActivity) {
-                    "SecurityOfficerActivity" -> Intent(this, SecurityOfficerActivity::class.java)
-                    "LocomotorDisabilityActivity" -> Intent(this, LocomotorDisabilityActivity::class.java)
-                    else -> null
-                }
-                intent?.let {
-                    startActivity(it)
-                    finish()
-                }
+            // Navigate to the appropriate activity based on userType
+            val intent = when (userType) {
+                "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
+                "Personnel", "Student", "Visitor" -> Intent(this, LocomotorDisabilityActivity::class.java)
+                else -> null
+            }
+            intent?.let {
+                startActivity(it)
+                finish()
             }
         } else {
-            // No token or fullName, show login/register screen
+            // No token, fullName, or userType, show login/register screen
             setContentView(R.layout.activity_main)
             val showRegisterButton = findViewById<Button>(R.id.show_register_button)
             showRegisterButton.setOnClickListener {
