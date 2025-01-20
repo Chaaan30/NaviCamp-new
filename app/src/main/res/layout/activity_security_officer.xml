@@ -50,9 +50,10 @@
                     android:fontFamily="@font/inter_bold" />
 
                 <TextView
+                    android:id="@+id/secoff_fullname"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="[Full Name Security Officer]"
+                    android:text="Full Name Security Officer!"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#000000"
@@ -68,74 +69,19 @@
                     android:paddingTop="16dp"
                     android:fontFamily="@font/inter_bold" />
 
-                <!-- Cards for Assistance -->
-                <LinearLayout
+                <!-- Horizontal ScrollView for Assistance Cards -->
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:weightSum="2"
                     android:paddingTop="8dp">
 
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:id="@+id/assistance_layout"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_margin="8dp"
-                        android:layout_weight="1"
-                        app:cardElevation="4dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <ImageView
-                                android:layout_width="match_parent"
-                                android:layout_height="190dp"
-                                android:scaleType="centerCrop"
-                                android:background="@drawable/einstein_map_preview"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Einstein Building\nGround Floor"
-                                android:fontFamily="@font/inter_bold"
-                                android:padding="8dp"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#000000" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_margin="8dp"
-                        android:layout_weight="1"
-                        app:cardElevation="4dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical">
-
-                            <ImageView
-                                android:layout_width="match_parent"
-                                android:layout_height="190dp"
-                                android:scaleType="centerCrop"
-                                android:background="@drawable/einstein_map_preview"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Einstein Building\n2nd Floor"
-                                android:fontFamily="@font/inter_bold"
-                                android:padding="8dp"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                android:textColor="#000000" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>
+                        android:orientation="horizontal">
+                    </LinearLayout>
+                </HorizontalScrollView>
 
                 <!-- Monitoring Section -->
                 <TextView
@@ -277,6 +223,7 @@
         android:fitsSystemWindows="true"
         android:background="@color/primaryColor"
         android:fontFamily="@font/inter"
+        app:headerLayout="@layout/nav_header_officer"
         app:itemTextColor="@color/onPrimaryColor"
-        app:menu="@menu/drawer_menu" />
+        app:menu="@menu/drawer_menu_officer" />
 </androidx.drawerlayout.widget.DrawerLayout>

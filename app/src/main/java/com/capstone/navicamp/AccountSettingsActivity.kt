@@ -2,48 +2,71 @@ package com.capstone.navicamp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
-import android.widget.Button
-import android.widget.TextView
+import java.text.SimpleDateFormat
+import java.util.*
 
-class LocomotorDisabilityActivity : AppCompatActivity() {
+class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_locomotor_disability)
-
-        // Initialize navigationView
-        navigationView = findViewById(R.id.navigation_view)
+        setContentView(R.layout.activity_account_settings)
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Main Menu"
+        supportActionBar?.title = "Account Information"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
-        toggle = ActionBarDrawerToggle(
-            this,
-            drawerLayout,
-            toolbar,
-            R.string.navigation_drawer_open,
-            R.string.navigation_drawer_close
-        )
+        toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
+        // Initialize navigationView
+        navigationView = findViewById(R.id.navigation_view)
+
+        // Retrieve data from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", null)
+        val userID = sharedPreferences.getString("userID", null)
+        val userType = sharedPreferences.getString("userType", null)
+        val dateCreated = sharedPreferences.getString("dateCreated", null)
+
+        // Log the retrieved values
+        Log.d("AccountSettingsActivity", "fullName: $fullName")
+        Log.d("AccountSettingsActivity", "userID: $userID")
+        Log.d("AccountSettingsActivity", "userType: $userType")
+        Log.d("AccountSettingsActivity", "dateCreated: $dateCreated")
+
+        // Format dateCreated
+        val formattedDateCreated = dateCreated?.let {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+            val date = inputFormat.parse(it)
+            outputFormat.format(date)
+        }
+
+        // Update UI with the retrieved data
+        findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $fullName"
+        findViewById<TextView>(R.id.user_id_text)?.text = "User ID: $userID"
+        findViewById<TextView>(R.id.user_type_text)?.text = "User Type: $userType"
+        findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedDateCreated"
+
+        // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
                     // Clear SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
                     editor.clear()
                     editor.apply()
@@ -53,12 +76,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
-                    true
-                }
-                R.id.nav_item1 -> {
-                    // Navigate to AccountSettingsActivity
-                    val intent = Intent(this, AccountSettingsActivity::class.java)
-                    startActivity(intent)
                     true
                 }
                 R.id.nav_item2 -> {
@@ -71,35 +88,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 else -> false
             }
         }
-
-        // Set up the Feedback button to navigate to UserFeedbackActivity
-        val feedbackButton: Button = findViewById(R.id.feedback_button)
-        feedbackButton.setOnClickListener {
-            val intent = Intent(this, UserFeedbackActivity::class.java)
-            startActivity(intent)
-        }
-
-        // Set up the Ask for assistance button to navigate to AssistanceActivity
-        val assistanceButton: Button = findViewById(R.id.assistance_button)
-        assistanceButton.setOnClickListener {
-            val intent = Intent(this, AssistanceActivity::class.java)
-            startActivity(intent)
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        val sharedPreferences = getSharedPreferences("LastActivity", MODE_PRIVATE)
-        val editor = sharedPreferences.edit()
-        editor.putString("lastActivity", "LocomotorDisabilityActivity")
-        editor.apply()
     }
 
     override fun onResume() {
         super.onResume()
-        // Update user_fullname
-        findViewById<TextView>(R.id.user_fullname)?.text = UserSingleton.fullName
-
         // Update nav_name_header in NavigationView
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -12,7 +11,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="16dp"
-        android:text="Create Account"
+        android:text="Register"
         android:fontFamily="@font/inter_bold"
         android:textColor="@color/primaryColor"
         android:textSize="25dp" />
@@ -28,66 +27,15 @@
         android:layout_marginEnd="16dp" />
 
     <EditText
-        android:id="@+id/username"
+        android:id="@+id/access_code"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Username"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <EditText
-        android:id="@+id/contact_number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Contact Number"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <EditText
-        android:id="@+id/email"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="E-mail"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <EditText
-        android:id="@+id/password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Password"
-        android:fontFamily="@font/inter"
         android:inputType="textPassword"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <EditText
-        android:id="@+id/confirm_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Confirm Password"
+        android:hint="Access Code"
         android:fontFamily="@font/inter"
-        android:inputType="textPassword"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
-
-    <Spinner
-        android:id="@+id/user_type_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:entries="@array/user_types" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -104,11 +52,19 @@
             android:buttonTint="?attr/colorControlActivated" />
 
         <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:text="I agree to the " />
+
+        <TextView
             android:id="@+id/terms_conditions_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:fontFamily="@font/inter"/>
+            android:fontFamily="@font/inter"
+            android:text="Terms and Conditions"
+            android:clickable="true"
+            android:textColor="@color/custom_blue" />
 
     </LinearLayout>
 
@@ -116,7 +72,7 @@
         android:id="@+id/create_account"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Register"
+        android:text="Set Access Code"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:fontFamily="@font/inter"/>
@@ -125,7 +81,7 @@
         android:id="@+id/login"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="I already have an account."
+        android:text="Log In with Access Code"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:fontFamily="@font/inter"/>

@@ -1,10 +1,9 @@
 package com.capstone.navicamp
 
-import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,10 +14,12 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
 
@@ -28,41 +29,12 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     ): View? {
         val view = inflater.inflate(R.layout.bottom_sheet_login, container, false)
 
-        val usernameEditText = view.findViewById<EditText>(R.id.username)
-        val passwordEditText = view.findViewById<EditText>(R.id.password)
         val loginButton = view.findViewById<Button>(R.id.login_button)
         val createAccountButton = view.findViewById<Button>(R.id.create_account_button)
-        val forgotPasswordText = view.findViewById<TextView>(R.id.forgot_password)
 
         // Handle Login Button Click
         loginButton.setOnClickListener {
-            val username = usernameEditText.text.toString()
-            val password = passwordEditText.text.toString()
-
-            if (username.isNotBlank() && password.isNotBlank()) {
-                // Use Coroutines for database operations
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        val userType = withContext(Dispatchers.IO) {
-                            MySQLHelper.validateUser(username, password)
-                        }
-
-                        if (userType != null) {
-                            // Login successful, navigate to the appropriate activity
-                            navigateToActivity(userType)
-                        } else {
-                            // Show an error if the username or password is incorrect
-                            showToast("Invalid Username or Password")
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        showToast("An error occurred: ${e.message}")
-                    }
-                }
-            } else {
-                // Show a message to prompt user to enter username and password
-                showToast("Please enter both Username and Password")
-            }
+            loginUser(view)
         }
 
         // Handle Create Account Button Click
@@ -72,17 +44,70 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             dismiss() // Close the current LoginBottomSheet
         }
 
-        // Handle Forgot Password Click
-        forgotPasswordText.setOnClickListener {
-            val dialogView = inflater.inflate(R.layout.dialog_forgot_password, null)
-            AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton("OK", null)
-                .create()
-                .show()
+        return view
+    }
+
+    private fun loginUser(view: View) {
+        val accessCode = view.findViewById<EditText>(R.id.logged_access_code).text.toString()
+
+        // Validation
+        if (accessCode.isEmpty()) {
+            Toast.makeText(context, "Please enter the access code", Toast.LENGTH_SHORT).show()
+            return
         }
 
-        return view
+        // Check access code and navigate based on user type
+        CoroutineScope(Dispatchers.Main).launch {
+            val userType = withContext(Dispatchers.IO) {
+                MySQLHelper.getUserTypeIfFullNameExists(accessCode)
+            }
+
+            if (userType != null) {
+                val fullName = withContext(Dispatchers.IO) {
+                    MySQLHelper.getFullNameByAccessCode(accessCode)
+                }
+                val userID = withContext(Dispatchers.IO) {
+                    MySQLHelper.getUserIDByAccessCode(accessCode)
+                }
+                val dateCreated = withContext(Dispatchers.IO) {
+                    MySQLHelper.getUserCreationDate(userID!!)
+                }
+                UserSingleton.fullName = fullName
+
+                // Generate a token
+                val token = UUID.randomUUID().toString()
+
+                // Save fullName, userID, userType, dateCreated, and token in SharedPreferences
+                val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                val editor = sharedPreferences.edit()
+                editor.putString("fullName", fullName)
+                editor.putString("userID", userID)
+                editor.putString("userType", userType)
+                editor.putString("dateCreated", dateCreated)
+                editor.putString("token", token)
+                editor.apply()
+
+                updateUIWithFullName(fullName)
+                navigateToActivity(userType)
+            } else {
+                Toast.makeText(view.context, "Invalid Access Code or Name not set", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun updateUIWithFullName(fullName: String?) {
+        fullName?.let {
+            // Update user_fullname in LocomotorDisabilityActivity
+            activity?.findViewById<TextView>(R.id.user_fullname)?.text = it
+
+            // Update secoff_fullname in SecurityOfficerActivity
+            activity?.findViewById<TextView>(R.id.secoff_fullname)?.text = it
+
+            // Update nav_name_header in NavigationView
+            val navigationView = activity?.findViewById<NavigationView>(R.id.navigation_view)
+            val headerView = navigationView?.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = it
+        }
     }
 
     private fun navigateToActivity(userType: String) {
@@ -90,11 +115,13 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             "Security Officer" -> {
                 val intent = Intent(activity, SecurityOfficerActivity::class.java)
                 startActivity(intent)
+                activity?.finish() // Prevent back navigation
                 dismiss()
             }
             "Personnel", "Student", "Visitor" -> {
                 val intent = Intent(activity, LocomotorDisabilityActivity::class.java)
                 startActivity(intent)
+                activity?.finish() // Prevent back navigation
                 dismiss()
             }
             else -> {

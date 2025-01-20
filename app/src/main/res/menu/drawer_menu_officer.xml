@@ -1,4 +1,5 @@
-<!-- res/menu/drawer_menu.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/menu/drawer_menu_officer.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group
         android:id="@+id/menu_bottom"
@@ -9,7 +10,7 @@
             android:textColor="@color/onPrimaryColor" />
         <item
             android:id="@+id/nav_item2"
-            android:title="Main Menu"
+            android:title="Dashboard"
             android:textColor="@color/onPrimaryColor" />
         <item
             android:id="@+id/nav_logout"

@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.capstone.navicamp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -63,11 +63,13 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation("androidx.cardview:cardview:1.0.0")
 
     //database
     implementation ("mysql:mysql-connector-java:8.0.33")
     implementation ("org.mariadb.jdbc:mariadb-java-client:3.5.1")
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+    implementation ("org.mindrot:jbcrypt:0.4")
 
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
