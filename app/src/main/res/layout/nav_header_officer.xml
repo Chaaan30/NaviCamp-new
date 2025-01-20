@@ -1,0 +1,18 @@
+<!-- res/layout/nav_header_officer.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/primaryColor">
+
+    <TextView
+        android:id="@+id/nav_name_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Officer Name"
+        android:textColor="@color/onPrimaryColor"
+        android:textSize="20sp"
+        android:fontFamily="@font/inter" />
+
+</LinearLayout>

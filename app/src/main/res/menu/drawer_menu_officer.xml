@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/menu/drawer_menu_officer.xml -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group
+        android:id="@+id/menu_bottom"
+        android:checkableBehavior="none">
+        <item
+            android:id="@+id/nav_item1"
+            android:title="Account Settings"
+            android:textColor="@color/onPrimaryColor" />
+        <item
+            android:id="@+id/nav_item2"
+            android:title="Dashboard"
+            android:textColor="@color/onPrimaryColor" />
+        <item
+            android:id="@+id/nav_logout"
+            android:title="Logout"
+            android:textColor="@color/onPrimaryColor" />
+    </group>
+</menu>

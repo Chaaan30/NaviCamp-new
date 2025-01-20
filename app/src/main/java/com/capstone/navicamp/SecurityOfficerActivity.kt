@@ -24,6 +24,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+        supportActionBar?.title = "Dashboard"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -51,6 +52,13 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
+                    true
+                }
+                R.id.nav_item2 -> {
+                    // Navigate to SecurityOfficerActivity and clear the activity stack
+                    val intent = Intent(this, SecurityOfficerActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
                     true
                 }
                 else -> false

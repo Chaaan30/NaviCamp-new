@@ -25,6 +25,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+        supportActionBar?.title = "Main Menu"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -52,6 +53,13 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
+                    true
+                }
+                R.id.nav_item2 -> {
+                    // Navigate to LocomotorDisabilityActivity and clear the activity stack
+                    val intent = Intent(this, LocomotorDisabilityActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
                     true
                 }
                 else -> false

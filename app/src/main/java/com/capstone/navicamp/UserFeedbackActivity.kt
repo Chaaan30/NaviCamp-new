@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 class UserFeedbackActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
+    private lateinit var navigationView: NavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,12 +28,16 @@ class UserFeedbackActivity : AppCompatActivity() {
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
+        supportActionBar?.title = "Feedback"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
         toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
+
+        // Initialize navigationView
+        navigationView = findViewById(R.id.navigation_view)
 
         // Set up the Submit button
         val submitButton: Button = findViewById(R.id.submit_button)
@@ -41,7 +46,6 @@ class UserFeedbackActivity : AppCompatActivity() {
         }
 
         // Set up NavigationView item click listener
-        val navigationView: NavigationView = findViewById(R.id.navigation_view)
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
@@ -56,6 +60,13 @@ class UserFeedbackActivity : AppCompatActivity() {
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
+                    true
+                }
+                R.id.nav_item2 -> {
+                    // Navigate to LocomotorDisabilityActivity and clear the activity stack
+                    val intent = Intent(this, LocomotorDisabilityActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
                     true
                 }
                 else -> false
