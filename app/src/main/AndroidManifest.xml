@@ -28,6 +28,8 @@
         <activity android:name=".LocomotorDisabilityActivity" />
         <activity android:name=".UserFeedbackActivity" />
         <activity android:name=".AssistanceActivity" />
+        <activity android:name=".AccountSettingsActivity"/>
+        <activity android:name=".OfficerAccountSettingsActivity"/>
     </application>
 
 </manifest>

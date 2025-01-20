@@ -54,6 +54,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+                R.id.nav_item1 -> {
+                    // Navigate to OfficerAccountSettingsActivity
+                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
                 R.id.nav_item2 -> {
                     // Navigate to SecurityOfficerActivity and clear the activity stack
                     val intent = Intent(this, SecurityOfficerActivity::class.java)
