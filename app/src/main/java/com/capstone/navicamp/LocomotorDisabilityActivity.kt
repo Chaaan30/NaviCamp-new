@@ -55,6 +55,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+                R.id.nav_item1 -> {
+                    // Navigate to AccountSettingsActivity
+                    val intent = Intent(this, AccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
                 R.id.nav_item2 -> {
                     // Navigate to LocomotorDisabilityActivity and clear the activity stack
                     val intent = Intent(this, LocomotorDisabilityActivity::class.java)

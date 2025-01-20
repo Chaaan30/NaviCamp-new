@@ -157,6 +157,37 @@ object MySQLHelper {
         }
     }
 
+    fun getUserCreationDate(userID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT createdOn FROM user_table WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, userID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("createdOn")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun insertLocationData(userID: String, fullName: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -272,6 +303,8 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+
 
     // Update user with userID
     fun updateUserWithUserID(accessCode: String, newFullName: String?, userID: String): Boolean {

@@ -62,6 +62,13 @@ class UserFeedbackActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+                R.id.nav_item1 -> {
+                    // Navigate to AccountSettingsActivity
+                    val intent = Intent(this, AccountSettingsActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    true
+                }
                 R.id.nav_item2 -> {
                     // Navigate to LocomotorDisabilityActivity and clear the activity stack
                     val intent = Intent(this, LocomotorDisabilityActivity::class.java)

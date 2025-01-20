@@ -6,7 +6,7 @@
         android:checkableBehavior="none">
         <item
             android:id="@+id/nav_item1"
-            android:title="Account Settings"
+            android:title="Account Information"
             android:textColor="@color/onPrimaryColor" />
         <item
             android:id="@+id/nav_item2"
