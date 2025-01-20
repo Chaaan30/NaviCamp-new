@@ -276,7 +276,7 @@
         android:fitsSystemWindows="true"
         android:background="@color/primaryColor"
         android:fontFamily="@font/inter"
-        app:headerLayout="@layout/nav_header"
+        app:headerLayout="@layout/nav_header_officer"
         app:itemTextColor="@color/onPrimaryColor"
-        app:menu="@menu/drawer_menu" />
+        app:menu="@menu/drawer_menu_officer" />
 </androidx.drawerlayout.widget.DrawerLayout>
