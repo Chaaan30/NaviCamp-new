@@ -1,8 +1,10 @@
 package com.capstone.navicamp
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -37,6 +39,28 @@ class UserFeedbackActivity : AppCompatActivity() {
         submitButton.setOnClickListener {
             submitFeedback()
         }
+
+        // Set up NavigationView item click listener
+        val navigationView: NavigationView = findViewById(R.id.navigation_view)
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_logout -> {
+                    // Clear SharedPreferences
+                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.clear()
+                    editor.apply()
+
+                    // Navigate to MainActivity
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     private fun submitFeedback() {
@@ -69,6 +93,16 @@ class UserFeedbackActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this@UserFeedbackActivity, "Failed to submit feedback. Please try again.", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Update nav_name_header in NavigationView
+        val navigationView = findViewById<NavigationView>(R.id.navigation_view)
+        navigationView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
     }
 }
