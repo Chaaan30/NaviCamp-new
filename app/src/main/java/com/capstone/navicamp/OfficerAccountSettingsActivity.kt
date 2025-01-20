@@ -19,7 +19,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_account_settings)
+        setContentView(R.layout.activity_officer_account_settings)
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
