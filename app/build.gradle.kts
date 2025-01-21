@@ -64,6 +64,9 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("androidx.cardview:cardview:1.0.0")
+    implementation("com.google.android.gms:play-services-maps:19.0.0")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
 
     //database
     implementation ("mysql:mysql-connector-java:8.0.33")

@@ -1,3 +1,5 @@
+package com.capstone.navicamp
+
 import android.util.Log
 import java.sql.Connection
 import java.sql.DriverManager
@@ -9,7 +11,6 @@ import java.util.*
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
-import com.capstone.navicamp.LocationItem
 import android.content.Context
 import android.content.Intent
 
@@ -116,7 +117,8 @@ object MySQLHelper {
                     resultSet.getString("floorLevel"),
                     resultSet.getString("status"),
                     resultSet.getDouble("latitude"),
-                    resultSet.getDouble("longitude")
+                    resultSet.getDouble("longitude"),
+                    resultSet.getString("dateTime") // Add this line
                 )
                 pendingItems.add(locationItem)
             }
@@ -383,8 +385,6 @@ object MySQLHelper {
         }
     }
 
-
-
     // Update user with userID
     fun updateUserWithUserID(accessCode: String, newFullName: String?, userID: String): Boolean {
         var connection: Connection? = null
@@ -470,6 +470,45 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             0
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getLocationItemById(locationID: String): LocationItem {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                throw SQLException("Database connection failed.")
+            }
+
+            val query = "SELECT * FROM location_table WHERE locationID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, locationID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                LocationItem(
+                    resultSet.getString("locationID"),
+                    resultSet.getString("userID"),
+                    resultSet.getString("fullName"),
+                    resultSet.getString("floorLevel"),
+                    resultSet.getString("status"),
+                    resultSet.getDouble("latitude"),
+                    resultSet.getDouble("longitude"),
+                    resultSet.getString("dateTime") // Add this line
+                )
+            } else {
+                throw SQLException("Location item not found.")
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            throw e
         } finally {
             resultSet?.close()
             statement?.close()

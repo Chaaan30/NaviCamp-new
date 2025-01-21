@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
     <application
         android:name=".ForceTheme"
         android:allowBackup="true"
@@ -31,6 +34,11 @@
         <activity android:name=".AssistanceActivity" />
         <activity android:name=".AccountSettingsActivity"/>
         <activity android:name=".OfficerAccountSettingsActivity"/>
+        <activity android:name=".MapActivity" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCSehCywL8-tJQ_7k7RoA3QdFckFjVIJhs"/>
 
         <receiver
             android:name=".DataChangeReceiver"

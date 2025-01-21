@@ -1,0 +1,75 @@
+<!-- res/layout/bottom_sheet_assistance.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/rounded_bottom_sheet">
+
+    <!-- Pill View -->
+    <View
+        android:id="@+id/bottom_sheet_pill"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:background="@drawable/pill_shape"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Content View -->
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@id/floor_level_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="24sp"
+            android:gravity="center"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter_bold"
+            android:text="Floor Level" />
+
+        <TextView
+            android:id="@+id/user_id_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter"
+            android:text="User ID" />
+
+        <TextView
+            android:id="@+id/full_name_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter"
+            android:text="Full Name" />
+
+        <TextView
+            android:id="@+id/date_time_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter"
+            android:text="Date Time" />
+
+        <TextView
+            android:id="@+id/status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter"
+            android:text="Status" />
+    </LinearLayout>
+</LinearLayout>

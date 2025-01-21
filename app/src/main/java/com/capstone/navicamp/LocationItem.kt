@@ -7,5 +7,6 @@ data class LocationItem(
     val floorLevel: String,
     val status: String,
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val dateTime: String
 )
