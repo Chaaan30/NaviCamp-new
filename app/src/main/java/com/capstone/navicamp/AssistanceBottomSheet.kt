@@ -1,3 +1,5 @@
+package com.capstone.navicamp
+
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -9,6 +11,8 @@ import com.capstone.navicamp.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import java.text.SimpleDateFormat
+import java.util.*
 
 class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
@@ -28,11 +32,22 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         val dateTime = arguments?.getString("DATE_TIME")
         val status = arguments?.getString("STATUS")
 
-        view.findViewById<TextView>(R.id.floor_level_text).text = floorLevel
-        view.findViewById<TextView>(R.id.user_id_text).text = userID
-        view.findViewById<TextView>(R.id.full_name_text).text = fullName
-        view.findViewById<TextView>(R.id.date_time_text).text = dateTime
-        view.findViewById<TextView>(R.id.status_text).text = status
+        view.findViewById<TextView>(R.id.floor_level_text).text = "$floorLevel"
+        view.findViewById<TextView>(R.id.user_id_text).text = "User ID: $userID"
+        view.findViewById<TextView>(R.id.full_name_text).text = "Full Name: $fullName"
+        view.findViewById<TextView>(R.id.date_time_text).text = "Date and Time: ${formatDateTime(dateTime)}"
+        view.findViewById<TextView>(R.id.status_text).text = "Status: $status"
+    }
+
+    private fun formatDateTime(dateTime: String?): String {
+        return if (dateTime != null) {
+            val inputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
+            val date = inputFormat.parse(dateTime)
+            outputFormat.format(date)
+        } else {
+            ""
+        }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -42,14 +57,16 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
             bottomSheet?.let {
                 it.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
                 val behavior = BottomSheetBehavior.from(it)
-                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                behavior.peekHeight = BottomSheetBehavior.PEEK_HEIGHT_AUTO
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.peekHeight = resources.getDimensionPixelSize(R.dimen.bottom_sheet_peek_height)
                 behavior.isDraggable = true
                 behavior.isHideable = true
 
                 behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                     override fun onStateChanged(bottomSheet: View, newState: Int) {
-                        // Handle state changes
+                        if (newState == BottomSheetBehavior.STATE_HIDDEN) {
+                            dismiss()
+                        }
                     }
 
                     override fun onSlide(bottomSheet: View, slideOffset: Float) {
@@ -61,10 +78,8 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                 })
             }
         }
-        dialog.window?.setDimAmount(0f)
         return dialog
     }
-
 
     companion object {
         fun newInstance(
