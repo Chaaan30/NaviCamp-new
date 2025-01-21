@@ -73,15 +73,17 @@ class AssistanceActivity : AppCompatActivity() {
             }
         }
 
-        // Retrieve userID from SharedPreferences
+        // Retrieve userID and fullName from SharedPreferences and set them in UserSingleton
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        UserSingleton.userID = sharedPreferences.getString("userID", null)
+        UserSingleton.fullName = sharedPreferences.getString("fullName", null)
 
         // Set up the Request Assistance button
         val assistanceButton: Button = findViewById(R.id.requestAssistanceButton)
         assistanceButton.setOnClickListener {
             Log.d("AssistanceActivity", "Request Assistance button clicked")
 
-            val userID = sharedPreferences.getString("userID", null)
+            val userID = UserSingleton.userID
             val fullName = UserSingleton.fullName
 
             Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
