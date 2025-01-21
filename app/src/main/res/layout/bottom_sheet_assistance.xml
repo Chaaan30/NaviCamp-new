@@ -33,14 +33,15 @@
             android:text="Floor Level" />
 
         <TextView
-            android:id="@+id/user_id_text"
+            android:id="@+id/date_time_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:paddingTop="8dp"
             android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="User ID" />
+            android:text="Date and Time:" />
+
 
         <TextView
             android:id="@+id/full_name_text"
@@ -50,17 +51,17 @@
             android:paddingTop="8dp"
             android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Full Name" />
+            android:text="Full Name:" />
 
         <TextView
-            android:id="@+id/date_time_text"
+            android:id="@+id/user_id_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="16sp"
             android:paddingTop="8dp"
             android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Date Time" />
+            android:text="User ID:" />
 
         <TextView
             android:id="@+id/status_text"
@@ -70,6 +71,6 @@
             android:paddingTop="8dp"
             android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Status" />
+            android:text="Status:" />
     </LinearLayout>
 </LinearLayout>

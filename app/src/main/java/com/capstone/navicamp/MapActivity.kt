@@ -14,6 +14,9 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import android.widget.TextView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -21,6 +24,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var map: GoogleMap
+    private lateinit var fab: FloatingActionButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +90,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initialize the map
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        // Initialize FAB
+        fab = findViewById(R.id.fab)
+        fab.setOnClickListener {
+            showBottomSheet()
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -99,5 +109,32 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         val location = LatLng(latitude, longitude)
         map.addMarker(MarkerOptions().position(location).title("Assistance Location"))
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 17f))
+
+        // Show the bottom sheet
+        showBottomSheet()
+    }
+
+    private fun showBottomSheet() {
+        val floorLevel = intent.getStringExtra("FLOOR_LEVEL")
+        val userID = intent.getStringExtra("USER_ID")
+        val fullName = intent.getStringExtra("FULL_NAME")
+        val dateTime = intent.getStringExtra("DATE_TIME")
+        val status = intent.getStringExtra("STATUS")
+
+        val bottomSheet = AssistanceBottomSheet.newInstance(
+            floorLevel ?: "",
+            userID ?: "",
+            fullName ?: "",
+            formatDateTime(dateTime ?: ""),
+            status ?: ""
+        )
+        bottomSheet.show(supportFragmentManager, bottomSheet.tag)
+    }
+
+    private fun formatDateTime(dateTime: String): String {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
+        val date = inputFormat.parse(dateTime)
+        return outputFormat.format(date)
     }
 }
