@@ -418,4 +418,62 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    fun getUserCount(): Int {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return 0
+            }
+
+            val query = "SELECT COUNT(*) AS count FROM user_table WHERE userType = 'Student' AND userID IS NOT NULL AND userID != ''"
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getInt("count")
+            } else {
+                0
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            0
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getDeviceCount(): Int {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return 0
+            }
+
+            val query = "SELECT COUNT(*) AS count FROM devices_table"
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getInt("count")
+            } else {
+                0
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            0
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
 }

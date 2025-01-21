@@ -12,12 +12,36 @@ class SecurityOfficerViewModel : ViewModel() {
     private val _pendingItems = MutableLiveData<List<LocationItem>>()
     val pendingItems: LiveData<List<LocationItem>> get() = _pendingItems
 
+    private val _userCount = MutableLiveData<Int>()
+    val userCount: LiveData<Int> get() = _userCount
+
+    private val _deviceCount = MutableLiveData<Int>()
+    val deviceCount: LiveData<Int> get() = _deviceCount
+
     fun fetchPendingItems() {
         viewModelScope.launch {
             val items = withContext(Dispatchers.IO) {
                 MySQLHelper.getPendingItems()
             }
             _pendingItems.postValue(items)
+        }
+    }
+
+    fun fetchUserCount() {
+        viewModelScope.launch {
+            val count = withContext(Dispatchers.IO) {
+                MySQLHelper.getUserCount()
+            }
+            _userCount.postValue(count)
+        }
+    }
+
+    fun fetchDeviceCount() {
+        viewModelScope.launch {
+            val count = withContext(Dispatchers.IO) {
+                MySQLHelper.getDeviceCount()
+            }
+            _deviceCount.postValue(count)
         }
     }
 }

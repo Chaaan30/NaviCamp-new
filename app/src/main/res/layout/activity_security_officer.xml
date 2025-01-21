@@ -121,14 +121,17 @@
                                 android:layout_height="wrap_content"
                                 android:text="Number of people with locomotor disability in MMCL"
                                 android:fontFamily="@font/inter"
-                                android:textSize="16sp"
-                                android:textColor="#FFFFFF" />
+                                android:textSize="17sp"
+                                android:textColor="#FFFFFF"
+                                android:lines="5"
+                                android:ellipsize="end" />
 
                             <TextView
+                                android:id="@+id/registered_users"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="5"
-                                android:fontFamily="@font/inter"
+                                android:text="0"
+                                android:fontFamily="@font/inter_bold"
                                 android:gravity="center"
                                 android:paddingTop="16dp"
                                 android:textSize="32sp"
@@ -136,7 +139,6 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Card 2 -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -156,14 +158,17 @@
                                 android:layout_height="wrap_content"
                                 android:text="Number of currently IoT-modified wheelchairs"
                                 android:fontFamily="@font/inter"
-                                android:textSize="16sp"
-                                android:textColor="#FFFFFF" />
+                                android:textSize="17sp"
+                                android:textColor="#FFFFFF"
+                                android:lines="5"
+                                android:ellipsize="end" />
 
                             <TextView
+                                android:id="@+id/iot_devices"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="7"
-                                android:fontFamily="@font/inter"
+                                android:text="0"
+                                android:fontFamily="@font/inter_bold"
                                 android:gravity="center"
                                 android:paddingTop="16dp"
                                 android:textSize="32sp"

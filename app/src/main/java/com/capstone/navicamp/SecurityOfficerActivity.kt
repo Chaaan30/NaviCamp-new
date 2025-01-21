@@ -26,11 +26,13 @@ class SecurityOfficerActivity : AppCompatActivity() {
     private val viewModel: SecurityOfficerViewModel by viewModels()
     private lateinit var dataChangeReceiver: DataChangeReceiver
     private val handler = Handler(Looper.getMainLooper())
-    private val refreshInterval = 1000L // 5 seconds
+    private val refreshInterval = 1000L // 1 second
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
             viewModel.fetchPendingItems()
+            viewModel.fetchUserCount()
+            viewModel.fetchDeviceCount()
             handler.postDelayed(this, refreshInterval)
         }
     }
@@ -92,6 +94,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
             }
         }
 
+        // Initialize assistanceLayout
         assistanceLayout = findViewById(R.id.assistance_layout)
 
         // Observe the LiveData from the ViewModel
@@ -99,12 +102,24 @@ class SecurityOfficerActivity : AppCompatActivity() {
             updateAssistanceCards(pendingItems)
         })
 
+        viewModel.userCount.observe(this, Observer { count ->
+            findViewById<TextView>(R.id.registered_users)?.text = count.toString()
+        })
+
+        viewModel.deviceCount.observe(this, Observer { count ->
+            findViewById<TextView>(R.id.iot_devices)?.text = count.toString()
+        })
+
         // Fetch the initial data
         viewModel.fetchPendingItems()
+        viewModel.fetchUserCount()
+        viewModel.fetchDeviceCount()
 
         // Register the BroadcastReceiver
         dataChangeReceiver = DataChangeReceiver {
             viewModel.fetchPendingItems()
+            viewModel.fetchUserCount()
+            viewModel.fetchDeviceCount()
         }
         val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
         registerReceiver(dataChangeReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
@@ -124,6 +139,8 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
         // Fetch pending items and update UI
         viewModel.fetchPendingItems()
+        viewModel.fetchUserCount()
+        viewModel.fetchDeviceCount()
 
         // Start the refresh timer
         handler.post(refreshRunnable)
