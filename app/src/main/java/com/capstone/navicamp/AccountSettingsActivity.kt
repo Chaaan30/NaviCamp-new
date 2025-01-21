@@ -12,6 +12,9 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Import MainActivity
+import com.capstone.navicamp.MainActivity
+
 class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
@@ -40,16 +43,20 @@ class AccountSettingsActivity : AppCompatActivity() {
         val fullName = sharedPreferences.getString("fullName", null)
         val userID = sharedPreferences.getString("userID", null)
         val userType = sharedPreferences.getString("userType", null)
-        val dateCreated = sharedPreferences.getString("dateCreated", null)
+        val email = sharedPreferences.getString("email", null)
+        val contactNumber = sharedPreferences.getString("contactNumber", null)
+        val createdOn = sharedPreferences.getString("createdOn", null)
 
         // Log the retrieved values
         Log.d("AccountSettingsActivity", "fullName: $fullName")
         Log.d("AccountSettingsActivity", "userID: $userID")
         Log.d("AccountSettingsActivity", "userType: $userType")
-        Log.d("AccountSettingsActivity", "dateCreated: $dateCreated")
+        Log.d("AccountSettingsActivity", "email: $email")
+        Log.d("AccountSettingsActivity", "contactNumber: $contactNumber")
+        Log.d("AccountSettingsActivity", "createdOn: $createdOn")
 
-        // Format dateCreated
-        val formattedDateCreated = dateCreated?.let {
+        // Format createdOn
+        val formattedCreatedOn = createdOn?.let {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
             val date = inputFormat.parse(it)
@@ -60,7 +67,9 @@ class AccountSettingsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $fullName"
         findViewById<TextView>(R.id.user_id_text)?.text = "User ID: $userID"
         findViewById<TextView>(R.id.user_type_text)?.text = "User Type: $userType"
-        findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedDateCreated"
+        findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
+        findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
+        findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedCreatedOn"
 
         // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
@@ -78,6 +87,12 @@ class AccountSettingsActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+                R.id.nav_item1 -> {
+                    // Navigate to AccountSettingsActivity
+                    val intent = Intent(this, AccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
                 R.id.nav_item2 -> {
                     // Navigate to LocomotorDisabilityActivity and clear the activity stack
                     val intent = Intent(this, LocomotorDisabilityActivity::class.java)
@@ -92,11 +107,12 @@ class AccountSettingsActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Update nav_name_header in NavigationView
-        val navigationView = findViewById<NavigationView>(R.id.navigation_view)
+        // Retrieve the full name from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", "Full Name")
         navigationView?.let {
             val headerView = it.getHeaderView(0)
-            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
     }
 }

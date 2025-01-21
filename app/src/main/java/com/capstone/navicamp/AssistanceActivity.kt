@@ -39,39 +39,6 @@ class AssistanceActivity : AppCompatActivity() {
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
 
-        // Retrieve userID from SharedPreferences
-        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-
-        // Set up the Request Assistance button
-        val assistanceButton: Button = findViewById(R.id.requestAssistanceButton)
-        assistanceButton.setOnClickListener {
-            Log.d("AssistanceActivity", "Request Assistance button clicked")
-
-            val userID = sharedPreferences.getString("userID", null)
-            val fullName = UserSingleton.fullName
-
-            Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
-
-            if (userID != null && fullName != null) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    val success = withContext(Dispatchers.IO) {
-                        MySQLHelper.insertLocationData(this@AssistanceActivity, userID, fullName)
-                    }
-                    if (success) {
-                        Log.d("AssistanceActivity", "Location data inserted successfully")
-                        Toast.makeText(this@AssistanceActivity, "Assistance requested successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Log.e("AssistanceActivity", "Failed to insert location data")
-                        Toast.makeText(this@AssistanceActivity, "Failed to request assistance. Please try again.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Log.e("AssistanceActivity", "User ID or Full Name is null")
-                Toast.makeText(this, "User ID or Full Name is missing. Please log in again.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
@@ -105,15 +72,51 @@ class AssistanceActivity : AppCompatActivity() {
                 else -> false
             }
         }
+
+        // Retrieve userID from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+
+        // Set up the Request Assistance button
+        val assistanceButton: Button = findViewById(R.id.requestAssistanceButton)
+        assistanceButton.setOnClickListener {
+            Log.d("AssistanceActivity", "Request Assistance button clicked")
+
+            val userID = sharedPreferences.getString("userID", null)
+            val fullName = UserSingleton.fullName
+
+            Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
+
+            if (userID != null && fullName != null) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val success = withContext(Dispatchers.IO) {
+                        MySQLHelper.insertLocationData(this@AssistanceActivity, userID, fullName)
+                    }
+                    if (success) {
+                        Log.d("AssistanceActivity", "Location data inserted successfully")
+                        Toast.makeText(this@AssistanceActivity, "Assistance requested successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Log.e("AssistanceActivity", "Failed to insert location data")
+                        Toast.makeText(this@AssistanceActivity, "Failed to request assistance. Please try again.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                Log.e("AssistanceActivity", "User ID or Full Name is null")
+                Toast.makeText(this, "User ID or Full Name is missing. Please log in again.", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        // Retrieve the full name from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", "Full Name")
+
         // Update nav_name_header in NavigationView
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
-            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
     }
 }

@@ -39,12 +39,6 @@ class UserFeedbackActivity : AppCompatActivity() {
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
 
-        // Set up the Submit button
-        val submitButton: Button = findViewById(R.id.submit_button)
-        submitButton.setOnClickListener {
-            submitFeedback()
-        }
-
         // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
@@ -78,6 +72,12 @@ class UserFeedbackActivity : AppCompatActivity() {
                 }
                 else -> false
             }
+        }
+
+        // Set up the Submit button
+        val submitButton: Button = findViewById(R.id.submit_button)
+        submitButton.setOnClickListener {
+            submitFeedback()
         }
     }
 
@@ -116,11 +116,15 @@ class UserFeedbackActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Retrieve the full name from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", "Full Name")
+
         // Update nav_name_header in NavigationView
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
-            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
     }
 }

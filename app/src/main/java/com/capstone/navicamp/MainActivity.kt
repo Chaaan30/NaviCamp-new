@@ -8,21 +8,26 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        // Retrieve token and fullName from SharedPreferences
+        // Retrieve token, fullName, and userType from SharedPreferences
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-        val token = userPrefs.getString("token", null)
+        val isLoggedIn = userPrefs.getBoolean("isLoggedIn", false)
         val fullName = userPrefs.getString("fullName", null)
         val userType = userPrefs.getString("userType", null)
 
-        if (token != null && fullName != null && userType != null) {
-            // Token, fullName, and userType exist, set the fullName in UserSingleton
+        if (isLoggedIn && fullName != null && userType != null) {
+            // User is logged in, set the fullName in UserSingleton
             UserSingleton.fullName = fullName
 
             // Navigate to the appropriate activity based on userType
             val intent = when (userType) {
                 "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
-                "Personnel", "Student", "Visitor" -> Intent(this, LocomotorDisabilityActivity::class.java)
+                "Personnel", "Student", "Visitor" -> Intent(
+                    this,
+                    LocomotorDisabilityActivity::class.java
+                )
+
                 else -> null
             }
             intent?.let {
