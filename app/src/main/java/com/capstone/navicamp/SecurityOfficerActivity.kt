@@ -16,6 +16,10 @@ import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.activity.viewModels
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -77,12 +81,14 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     finish()
                     true
                 }
+
                 R.id.nav_item1 -> {
                     // Navigate to OfficerAccountSettingsActivity
                     val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
                     startActivity(intent)
                     true
                 }
+
                 R.id.nav_item2 -> {
                     // Navigate to SecurityOfficerActivity and clear the activity stack
                     val intent = Intent(this, SecurityOfficerActivity::class.java)
@@ -90,6 +96,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     startActivity(intent)
                     true
                 }
+
                 else -> false
             }
         }
@@ -157,10 +164,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
         unregisterReceiver(dataChangeReceiver)
     }
 
+
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
         for (item in pendingItems) {
-            val cardView = LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
+            val cardView =
+                LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
             val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
             val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
             val respondButton = cardView.findViewById<Button>(R.id.respond_button)
@@ -168,9 +177,25 @@ class SecurityOfficerActivity : AppCompatActivity() {
             fullNameTextView.text = item.fullName
             floorLevelTextView.text = item.floorLevel
             respondButton.setOnClickListener {
-                // Handle respond button click
-            }
+                val locationID = item.locationID
+                val officerName = UserSingleton.fullName
 
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val locationItem = MySQLHelper.getLocationItemById(locationID)
+                    withContext(Dispatchers.Main) {
+                        val intent = Intent(this@SecurityOfficerActivity, MapActivity::class.java)
+                        intent.putExtra("OFFICER_NAME", officerName)
+                        intent.putExtra("LATITUDE", locationItem.latitude)
+                        intent.putExtra("LONGITUDE", locationItem.longitude)
+                        intent.putExtra("FLOOR_LEVEL", locationItem.floorLevel)
+                        intent.putExtra("USER_ID", locationItem.userID)
+                        intent.putExtra("FULL_NAME", locationItem.fullName)
+                        intent.putExtra("DATE_TIME", locationItem.dateTime)
+                        intent.putExtra("STATUS", locationItem.status)
+                        startActivity(intent)
+                    }
+                }
+            }
             assistanceLayout.addView(cardView)
         }
     }
