@@ -97,10 +97,14 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Retrieve the full name from SharedPreferences
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-        val userFullName = sharedPreferences.getString("user_fullname", "Full Name!")
+        val userFullName = sharedPreferences.getString("fullName", "Full Name!")
+
+        // Update user_fullname TextView
         findViewById<TextView>(R.id.user_fullname)?.text = userFullName
 
+        // Update nav_name_header in NavigationView
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
