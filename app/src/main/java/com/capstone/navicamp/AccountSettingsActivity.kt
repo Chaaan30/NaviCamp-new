@@ -12,9 +12,6 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Import MainActivity
-import com.capstone.navicamp.MainActivity
-
 class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle

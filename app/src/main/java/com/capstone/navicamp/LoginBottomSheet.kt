@@ -65,6 +65,8 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 }
 
                 if (userData != null) {
+                    UserSingleton.fullName = userData.fullName // Set the fullName in UserSingleton
+
                     val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                     with(sharedPreferences.edit()) {
                         putString("userID", userData.userID)
