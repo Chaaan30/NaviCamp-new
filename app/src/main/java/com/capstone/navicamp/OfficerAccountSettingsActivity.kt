@@ -40,12 +40,16 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         val fullName = sharedPreferences.getString("fullName", null)
         val userID = sharedPreferences.getString("userID", null)
         val userType = sharedPreferences.getString("userType", null)
-        val dateCreated = sharedPreferences.getString("dateCreated", null)
+        val email = sharedPreferences.getString("email", null)
+        val contactNumber = sharedPreferences.getString("contactNumber", null)
+        val dateCreated = sharedPreferences.getString("createdOn", null)
 
         // Log the retrieved values
         Log.d("OfficerAccountSettingsActivity", "fullName: $fullName")
         Log.d("OfficerAccountSettingsActivity", "userID: $userID")
         Log.d("OfficerAccountSettingsActivity", "userType: $userType")
+        Log.d("OfficerAccountSettingsActivity", "email: $email")
+        Log.d("OfficerAccountSettingsActivity", "contactNumber: $contactNumber")
         Log.d("OfficerAccountSettingsActivity", "dateCreated: $dateCreated")
 
         // Format dateCreated
@@ -60,6 +64,8 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $fullName"
         findViewById<TextView>(R.id.user_id_text)?.text = "User ID: $userID"
         findViewById<TextView>(R.id.user_type_text)?.text = "User Type: $userType"
+        findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
+        findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
         findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedDateCreated"
 
         // Set up NavigationView item click listener
