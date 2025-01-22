@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.compose") version "1.7.3"
     id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
+    id("com.google.gms.google-services")
+
 }
 
 android {
@@ -73,6 +75,16 @@ dependencies {
     implementation ("org.mariadb.jdbc:mariadb-java-client:3.5.1")
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     implementation ("org.mindrot:jbcrypt:0.4")
+
+    //firebase and notification
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    //http requests
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-cio:3.0.3")
+    implementation("io.ktor:ktor-client-serialization:3.0.3")
+    implementation("io.ktor:ktor-client-logging:3.0.3")
 
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

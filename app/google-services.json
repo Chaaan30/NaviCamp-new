@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "371792225408",
+    "project_id": "campus-navigator-ab838",
+    "storage_bucket": "campus-navigator-ab838.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:371792225408:android:4ecb0ccf52c92eec9fb265",
+        "android_client_info": {
+          "package_name": "com.capstone.navicamp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQy-GrosLvL0CP-T_XWh1d71LZMhUYYwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
