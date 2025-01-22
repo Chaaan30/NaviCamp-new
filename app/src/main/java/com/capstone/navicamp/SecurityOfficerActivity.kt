@@ -173,8 +173,14 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
         val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
-        for (item in pendingItems) {
-            val cardView = LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
+        // Sort the pendingItems list by dateTime in descending order
+        val sortedItems = pendingItems.sortedByDescending { item ->
+            inputFormat.parse(item.dateTime)
+        }
+
+        for (item in sortedItems) {
+            val cardView =
+                LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
             val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
             val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
             val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
