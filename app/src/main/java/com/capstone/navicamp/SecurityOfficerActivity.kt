@@ -20,6 +20,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -167,14 +169,27 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+
         for (item in pendingItems) {
-            val cardView =
-                LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
+            val cardView = LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
             val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
+            val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
+            val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
             val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
             val respondButton = cardView.findViewById<Button>(R.id.respond_button)
 
             fullNameTextView.text = item.fullName
+
+            // Parse and format the date and time
+            val date = inputFormat.parse(item.dateTime)
+            val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
+            val formattedTime = date?.let { timeFormat.format(it) } ?: item.dateTime
+            createdOnDateTextView.text = formattedDate
+            createdOnTimeTextView.text = formattedTime
+
             floorLevelTextView.text = item.floorLevel
             respondButton.setOnClickListener {
                 val locationID = item.locationID
