@@ -718,4 +718,74 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    fun getIncidentData(): List<List<String>> {
+        val data = mutableListOf<List<String>>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+
+        try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return data // Return empty list if connection fails
+            }
+
+            val query = """
+             SELECT 
+                 emergency_alert_table.alertID,
+                 emergency_alert_table.alertType,
+                 emergency_alert_table.alertDateTime,
+                 emergency_alert_table.resolvedOn,
+                 emergency_alert_table.status,
+                 user_table.fullName,
+                 user_table.userType,
+                 location_table.latitude,
+                 location_table.longitude,
+                 location_table.floorLevel,
+                 devices_table.deviceID
+             FROM 
+                 emergency_alert_table
+             JOIN 
+                 user_table ON emergency_alert_table.userID = user_table.userID
+             JOIN 
+                 location_table ON emergency_alert_table.locationID = location_table.locationID
+             JOIN 
+                 devices_table ON location_table.userID = devices_table.userID
+         """.trimIndent()
+
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+
+            while (resultSet.next()) {
+                // Store the row data as a list of strings
+                val row = listOf(
+                    resultSet.getString("alertID"),
+                    resultSet.getString("alertType"),
+                    resultSet.getString("alertDateTime"),
+                    resultSet.getString("resolvedOn"),
+                    resultSet.getString("status"),
+                    resultSet.getString("fullName"),
+                    resultSet.getString("userType"),
+                    resultSet.getString("latitude"),
+                    resultSet.getString("longitude"),
+                    resultSet.getString("floorLevel"),
+                    resultSet.getString("deviceID")
+                )
+                data.add(row)
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            // Close resources
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+
+        return data
+    }
+
 }

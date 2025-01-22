@@ -195,23 +195,12 @@
                     android:orientation="vertical"
                     android:padding="8dp">
 
-                    <TextView
+                    <Button
+                        android:id="@+id/incidentLogBtn"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
-                        android:text="Nicca Quintillan: Fall - Resolved"
-                        android:padding="8dp"
-                        android:textSize="14sp"
-                        android:textColor="#000000" />
+                        android:text="Button" />
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter"
-                        android:text="Curt Badiola: Asked for assistance - Pending"
-                        android:padding="8dp"
-                        android:textSize="14sp"
-                        android:textColor="#000000" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
