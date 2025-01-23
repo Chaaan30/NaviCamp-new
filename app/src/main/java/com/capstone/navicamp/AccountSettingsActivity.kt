@@ -3,7 +3,11 @@ package com.capstone.navicamp
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -11,6 +15,9 @@ import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -43,6 +50,7 @@ class AccountSettingsActivity : AppCompatActivity() {
         val email = sharedPreferences.getString("email", null)
         val contactNumber = sharedPreferences.getString("contactNumber", null)
         val createdOn = sharedPreferences.getString("createdOn", null)
+        val updatedOn = sharedPreferences.getString("updatedOn", null)
 
         // Log the retrieved values
         Log.d("AccountSettingsActivity", "fullName: $fullName")
@@ -51,9 +59,17 @@ class AccountSettingsActivity : AppCompatActivity() {
         Log.d("AccountSettingsActivity", "email: $email")
         Log.d("AccountSettingsActivity", "contactNumber: $contactNumber")
         Log.d("AccountSettingsActivity", "createdOn: $createdOn")
+        Log.d("AccountSettingsActivity", "updatedOn: $updatedOn")
 
-        // Format createdOn
-        val formattedCreatedOn = createdOn?.let {
+        // Format createdOn and updatedOn
+        val formattedCreatedOn = createdOn?.takeIf { it.isNotEmpty() }?.let {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
+            val date = inputFormat.parse(it)
+            outputFormat.format(date)
+        }
+
+        val formattedUpdatedOn = updatedOn?.takeIf { it.isNotEmpty() }?.let {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
             val date = inputFormat.parse(it)
@@ -67,6 +83,11 @@ class AccountSettingsActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
         findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
         findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedCreatedOn"
+
+        if (formattedUpdatedOn != null) {
+            findViewById<TextView>(R.id.updated_on_text)?.text = "Updated On: $formattedUpdatedOn"
+            findViewById<View>(R.id.updated_on_card)?.visibility = View.VISIBLE
+        }
 
         // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
@@ -99,6 +120,88 @@ class AccountSettingsActivity : AppCompatActivity() {
                 }
                 else -> false
             }
+        }
+
+        // Set up Update Info button click listener
+        val updateInfoButton: Button = findViewById(R.id.update_info_button)
+        val cancelEditButton: Button = findViewById(R.id.cancel_edit_button)
+        val editFullName: EditText = findViewById(R.id.edit_full_name)
+        val editEmail: EditText = findViewById(R.id.edit_email)
+        val editContactNumber: EditText = findViewById(R.id.edit_contact_number)
+
+        updateInfoButton.setOnClickListener {
+            if (editFullName.visibility == View.VISIBLE) {
+                val newFullName = editFullName.text.toString()
+                val newEmail = editEmail.text.toString()
+                val newContactNumber = editContactNumber.text.toString()
+                val currentDateTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    val userId = userID ?: return@launch // Handle null userID case
+                    if (newEmail.isNotBlank() && MySQLHelper.isEmailExists(newEmail, userId)) {
+                        Toast.makeText(this@AccountSettingsActivity, "Email already exists. Please use a different email.", Toast.LENGTH_SHORT).show()
+                    } else if (newContactNumber.isNotBlank() && MySQLHelper.isContactNumberExists(newContactNumber, userId)) {
+                        Toast.makeText(this@AccountSettingsActivity, "Contact number already exists. Please use a different contact number.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val success = MySQLHelper.updateUserWithUserID(newFullName, newEmail, newContactNumber, userId, currentDateTime)
+                        if (success) {
+                            // Update SharedPreferences and UI
+                            val editor = sharedPreferences.edit()
+                            if (newFullName.isNotBlank()) {
+                                editor.putString("fullName", newFullName)
+                                findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $newFullName"
+                                // Update the header view
+                                val headerView = navigationView.getHeaderView(0)
+                                headerView.findViewById<TextView>(R.id.nav_name_header)?.text = newFullName
+                                // Update UserSingleton
+                                UserSingleton.fullName = newFullName
+                            }
+                            if (newEmail.isNotBlank()) {
+                                editor.putString("email", newEmail)
+                                findViewById<TextView>(R.id.email_text)?.text = "Email: $newEmail"
+                            } else {
+                                findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
+                            }
+                            if (newContactNumber.isNotBlank()) {
+                                editor.putString("contactNumber", newContactNumber)
+                                findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $newContactNumber"
+                            } else {
+                                findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
+                            }
+                            editor.putString("updatedOn", currentDateTime)
+                            editor.apply()
+
+                            findViewById<TextView>(R.id.updated_on_text)?.text = "Updated On: ${SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())}"
+                            findViewById<View>(R.id.updated_on_card)?.visibility = View.VISIBLE
+
+                            // Show toast message
+                            Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
+
+                            // Clear EditText fields
+                            editFullName.text.clear()
+                            editEmail.text.clear()
+                            editContactNumber.text.clear()
+
+                            editFullName.visibility = View.GONE
+                            editEmail.visibility = View.GONE
+                            editContactNumber.visibility = View.GONE
+                            cancelEditButton.visibility = View.GONE
+                        }
+                    }
+                }
+            } else {
+                editFullName.visibility = View.VISIBLE
+                editEmail.visibility = View.VISIBLE
+                editContactNumber.visibility = View.VISIBLE
+                cancelEditButton.visibility = View.VISIBLE
+            }
+        }
+
+        cancelEditButton.setOnClickListener {
+            editFullName.visibility = View.GONE
+            editEmail.visibility = View.GONE
+            editContactNumber.visibility = View.GONE
+            cancelEditButton.visibility = View.GONE
         }
     }
 

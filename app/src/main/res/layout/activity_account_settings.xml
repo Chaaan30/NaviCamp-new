@@ -72,6 +72,15 @@
                             android:textSize="16sp"
                             android:textColor="#000000"
                             android:fontFamily="@font/inter" />
+
+                        <EditText
+                            android:id="@+id/edit_full_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Edit Full Name"
+                            android:visibility="gone"
+                            android:layout_marginBottom="16dp"
+                            android:fontFamily="@font/inter" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
@@ -150,6 +159,15 @@
                             android:textSize="16sp"
                             android:textColor="#000000"
                             android:fontFamily="@font/inter" />
+
+                        <EditText
+                            android:id="@+id/edit_email"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Edit Email"
+                            android:visibility="gone"
+                            android:layout_marginBottom="16dp"
+                            android:fontFamily="@font/inter" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
@@ -175,6 +193,15 @@
                             android:layout_marginLeft="10dp"
                             android:textSize="16sp"
                             android:textColor="#000000"
+                            android:fontFamily="@font/inter" />
+
+                        <EditText
+                            android:id="@+id/edit_contact_number"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Edit Contact Number"
+                            android:visibility="gone"
+                            android:layout_marginBottom="16dp"
                             android:fontFamily="@font/inter" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
@@ -204,6 +231,56 @@
                             android:fontFamily="@font/inter" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/updated_on_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardElevation="4dp"
+                android:padding="16dp"
+                app:cardCornerRadius="8dp"
+                android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/updated_on_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Updated On: "
+                    android:layout_marginLeft="10dp"
+                    android:textSize="16sp"
+                    android:textColor="#000000"
+                    android:fontFamily="@font/inter" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+                <Button
+                    android:id="@+id/update_info_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Update Info"
+                    android:layout_gravity="center"
+                    android:background="@drawable/button_outline"
+                    android:textColor="@color/custom_blue"
+                    android:fontFamily="@font/inter" />
+
+                <Button
+                    android:id="@+id/cancel_edit_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel Edit"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="5dp"
+                    android:visibility="gone"
+                    android:background="@drawable/button_filled"
+                    android:textColor="@android:color/white"
+                    android:fontFamily="@font/inter" />
+
             </LinearLayout>
         </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
