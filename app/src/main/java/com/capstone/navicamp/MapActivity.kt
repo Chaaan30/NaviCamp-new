@@ -116,6 +116,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun showBottomSheet() {
         val floorLevel = intent.getStringExtra("FLOOR_LEVEL")
+        val locationID = intent.getStringExtra("LOCATION_ID")
         val userID = intent.getStringExtra("USER_ID")
         val fullName = intent.getStringExtra("FULL_NAME")
         val dateTime = intent.getStringExtra("DATE_TIME")
@@ -123,6 +124,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val bottomSheet = AssistanceBottomSheet.newInstance(
             floorLevel ?: "",
+            locationID ?: "",
             userID ?: "",
             fullName ?: "",
             formatDateTime(dateTime ?: ""),

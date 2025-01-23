@@ -90,7 +90,7 @@ object MySQLHelper {
                 return pendingItems
             }
 
-            val query = "SELECT * FROM location_table WHERE status = 'pending'"
+            val query = "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
             while (resultSet.next()) {
@@ -798,4 +798,31 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    fun updateStatus(locationID: String, newStatus: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE location_table SET status = ? WHERE locationID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, newStatus)
+            statement.setString(2, locationID)
+
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
 }

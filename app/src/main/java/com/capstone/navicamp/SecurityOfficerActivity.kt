@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.view.View
+
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -168,55 +170,64 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
-        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val noAssistanceTextView = findViewById<TextView>(R.id.no_assistance_text)
 
-        // Sort the pendingItems list by dateTime in descending order
-        val sortedItems = pendingItems.sortedByDescending { item ->
-            inputFormat.parse(item.dateTime)
-        }
+        if (pendingItems.isEmpty()) {
+            noAssistanceTextView.visibility = View.VISIBLE
+        } else {
+            noAssistanceTextView.visibility = View.GONE
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
-        for (item in sortedItems) {
-            val cardView =
-                LayoutInflater.from(this).inflate(R.layout.assistance_card, assistanceLayout, false)
-            val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
-            val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
-            val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
-            val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
-            val respondButton = cardView.findViewById<Button>(R.id.respond_button)
+            val sortedItems = pendingItems.sortedByDescending { item ->
+                inputFormat.parse(item.dateTime)
+            }
 
-            fullNameTextView.text = item.fullName
+            for (item in sortedItems) {
+                val cardView = LayoutInflater.from(this)
+                    .inflate(R.layout.assistance_card, assistanceLayout, false)
+                val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
+                val createdOnDateTextView =
+                    cardView.findViewById<TextView>(R.id.created_on_date_text)
+                val createdOnTimeTextView =
+                    cardView.findViewById<TextView>(R.id.created_on_time_text)
+                val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
+                val respondButton = cardView.findViewById<Button>(R.id.respond_button)
 
-            // Parse and format the date and time
-            val date = inputFormat.parse(item.dateTime)
-            val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
-            val formattedTime = date?.let { timeFormat.format(it) } ?: item.dateTime
-            createdOnDateTextView.text = formattedDate
-            createdOnTimeTextView.text = formattedTime
+                fullNameTextView.text = item.fullName
 
-            floorLevelTextView.text = item.floorLevel
-            respondButton.setOnClickListener {
-                val locationID = item.locationID
-                val officerName = UserSingleton.fullName
+                val date = inputFormat.parse(item.dateTime)
+                val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
+                val formattedTime = date?.let { timeFormat.format(it) } ?: item.dateTime
+                createdOnDateTextView.text = formattedDate
+                createdOnTimeTextView.text = formattedTime
 
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val locationItem = MySQLHelper.getLocationItemById(locationID)
-                    withContext(Dispatchers.Main) {
-                        val intent = Intent(this@SecurityOfficerActivity, MapActivity::class.java)
-                        intent.putExtra("OFFICER_NAME", officerName)
-                        intent.putExtra("LATITUDE", locationItem.latitude)
-                        intent.putExtra("LONGITUDE", locationItem.longitude)
-                        intent.putExtra("FLOOR_LEVEL", locationItem.floorLevel)
-                        intent.putExtra("USER_ID", locationItem.userID)
-                        intent.putExtra("FULL_NAME", locationItem.fullName)
-                        intent.putExtra("DATE_TIME", locationItem.dateTime)
-                        intent.putExtra("STATUS", locationItem.status)
-                        startActivity(intent)
+                floorLevelTextView.text = item.floorLevel
+                respondButton.setOnClickListener {
+                    val locationID = item.locationID
+                    val officerName = UserSingleton.fullName
+
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val locationItem = MySQLHelper.getLocationItemById(locationID)
+                        withContext(Dispatchers.Main) {
+                            val intent =
+                                Intent(this@SecurityOfficerActivity, MapActivity::class.java)
+                            intent.putExtra("OFFICER_NAME", officerName)
+                            intent.putExtra("LATITUDE", locationItem.latitude)
+                            intent.putExtra("LONGITUDE", locationItem.longitude)
+                            intent.putExtra("FLOOR_LEVEL", locationItem.floorLevel)
+                            intent.putExtra("LOCATION_ID", locationItem.locationID)
+                            intent.putExtra("USER_ID", locationItem.userID)
+                            intent.putExtra("FULL_NAME", locationItem.fullName)
+                            intent.putExtra("DATE_TIME", locationItem.dateTime)
+                            intent.putExtra("STATUS", locationItem.status)
+                            startActivity(intent)
+                        }
                     }
                 }
+                assistanceLayout.addView(cardView)
             }
-            assistanceLayout.addView(cardView)
         }
     }
 }

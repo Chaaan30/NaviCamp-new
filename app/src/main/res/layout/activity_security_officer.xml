@@ -69,6 +69,17 @@
                     android:paddingTop="16dp"
                     android:fontFamily="@font/inter_bold" />
 
+                <TextView
+                    android:id="@+id/no_assistance_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="There are currently no assistance requests."
+                    android:textSize="16sp"
+                    android:visibility="gone"
+                    android:fontFamily="@font/inter"
+                    android:textColor="#000000" />
+
                 <!-- Horizontal ScrollView for Assistance Cards -->
                 <HorizontalScrollView
                     android:layout_width="match_parent"

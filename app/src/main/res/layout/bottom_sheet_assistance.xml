@@ -72,5 +72,23 @@
             android:textColor="#000000"
             android:fontFamily="@font/inter"
             android:text="Status:" />
+
+        <Button
+            android:id="@+id/respond_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Respond"
+            android:textSize="16sp"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/inter_bold" />
+
+        <Button
+            android:id="@+id/resolve_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Resolve"
+            android:textSize="16sp"
+            android:fontFamily="@font/inter_bold"
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>
