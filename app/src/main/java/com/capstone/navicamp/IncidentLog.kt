@@ -101,7 +101,8 @@ class IncidentLog : AppCompatActivity() {
 
         // Observe incident data from ViewModel
         viewModel.incidentData.observe(this, Observer { data ->
-            displayDataInTable(data) // Update the table when data changes
+            val sortedData = data.sortedBy { it[0].toIntOrNull() ?: 0 }
+            displayDataInTable(sortedData)
         })
 
         // Start refreshing incident data every second
@@ -114,11 +115,13 @@ class IncidentLog : AppCompatActivity() {
 
         // Add table header row
         val headerRow = TableRow(this)
-        val headerText = arrayOf("Alert ID", "Name", "User Type", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On")
+        val headerText = arrayOf(
+            "Alert ID", "Name", "User Type", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On"
+        )
         headerText.forEach { text ->
             val textView = TextView(this).apply {
                 setText(text)
-                setPadding(15, 15, 15, 15)
+                setPadding(20, 20, 20, 20)
                 setTextColor(resources.getColor(android.R.color.white))
                 setBackgroundColor(resources.getColor(R.color.custom_blue))
             }
@@ -130,22 +133,25 @@ class IncidentLog : AppCompatActivity() {
         incidentData.forEach { row ->
             val tableRow = TableRow(this)
 
-            row.forEachIndexed { index, cell ->
+            // Map each column correctly
+            val cellData = listOf(
+                row[0], // alertID
+                row[1], // fullName
+                row[2], // userType
+                row[3], // deviceID
+                "${row[4]}, ${row[5]}", // Combine latitude and longitude as "Coordinates"
+                row[6], // floorLevel
+                row[7], // alertType
+                row[8], // status
+                row[9], // alertDateTime
+                row[10] // resolvedOn
+            )
+
+            cellData.forEach { cell ->
                 val textView = TextView(this).apply {
-                    text = when (index) {
-                        4 -> {
-                            // Combine Latitude and Longitude for the "Coordinates" column
-                            val latitude = row[4]  // Assuming latitude is at index 7
-                            val longitude = row[5] // Assuming longitude is at index 8
-                            "$latitude, $longitude"
-                        }
-                        else -> cell
-                    }
-                    setPadding(15, 15, 15, 15)
+                    text = cell
+                    setPadding(20, 20, 20, 20)
                     setTextColor(resources.getColor(android.R.color.black))
-                    if (index == 0) {
-                        setTextColor(resources.getColor(android.R.color.black)) // Highlight first column (Name)
-                    }
                 }
                 tableRow.addView(textView)
             }

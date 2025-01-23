@@ -719,8 +719,50 @@ object MySQLHelper {
         }
     }
 
+    fun insertEmergencyAlerts() {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+
+        try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return
+            }
+
+            val insertQuery = """
+            INSERT INTO emergency_alert_table (alertID, userID, deviceID, locationID, alertType, alertDateTime, status, resolvedOn)
+            SELECT 
+                CONCAT('2025', LPAD(@row_num := @row_num + 1, 4, '0')) AS alertID,
+                u.userID,
+                d.deviceID,
+                l.locationID,
+                NULL AS alertType,
+                l.dateTime AS alertDateTime,
+                l.status AS status,
+                NULL AS resolvedOn
+            FROM location_table l
+            JOIN user_table u ON u.userID = l.userID
+            JOIN devices_table d ON d.userID = u.userID,
+            (SELECT @row_num := 0) AS r; -- Initialize row numbering variable
+        """.trimIndent()
+
+            statement = connection.prepareStatement(insertQuery)
+            val rowsInserted = statement.executeUpdate()
+            println("$rowsInserted rows inserted into emergency_alert_table.")
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+
     fun getIncidentData(): List<List<String>> {
         val data = mutableListOf<List<String>>()
+        insertEmergencyAlerts() // Ensure data is inserted first
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
@@ -729,38 +771,32 @@ object MySQLHelper {
             connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
-                return data // Return empty list if connection fails
+                return data
             }
 
             val query = """
-             SELECT 
+            SELECT 
                 emergency_alert_table.alertID,
-                 user_table.fullName,
-                 user_table.userType,
-                 devices_table.deviceID,
-                 location_table.latitude,
-                 location_table.longitude,
-                 location_table.floorLevel,
-                 emergency_alert_table.alertType,
-                 emergency_alert_table.status,
-                 emergency_alert_table.alertDateTime,
-                 emergency_alert_table.resolvedOn
-                
-             FROM 
-                 emergency_alert_table
-             JOIN 
-                 user_table ON emergency_alert_table.userID = user_table.userID
-             JOIN 
-                 location_table ON emergency_alert_table.locationID = location_table.locationID
-             JOIN 
-                 devices_table ON location_table.userID = devices_table.userID
-         """.trimIndent()
+                user_table.fullName,
+                user_table.userType,
+                devices_table.deviceID,
+                location_table.latitude,
+                location_table.longitude,
+                location_table.floorLevel,
+                emergency_alert_table.alertType,
+                emergency_alert_table.status,
+                emergency_alert_table.alertDateTime,
+                emergency_alert_table.resolvedOn
+            FROM emergency_alert_table
+            JOIN user_table ON emergency_alert_table.userID = user_table.userID
+            JOIN location_table ON emergency_alert_table.locationID = location_table.locationID
+            JOIN devices_table ON emergency_alert_table.userID = devices_table.userID
+        """.trimIndent()
 
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
 
             while (resultSet.next()) {
-                // Store the row data as a list of strings
                 val row = listOf(
                     resultSet.getString("alertID"),
                     resultSet.getString("fullName"),
@@ -780,7 +816,6 @@ object MySQLHelper {
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            // Close resources
             resultSet?.close()
             statement?.close()
             connection?.close()
@@ -788,5 +823,6 @@ object MySQLHelper {
 
         return data
     }
+
 
 }
