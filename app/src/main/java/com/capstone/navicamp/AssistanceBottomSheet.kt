@@ -1,20 +1,30 @@
 package com.capstone.navicamp
 
-import android.app.Dialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import com.capstone.navicamp.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
+import android.app.Dialog
+import android.content.Intent
 
 class AssistanceBottomSheet : BottomSheetDialogFragment() {
+
+    private lateinit var respondButton: Button
+    private lateinit var resolveButton: Button
+    private var locationID: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -27,6 +37,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
+        locationID = arguments?.getString("LOCATION_ID")
         val userID = arguments?.getString("USER_ID")
         val fullName = arguments?.getString("FULL_NAME")
         val dateTime = arguments?.getString("DATE_TIME")
@@ -37,6 +48,52 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         view.findViewById<TextView>(R.id.full_name_text).text = "Full Name: $fullName"
         view.findViewById<TextView>(R.id.date_time_text).text = "Date and Time: ${formatDateTime(dateTime)}"
         view.findViewById<TextView>(R.id.status_text).text = "Status: $status"
+
+        respondButton = view.findViewById(R.id.respond_button)
+        resolveButton = view.findViewById(R.id.resolve_button)
+
+        if (status?.contains("ongoing") == true) {
+            respondButton.isEnabled = false
+            resolveButton.visibility = View.VISIBLE
+        }
+
+        respondButton.setOnClickListener {
+            Log.d("AssistanceBottomSheet", "Respond button clicked")
+            updateStatus(locationID, "ongoing")
+            respondButton.isEnabled = false
+            resolveButton.visibility = View.VISIBLE
+        }
+
+        resolveButton.setOnClickListener {
+            Log.d("AssistanceBottomSheet", "Resolve button clicked")
+            updateStatus(locationID, "resolved")
+            activity?.finish() // Close MapActivity
+        }
+    }
+
+    private fun updateStatus(locationID: String?, newStatus: String) {
+        if (locationID != null) {
+            val officerName = UserSingleton.fullName ?: "Unknown Officer"
+            val statusWithOfficer = "$newStatus by Officer: $officerName"
+
+            CoroutineScope(Dispatchers.IO).launch {
+                val success = MySQLHelper.updateStatus(locationID, statusWithOfficer)
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        view?.findViewById<TextView>(R.id.status_text)?.text = "Status: $newStatus"
+                        Log.d("AssistanceBottomSheet", "Status updated to $statusWithOfficer")
+
+                        // Send broadcast to notify data change
+                        val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
+                        requireContext().sendBroadcast(intent)
+                    } else {
+                        Log.e("AssistanceBottomSheet", "Failed to update status")
+                    }
+                }
+            }
+        } else {
+            Log.e("AssistanceBottomSheet", "Location ID is null")
+        }
     }
 
     private fun formatDateTime(dateTime: String?): String {
@@ -64,16 +121,11 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
                 behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
                     override fun onStateChanged(bottomSheet: View, newState: Int) {
-                        if (newState == BottomSheetBehavior.STATE_HIDDEN) {
-                            dismiss()
-                        }
+                        // Handle state changes
                     }
 
                     override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                        val content = bottomSheet.findViewById<View>(R.id.content)
-                        val pill = bottomSheet.findViewById<View>(R.id.bottom_sheet_pill)
-                        content?.visibility = if (slideOffset < 0.5) View.GONE else View.VISIBLE
-                        pill?.visibility = View.VISIBLE
+                        // Handle slide changes
                     }
                 })
             }
@@ -84,6 +136,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     companion object {
         fun newInstance(
             floorLevel: String,
+            locationID: String,
             userID: String,
             fullName: String,
             dateTime: String,
@@ -91,6 +144,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         ): AssistanceBottomSheet {
             val args = Bundle()
             args.putString("FLOOR_LEVEL", floorLevel)
+            args.putString("LOCATION_ID", locationID)
             args.putString("USER_ID", userID)
             args.putString("FULL_NAME", fullName)
             args.putString("DATE_TIME", dateTime)
