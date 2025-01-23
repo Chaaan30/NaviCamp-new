@@ -15,6 +15,8 @@ import android.content.Context
 import android.content.Intent
 import org.mindrot.jbcrypt.BCrypt
 import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 
@@ -469,35 +471,113 @@ object MySQLHelper {
     }
 
     // Update user with userID
-    fun updateUserWithUserID(newFullName: String?, userID: String): Boolean {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return false
+    suspend fun updateUserWithUserID(newFullName: String, newEmail: String, newContactNumber: String, userID: String, updatedOn: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                val query = StringBuilder("UPDATE user_table SET updatedOn = ?")
+                if (newFullName.isNotBlank()) {
+                    query.append(", fullName = ?")
+                }
+                if (newEmail.isNotBlank()) {
+                    query.append(", email = ?")
+                }
+                if (newContactNumber.isNotBlank()) {
+                    query.append(", contactNumber = ?")
+                }
+                query.append(" WHERE userID = ?")
+
+                statement = connection.prepareStatement(query.toString())
+                statement.setString(1, updatedOn)
+                var index = 2
+                if (newFullName.isNotBlank()) {
+                    statement.setString(index++, newFullName)
+                }
+                if (newEmail.isNotBlank()) {
+                    statement.setString(index++, newEmail)
+                }
+                if (newContactNumber.isNotBlank()) {
+                    statement.setString(index++, newContactNumber)
+                }
+                statement.setString(index, userID)
+
+                val rowsAffected = statement.executeUpdate()
+                Log.d("MySQLHelper", "User updated: $rowsAffected rows affected.")
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
             }
+        }
+    }
 
-            // Get current datetime in UTC+8 and format it to 24-hour format
-            val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    suspend fun isContactNumberExists(contactNumber: String, userID: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            var resultSet: ResultSet? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
 
-            val query = "UPDATE user_table SET fullName = ?, createdOn = ? WHERE userID = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, newFullName)
-            statement.setString(2, currentDateTime)
-            statement.setString(3, userID)
+                val query = "SELECT COUNT(*) AS count FROM user_table WHERE contactNumber = ? AND userID != ?"
+                statement = connection.prepareStatement(query)
+                statement.setString(1, contactNumber)
+                statement.setString(2, userID)
 
-            val rowsAffected = statement.executeUpdate()
-            Log.d("MySQLHelper", "User updated: $rowsAffected rows affected.")
-            rowsAffected > 0
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            false
-        } finally {
-            statement?.close()
-            connection?.close()
+                resultSet = statement.executeQuery()
+                resultSet.next() && resultSet.getInt("count") > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                resultSet?.close()
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    suspend fun isEmailExists(email: String, userID: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            var resultSet: ResultSet? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                val query = "SELECT COUNT(*) AS count FROM user_table WHERE email = ? AND userID != ?"
+                statement = connection.prepareStatement(query)
+                statement.setString(1, email)
+                statement.setString(2, userID)
+
+                resultSet = statement.executeQuery()
+                resultSet.next() && resultSet.getInt("count") > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                resultSet?.close()
+                statement?.close()
+                connection?.close()
+            }
         }
     }
 

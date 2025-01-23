@@ -166,7 +166,6 @@ class SecurityOfficerActivity : AppCompatActivity() {
         unregisterReceiver(dataChangeReceiver)
     }
 
-
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
         val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
