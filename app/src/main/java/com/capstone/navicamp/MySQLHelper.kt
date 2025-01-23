@@ -734,17 +734,18 @@ object MySQLHelper {
 
             val query = """
              SELECT 
-                 emergency_alert_table.alertID,
-                 emergency_alert_table.alertType,
-                 emergency_alert_table.alertDateTime,
-                 emergency_alert_table.resolvedOn,
-                 emergency_alert_table.status,
+                emergency_alert_table.alertID,
                  user_table.fullName,
                  user_table.userType,
+                 devices_table.deviceID,
                  location_table.latitude,
                  location_table.longitude,
                  location_table.floorLevel,
-                 devices_table.deviceID
+                 emergency_alert_table.alertType,
+                 emergency_alert_table.status,
+                 emergency_alert_table.alertDateTime,
+                 emergency_alert_table.resolvedOn
+                
              FROM 
                  emergency_alert_table
              JOIN 
@@ -762,16 +763,16 @@ object MySQLHelper {
                 // Store the row data as a list of strings
                 val row = listOf(
                     resultSet.getString("alertID"),
-                    resultSet.getString("alertType"),
-                    resultSet.getString("alertDateTime"),
-                    resultSet.getString("resolvedOn"),
-                    resultSet.getString("status"),
                     resultSet.getString("fullName"),
                     resultSet.getString("userType"),
+                    resultSet.getString("deviceID"),
                     resultSet.getString("latitude"),
                     resultSet.getString("longitude"),
                     resultSet.getString("floorLevel"),
-                    resultSet.getString("deviceID")
+                    resultSet.getString("alertType"),
+                    resultSet.getString("status"),
+                    resultSet.getString("alertDateTime"),
+                    resultSet.getString("resolvedOn")
                 )
                 data.add(row)
             }

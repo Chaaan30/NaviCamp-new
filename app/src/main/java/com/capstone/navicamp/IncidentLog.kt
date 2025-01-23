@@ -114,13 +114,13 @@ class IncidentLog : AppCompatActivity() {
 
         // Add table header row
         val headerRow = TableRow(this)
-        val headerText = arrayOf("Name", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On", "User Type")
+        val headerText = arrayOf("Alert ID", "Name", "User Type", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On")
         headerText.forEach { text ->
             val textView = TextView(this).apply {
                 setText(text)
-                setPadding(10, 10, 10, 10)
+                setPadding(15, 15, 15, 15)
                 setTextColor(resources.getColor(android.R.color.white))
-                setBackgroundColor(resources.getColor(R.color.custom_blue)) // Set background color for header
+                setBackgroundColor(resources.getColor(R.color.custom_blue))
             }
             headerRow.addView(textView)
         }
@@ -133,18 +133,18 @@ class IncidentLog : AppCompatActivity() {
             row.forEachIndexed { index, cell ->
                 val textView = TextView(this).apply {
                     text = when (index) {
-                        2 -> {
+                        4 -> {
                             // Combine Latitude and Longitude for the "Coordinates" column
-                            val latitude = row[7]  // Assuming latitude is at index 7
-                            val longitude = row[8] // Assuming longitude is at index 8
+                            val latitude = row[4]  // Assuming latitude is at index 7
+                            val longitude = row[5] // Assuming longitude is at index 8
                             "$latitude, $longitude"
                         }
                         else -> cell
                     }
-                    setPadding(10, 10, 10, 10)
+                    setPadding(15, 15, 15, 15)
                     setTextColor(resources.getColor(android.R.color.black))
                     if (index == 0) {
-                        setTextColor(resources.getColor(android.R.color.white)) // Highlight first column (Name)
+                        setTextColor(resources.getColor(android.R.color.black)) // Highlight first column (Name)
                     }
                 }
                 tableRow.addView(textView)
