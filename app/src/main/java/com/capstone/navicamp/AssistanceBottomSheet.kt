@@ -1,12 +1,16 @@
 package com.capstone.navicamp
 
+import android.app.Dialog
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -17,13 +21,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
-import android.app.Dialog
-import android.content.Intent
 
 class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
     private lateinit var respondButton: Button
     private lateinit var resolveButton: Button
+    private lateinit var respondProgress: ProgressBar
     private var locationID: String? = null
 
     override fun onCreateView(
@@ -51,6 +54,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
         respondButton = view.findViewById(R.id.respond_button)
         resolveButton = view.findViewById(R.id.resolve_button)
+        respondProgress = view.findViewById(R.id.respond_progress)
 
         if (status?.contains("ongoing") == true) {
             respondButton.isEnabled = false
@@ -59,14 +63,14 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
         respondButton.setOnClickListener {
             Log.d("AssistanceBottomSheet", "Respond button clicked")
+            respondProgress.visibility = View.VISIBLE
             updateStatus(locationID, "ongoing")
-            respondButton.isEnabled = false
-            resolveButton.visibility = View.VISIBLE
         }
 
         resolveButton.setOnClickListener {
             Log.d("AssistanceBottomSheet", "Resolve button clicked")
             updateStatus(locationID, "resolved")
+            Toast.makeText(requireContext(), "Assistance has been resolved", Toast.LENGTH_SHORT).show()
             activity?.finish() // Close MapActivity
         }
     }
@@ -79,9 +83,12 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
             CoroutineScope(Dispatchers.IO).launch {
                 val success = MySQLHelper.updateStatus(locationID, statusWithOfficer)
                 withContext(Dispatchers.Main) {
+                    respondProgress.visibility = View.GONE
                     if (success) {
                         view?.findViewById<TextView>(R.id.status_text)?.text = "Status: $newStatus"
                         Log.d("AssistanceBottomSheet", "Status updated to $statusWithOfficer")
+                        respondButton.isEnabled = false
+                        resolveButton.visibility = View.VISIBLE
 
                         // Send broadcast to notify data change
                         val intent = Intent("com.capstone.navicamp.DATA_CHANGED")

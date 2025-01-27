@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import android.view.View
-
+import android.widget.ProgressBar
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -108,17 +108,30 @@ class SecurityOfficerActivity : AppCompatActivity() {
         // Initialize assistanceLayout
         assistanceLayout = findViewById(R.id.assistance_layout)
 
+        // Initialize ProgressBars
+        val noAssistanceProgress = findViewById<ProgressBar>(R.id.no_assistance_progress)
+        val registeredUsersProgress = findViewById<ProgressBar>(R.id.registered_users_progress)
+        val iotDevicesProgress = findViewById<ProgressBar>(R.id.iot_devices_progress)
+
+        // Show ProgressBars
+        noAssistanceProgress.visibility = View.VISIBLE
+        registeredUsersProgress.visibility = View.VISIBLE
+        iotDevicesProgress.visibility = View.VISIBLE
+
         // Observe the LiveData from the ViewModel
         viewModel.pendingItems.observe(this, Observer { pendingItems ->
             updateAssistanceCards(pendingItems)
+            noAssistanceProgress.visibility = View.GONE
         })
 
         viewModel.userCount.observe(this, Observer { count ->
             findViewById<TextView>(R.id.registered_users)?.text = count.toString()
+            registeredUsersProgress.visibility = View.GONE
         })
 
         viewModel.deviceCount.observe(this, Observer { count ->
             findViewById<TextView>(R.id.iot_devices)?.text = count.toString()
+            iotDevicesProgress.visibility = View.GONE
         })
 
         // Fetch the initial data
@@ -171,6 +184,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
         val noAssistanceTextView = findViewById<TextView>(R.id.no_assistance_text)
+        val noAssistanceProgress = findViewById<ProgressBar>(R.id.no_assistance_progress)
 
         if (pendingItems.isEmpty()) {
             noAssistanceTextView.visibility = View.VISIBLE
@@ -229,5 +243,6 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 assistanceLayout.addView(cardView)
             }
         }
+        noAssistanceProgress.visibility = View.GONE
     }
 }

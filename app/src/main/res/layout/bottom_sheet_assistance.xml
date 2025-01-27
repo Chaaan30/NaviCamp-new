@@ -90,5 +90,13 @@
             android:textSize="16sp"
             android:fontFamily="@font/inter_bold"
             android:visibility="gone" />
+
+        <ProgressBar
+            android:id="@+id/respond_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            style="?android:attr/progressBarStyleLarge" />
     </LinearLayout>
 </LinearLayout>

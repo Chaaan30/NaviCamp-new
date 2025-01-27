@@ -21,6 +21,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
 
     private lateinit var emailEditText: EditText
     private lateinit var passwordEditText: EditText
+    private lateinit var progressBar: ProgressBar
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -30,6 +31,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
 
         emailEditText = view.findViewById(R.id.email)
         passwordEditText = view.findViewById(R.id.password)
+        progressBar = view.findViewById(R.id.progress_bar)
 
         val loginButton = view.findViewById<Button>(R.id.login_button)
         val createAccountButton = view.findViewById<Button>(R.id.create_account_button)
@@ -57,8 +59,14 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        // Show progress bar and hide EditText fields
+        progressBar.visibility = View.VISIBLE
+        emailEditText.visibility = View.GONE
+        passwordEditText.visibility = View.GONE
+
         // Handle login logic
         CoroutineScope(Dispatchers.Main).launch {
+            val startTime = System.currentTimeMillis()
             try {
                 val userData = withContext(Dispatchers.IO) {
                     MySQLHelper.loginUser(email, password)
@@ -95,6 +103,17 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 Log.e("LoginBottomSheet", "Error during login", e)
                 Toast.makeText(context, "An error occurred during login", Toast.LENGTH_SHORT).show()
+            } finally {
+                // Hide progress bar and show EditText fields
+                progressBar.visibility = View.GONE
+                emailEditText.visibility = View.VISIBLE
+                passwordEditText.visibility = View.VISIBLE
+
+                // Check if the internet is slow
+                val endTime = System.currentTimeMillis()
+                if (endTime - startTime > 5000) { // 5 seconds threshold for slow internet
+                    Toast.makeText(context, "Internet is slow, please try again later", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,11 +19,13 @@ import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class OfficerAccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+    private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +44,9 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
+
+        // Initialize ProgressBar
+        progressBar = findViewById(R.id.progressBar)
 
         // Retrieve data from SharedPreferences
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
@@ -94,7 +100,6 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
                     // Clear SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
                     editor.clear()
                     editor.apply()
@@ -137,6 +142,14 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                 val newContactNumber = editContactNumber.text.toString()
                 val currentDateTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 
+                // Show ProgressBar and hide EditText and Buttons
+                progressBar.visibility = View.VISIBLE
+                editFullName.visibility = View.GONE
+                editEmail.visibility = View.GONE
+                editContactNumber.visibility = View.GONE
+                updateInfoButton.visibility = View.GONE
+                cancelEditButton.visibility = View.GONE
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val userId = userID ?: return@launch // Handle null userID case
                     if (newEmail.isNotBlank() && MySQLHelper.isEmailExists(newEmail, userId)) {
@@ -144,7 +157,9 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     } else if (newContactNumber.isNotBlank() && MySQLHelper.isContactNumberExists(newContactNumber, userId)) {
                         Toast.makeText(this@OfficerAccountSettingsActivity, "Contact number already exists. Please use a different contact number.", Toast.LENGTH_SHORT).show()
                     } else {
-                        val success = MySQLHelper.updateUserWithUserID(newFullName, newEmail, newContactNumber, userId, currentDateTime)
+                        val success = withContext(Dispatchers.IO) {
+                            MySQLHelper.updateUserWithUserID(newFullName, newEmail, newContactNumber, userId, currentDateTime)
+                        }
                         if (success) {
                             // Update SharedPreferences and UI
                             val editor = sharedPreferences.edit()
@@ -182,13 +197,16 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                             editFullName.text.clear()
                             editEmail.text.clear()
                             editContactNumber.text.clear()
-
-                            editFullName.visibility = View.GONE
-                            editEmail.visibility = View.GONE
-                            editContactNumber.visibility = View.GONE
-                            cancelEditButton.visibility = View.GONE
                         }
                     }
+
+                    // Hide ProgressBar and show EditText and Buttons
+                    progressBar.visibility = View.GONE
+                    editFullName.visibility = View.GONE
+                    editEmail.visibility = View.GONE
+                    editContactNumber.visibility = View.GONE
+                    updateInfoButton.visibility = View.VISIBLE
+                    cancelEditButton.visibility = View.GONE
                 }
             } else {
                 editFullName.visibility = View.VISIBLE
@@ -203,6 +221,17 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
             editEmail.visibility = View.GONE
             editContactNumber.visibility = View.GONE
             cancelEditButton.visibility = View.GONE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Retrieve the full name from SharedPreferences
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", "Full Name")
+        navigationView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
     }
 }

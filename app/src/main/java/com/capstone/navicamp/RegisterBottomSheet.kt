@@ -20,6 +20,13 @@ import org.mindrot.jbcrypt.BCrypt
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
     private lateinit var userTypeSpinner: Spinner
+    private lateinit var progressBar: ProgressBar
+    private lateinit var fullNameEditText: EditText
+    private lateinit var emailEditText: EditText
+    private lateinit var contactNumberEditText: EditText
+    private lateinit var passwordEditText: EditText
+    private lateinit var termsConditionsCheckbox: CheckBox
+    private lateinit var termsConditionsText: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -28,6 +35,14 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.bottom_sheet_register, container, false)
 
         userTypeSpinner = view.findViewById(R.id.user_type_spinner)
+        progressBar = view.findViewById(R.id.progress_bar)
+        fullNameEditText = view.findViewById(R.id.fullname)
+        emailEditText = view.findViewById(R.id.email)
+        contactNumberEditText = view.findViewById(R.id.contact_number)
+        passwordEditText = view.findViewById(R.id.password)
+        termsConditionsCheckbox = view.findViewById(R.id.terms_conditions_checkbox)
+        termsConditionsText = view.findViewById(R.id.terms_conditions_text)
+
         ArrayAdapter.createFromResource(
             requireContext(),
             R.array.user_types_reg,
@@ -49,7 +64,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             registerUser(view)
         }
 
-        val termsConditionsText = view.findViewById<TextView>(R.id.terms_conditions_text)
         termsConditionsText.setOnClickListener {
             val dialogView = inflater.inflate(R.layout.dialog_terms_conditions, null)
             AlertDialog.Builder(requireContext())
@@ -63,12 +77,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun registerUser(view: View) {
-        val fullName = view.findViewById<EditText>(R.id.fullname).text.toString()
-        val email = view.findViewById<EditText>(R.id.email).text.toString()
-        val contactNumber = view.findViewById<EditText>(R.id.contact_number).text.toString()
-        val password = view.findViewById<EditText>(R.id.password).text.toString()
+        val fullName = fullNameEditText.text.toString()
+        val email = emailEditText.text.toString()
+        val contactNumber = contactNumberEditText.text.toString()
+        val password = passwordEditText.text.toString()
         val userType = userTypeSpinner.selectedItem.toString()
-        val termsConditionsCheckbox = view.findViewById<CheckBox>(R.id.terms_conditions_checkbox)
 
         // Validation
         if (fullName.isEmpty() || email.isEmpty() || contactNumber.isEmpty() || password.isEmpty()) {
@@ -85,6 +98,16 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             Toast.makeText(context, "Please read and agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
             return
         }
+
+        // Show progress bar and hide input fields
+        progressBar.visibility = View.VISIBLE
+        fullNameEditText.visibility = View.GONE
+        emailEditText.visibility = View.GONE
+        contactNumberEditText.visibility = View.GONE
+        passwordEditText.visibility = View.GONE
+        userTypeSpinner.visibility = View.GONE
+        termsConditionsCheckbox.visibility = View.GONE
+        termsConditionsText.visibility = View.GONE
 
         // Hash the password
         val hashedPassword = hashPassword(password)
@@ -110,6 +133,16 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             } else {
                 Toast.makeText(view.context, "Failed to generate userID", Toast.LENGTH_SHORT).show()
             }
+
+            // Hide progress bar and show input fields
+            progressBar.visibility = View.GONE
+            fullNameEditText.visibility = View.VISIBLE
+            emailEditText.visibility = View.VISIBLE
+            contactNumberEditText.visibility = View.VISIBLE
+            passwordEditText.visibility = View.VISIBLE
+            userTypeSpinner.visibility = View.VISIBLE
+            termsConditionsCheckbox.visibility = View.VISIBLE
+            termsConditionsText.visibility = View.VISIBLE
         }
     }
 

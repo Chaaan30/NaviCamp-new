@@ -73,13 +73,13 @@
 
         </LinearLayout>
 
-        <!-- FrameLayout to push the button to the bottom -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp">
+
             <!-- Button for submitting the assistance request -->
             <Button
                 android:id="@+id/requestAssistanceButton"
@@ -91,6 +91,16 @@
                 android:fontFamily="@font/inter"
                 android:layout_marginBottom="30dp"
                 android:textSize="14sp" />
+
+            <!-- Circular ProgressBar -->
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="30dp"
+                android:visibility="gone"
+                style="?android:attr/progressBarStyleLarge" />
         </FrameLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
