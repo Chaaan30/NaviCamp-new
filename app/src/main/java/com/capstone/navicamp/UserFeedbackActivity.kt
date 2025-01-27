@@ -2,15 +2,17 @@ package com.capstone.navicamp
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
-import androidx.appcompat.app.ActionBarDrawerToggle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,6 +22,9 @@ class UserFeedbackActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+    private lateinit var submitButton: Button
+    private lateinit var progressBar: ProgressBar
+    private lateinit var feedbackEditText: EditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,15 +79,17 @@ class UserFeedbackActivity : AppCompatActivity() {
             }
         }
 
-        // Set up the Submit button
-        val submitButton: Button = findViewById(R.id.submit_button)
+        // Set up the Submit button and ProgressBar
+        submitButton = findViewById(R.id.submit_button)
+        progressBar = findViewById(R.id.progressBar)
+        feedbackEditText = findViewById(R.id.issue_description)
+
         submitButton.setOnClickListener {
             submitFeedback()
         }
     }
 
     private fun submitFeedback() {
-        val feedbackEditText: EditText = findViewById(R.id.issue_description)
         val feedbackDescription = feedbackEditText.text.toString()
 
         if (feedbackDescription.isEmpty()) {
@@ -99,6 +106,11 @@ class UserFeedbackActivity : AppCompatActivity() {
             return
         }
 
+        // Show ProgressBar and hide EditText and Button
+        progressBar.visibility = View.VISIBLE
+        feedbackEditText.visibility = View.GONE
+        submitButton.visibility = View.GONE
+
         // Insert feedback into the database
         CoroutineScope(Dispatchers.Main).launch {
             val success = withContext(Dispatchers.IO) {
@@ -111,6 +123,11 @@ class UserFeedbackActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this@UserFeedbackActivity, "Failed to submit feedback. Please try again.", Toast.LENGTH_SHORT).show()
             }
+
+            // Hide ProgressBar and show EditText and Button
+            progressBar.visibility = View.GONE
+            feedbackEditText.visibility = View.VISIBLE
+            submitButton.visibility = View.VISIBLE
         }
     }
 

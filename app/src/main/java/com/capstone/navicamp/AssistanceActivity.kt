@@ -3,14 +3,16 @@ package com.capstone.navicamp
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
-import androidx.appcompat.app.ActionBarDrawerToggle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,6 +22,8 @@ class AssistanceActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+    private lateinit var assistanceButton: Button
+    private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,8 +82,10 @@ class AssistanceActivity : AppCompatActivity() {
         UserSingleton.userID = sharedPreferences.getString("userID", null)
         UserSingleton.fullName = sharedPreferences.getString("fullName", null)
 
-        // Set up the Request Assistance button
-        val assistanceButton: Button = findViewById(R.id.requestAssistanceButton)
+        // Set up the Request Assistance button and ProgressBar
+        assistanceButton = findViewById(R.id.requestAssistanceButton)
+        progressBar = findViewById(R.id.progressBar)
+
         assistanceButton.setOnClickListener {
             Log.d("AssistanceActivity", "Request Assistance button clicked")
 
@@ -89,6 +95,10 @@ class AssistanceActivity : AppCompatActivity() {
             Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
 
             if (userID != null && fullName != null) {
+                // Show ProgressBar and hide Button
+                progressBar.visibility = View.VISIBLE
+                assistanceButton.visibility = View.GONE
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val success = withContext(Dispatchers.IO) {
                         MySQLHelper.insertLocationData(this@AssistanceActivity, userID, fullName)
@@ -100,6 +110,10 @@ class AssistanceActivity : AppCompatActivity() {
                         Log.e("AssistanceActivity", "Failed to insert location data")
                         Toast.makeText(this@AssistanceActivity, "Failed to request assistance. Please try again.", Toast.LENGTH_SHORT).show()
                     }
+
+                    // Hide ProgressBar and show Button
+                    progressBar.visibility = View.GONE
+                    assistanceButton.visibility = View.VISIBLE
                 }
             } else {
                 Log.e("AssistanceActivity", "User ID or Full Name is null")
