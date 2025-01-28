@@ -51,6 +51,7 @@ android {
     packagingOptions {
         pickFirst("META-INF/AL2.0")  // Pick the first occurrence of the AL2.0 file
         pickFirst("META-INF/LGPL2.1") // Pick the first occurrence of the LGPL2.1 file
+        pickFirst("META-INF/mimetypes.default")
     }
 }
 
@@ -69,6 +70,12 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:19.0.0")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+
+    implementation("com.sun.mail:android-mail:1.6.2") {
+        exclude(group = "javax.activation", module = "activation")
+    }
+    implementation("com.sun.mail:android-activation:1.6.2")
+
 
     //database
     implementation ("mysql:mysql-connector-java:8.0.33")
