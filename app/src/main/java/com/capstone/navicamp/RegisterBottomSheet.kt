@@ -16,6 +16,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import org.mindrot.jbcrypt.BCrypt
+import java.util.Random
+import java.util.Properties
+import javax.mail.Message
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
@@ -25,8 +33,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var emailEditText: EditText
     private lateinit var contactNumberEditText: EditText
     private lateinit var passwordEditText: EditText
+    private lateinit var otpEditText: EditText
+    private lateinit var sendOtpButton: Button
     private lateinit var termsConditionsCheckbox: CheckBox
     private lateinit var termsConditionsText: TextView
+    private var generatedOtp: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -40,6 +51,8 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         emailEditText = view.findViewById(R.id.email)
         contactNumberEditText = view.findViewById(R.id.contact_number)
         passwordEditText = view.findViewById(R.id.password)
+        otpEditText = view.findViewById(R.id.otp)
+        sendOtpButton = view.findViewById(R.id.send_otp)
         termsConditionsCheckbox = view.findViewById(R.id.terms_conditions_checkbox)
         termsConditionsText = view.findViewById(R.id.terms_conditions_text)
 
@@ -50,6 +63,20 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             userTypeSpinner.adapter = adapter
+        }
+
+        sendOtpButton.setOnClickListener {
+            val email = emailEditText.text.toString()
+            if (email.isNotEmpty()) {
+                generatedOtp = generateOtp()
+                CoroutineScope(Dispatchers.Main).launch {
+                    sendOtpEmail(email, generatedOtp!!)
+                }
+                otpEditText.visibility = View.VISIBLE
+                Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
+            }
         }
 
         val loginButton = view.findViewById<Button>(R.id.login)
@@ -76,15 +103,61 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return view
     }
 
+    private fun generateOtp(): String {
+        val random = Random()
+        val otp = StringBuilder()
+        for (i in 0 until 6) {
+            otp.append(random.nextInt(10))
+        }
+        return otp.toString()
+    }
+
+    private suspend fun sendOtpEmail(toEmail: String, otp: String) {
+        withContext(Dispatchers.IO) {
+            val username = "navicamp.noreply@gmail.com"
+            val password = "tcwp hour hlzz tcag" // App password
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props,
+                object : javax.mail.Authenticator() {
+                    override fun getPasswordAuthentication(): PasswordAuthentication {
+                        return PasswordAuthentication(username, password)
+                    }
+                })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(username))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail))
+                    subject = "Your OTP Code"
+                    setText("Your OTP code is: $otp")
+                }
+
+                Transport.send(message)
+                println("OTP email sent successfully")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun registerUser(view: View) {
         val fullName = fullNameEditText.text.toString()
         val email = emailEditText.text.toString()
         val contactNumber = contactNumberEditText.text.toString()
         val password = passwordEditText.text.toString()
+        val otp = otpEditText.text.toString()
         val userType = userTypeSpinner.selectedItem.toString()
 
         // Validation
-        if (fullName.isEmpty() || email.isEmpty() || contactNumber.isEmpty() || password.isEmpty()) {
+        if (fullName.isEmpty() || email.isEmpty() || contactNumber.isEmpty() || password.isEmpty() || otp.isEmpty()) {
             Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_SHORT).show()
             return
         }
@@ -99,12 +172,18 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        if (otp != generatedOtp) {
+            Toast.makeText(context, "Invalid OTP", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         // Show progress bar and hide input fields
         progressBar.visibility = View.VISIBLE
         fullNameEditText.visibility = View.GONE
         emailEditText.visibility = View.GONE
         contactNumberEditText.visibility = View.GONE
         passwordEditText.visibility = View.GONE
+        otpEditText.visibility = View.GONE
         userTypeSpinner.visibility = View.GONE
         termsConditionsCheckbox.visibility = View.GONE
         termsConditionsText.visibility = View.GONE
@@ -140,6 +219,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             emailEditText.visibility = View.VISIBLE
             contactNumberEditText.visibility = View.VISIBLE
             passwordEditText.visibility = View.VISIBLE
+            otpEditText.visibility = View.VISIBLE
             userTypeSpinner.visibility = View.VISIBLE
             termsConditionsCheckbox.visibility = View.VISIBLE
             termsConditionsText.visibility = View.VISIBLE
