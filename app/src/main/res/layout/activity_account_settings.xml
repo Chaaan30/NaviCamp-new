@@ -253,7 +253,9 @@
                             android:hint="Edit Contact Number"
                             android:visibility="gone"
                             android:layout_marginBottom="16dp"
-                            android:fontFamily="@font/inter" />
+                            android:fontFamily="@font/inter"
+                            android:inputType="number"
+                            android:maxLength="11" />
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
