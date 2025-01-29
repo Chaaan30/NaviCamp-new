@@ -140,6 +140,7 @@
                 </androidx.cardview.widget.CardView>
 
                 <!-- Email Card -->
+                <!-- Email Card -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/email_card"
                     android:layout_width="match_parent"
@@ -164,14 +165,59 @@
                             android:textColor="#000000"
                             android:fontFamily="@font/inter" />
 
-                        <EditText
-                            android:id="@+id/edit_email"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Edit Email"
-                            android:visibility="gone"
-                            android:layout_marginBottom="16dp"
-                            android:fontFamily="@font/inter" />
+                            android:orientation="horizontal">
+
+                            <EditText
+                                android:id="@+id/edit_email"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:hint="Edit Email"
+                                android:visibility="gone"
+                                android:layout_marginBottom="16dp"
+                                android:fontFamily="@font/inter" />
+
+                            <Button
+                                android:id="@+id/send_otp_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Send OTP"
+                                android:visibility="gone"
+                                android:background="@drawable/button_outline"
+                                android:textColor="@color/custom_blue"
+                                android:fontFamily="@font/inter" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <EditText
+                                android:id="@+id/edit_otp"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:hint="Enter OTP"
+                                android:visibility="gone"
+                                android:layout_marginBottom="16dp"
+                                android:fontFamily="@font/inter" />
+
+                            <Button
+                                android:id="@+id/confirm_otp_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Confirm OTP"
+                                android:visibility="gone"
+                                android:background="@drawable/button_outline"
+                                android:textColor="@color/custom_blue"
+                                android:fontFamily="@font/inter" />
+                        </LinearLayout>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
