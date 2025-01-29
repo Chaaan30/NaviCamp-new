@@ -508,8 +508,10 @@ object MySQLHelper {
                 }
                 statement.setString(index, userID)
 
+                Log.d("MySQLHelper", "Executing query: $query")
+                Log.d("MySQLHelper", "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID")
                 val rowsAffected = statement.executeUpdate()
-                Log.d("MySQLHelper", "User updated: $rowsAffected rows affected.")
+                Log.d("MySQLHelper", "Rows affected: $rowsAffected")
                 rowsAffected > 0
             } catch (e: SQLException) {
                 e.printStackTrace()
