@@ -3,6 +3,8 @@ package com.capstone.navicamp
 import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
+import android.os.CountDownTimer
+import android.text.InputFilter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
-import org.mindrot.jbcrypt.BCrypt
 import java.util.Random
 import java.util.Properties
 import javax.mail.Message
@@ -33,11 +34,16 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var emailEditText: EditText
     private lateinit var contactNumberEditText: EditText
     private lateinit var passwordEditText: EditText
+    private lateinit var confirmPasswordEditText: EditText
     private lateinit var otpEditText: EditText
     private lateinit var sendOtpButton: Button
+    private lateinit var sendOtpProgressBar: ProgressBar
+    private lateinit var otpTimerTextView: TextView
     private lateinit var termsConditionsCheckbox: CheckBox
     private lateinit var termsConditionsText: TextView
+    private lateinit var termsConditionsLabel: TextView
     private var generatedOtp: String? = null
+    private var isOtpSent: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -51,10 +57,22 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         emailEditText = view.findViewById(R.id.email)
         contactNumberEditText = view.findViewById(R.id.contact_number)
         passwordEditText = view.findViewById(R.id.password)
+        confirmPasswordEditText = view.findViewById(R.id.confirm_password)
         otpEditText = view.findViewById(R.id.otp)
         sendOtpButton = view.findViewById(R.id.send_otp)
+        sendOtpProgressBar = view.findViewById(R.id.send_otp_progress_bar) // Add this line
+        otpTimerTextView = view.findViewById(R.id.otp_timer)
         termsConditionsCheckbox = view.findViewById(R.id.terms_conditions_checkbox)
         termsConditionsText = view.findViewById(R.id.terms_conditions_text)
+        termsConditionsLabel = view.findViewById(R.id.terms_conditions_label)
+
+        // Set input filter for contact number to accept only 11 digits
+        contactNumberEditText.filters = arrayOf(InputFilter.LengthFilter(11), InputFilter { source, start, end, dest, dstart, dend ->
+            if (source.isEmpty()) return@InputFilter null // Allow deletion
+            if (source.length + dest.length > 11) return@InputFilter "" // Restrict to 11 digits
+            if (!source.matches(Regex("\\d+"))) return@InputFilter "" // Allow only digits
+            null
+        })
 
         ArrayAdapter.createFromResource(
             requireContext(),
@@ -68,12 +86,21 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         sendOtpButton.setOnClickListener {
             val email = emailEditText.text.toString()
             if (email.isNotEmpty()) {
-                generatedOtp = generateOtp()
+                sendOtpProgressBar.visibility = View.VISIBLE
+                sendOtpButton.visibility = View.GONE
+
                 CoroutineScope(Dispatchers.Main).launch {
-                    sendOtpEmail(email, generatedOtp!!)
+                    generatedOtp = generateOtp()
+                    withContext(Dispatchers.IO) {
+                        sendOtpEmail(email, generatedOtp!!)
+                    }
+                    sendOtpProgressBar.visibility = View.GONE
+                    sendOtpButton.visibility = View.VISIBLE
+                    otpEditText.visibility = View.VISIBLE
+                    isOtpSent = true // Set isOtpSent to true
+                    startOtpTimer()
+                    Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
                 }
-                otpEditText.visibility = View.VISIBLE
-                Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
             }
@@ -96,11 +123,139 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             AlertDialog.Builder(requireContext())
                 .setView(dialogView)
                 .setPositiveButton("OK", null)
-                .create()
                 .show()
         }
 
         return view
+    }
+
+    private fun startOtpTimer() {
+        sendOtpButton.visibility = View.GONE
+        otpTimerTextView.visibility = View.VISIBLE
+        object : CountDownTimer(30000, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                otpTimerTextView.text = "Resend in\n${millisUntilFinished / 1000}"
+            }
+
+            override fun onFinish() {
+                otpTimerTextView.visibility = View.GONE
+                sendOtpButton.visibility = View.VISIBLE
+            }
+        }.start()
+    }
+
+    private fun registerUser(view: View) {
+        val fullName = fullNameEditText.text.toString()
+        val email = emailEditText.text.toString()
+        val contactNumber = contactNumberEditText.text.toString()
+        val password = passwordEditText.text.toString()
+        val confirmPassword = confirmPasswordEditText.text.toString()
+        val otp = otpEditText.text.toString()
+        val userType = userTypeSpinner.selectedItem.toString()
+
+        // Validation
+        if (fullName.isEmpty() || email.isEmpty() || contactNumber.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || otp.isEmpty()) {
+            Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (userType == "User Types") {
+            Toast.makeText(context, "Please select a valid user type", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!termsConditionsCheckbox.isChecked) {
+            Toast.makeText(context, "Please read and agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!isOtpSent) {
+            Toast.makeText(context, "Please send the OTP", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (otp != generatedOtp) {
+            Toast.makeText(context, "Invalid OTP", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (password.length < 7) {
+            Toast.makeText(context, "Password must be at least 7 characters long", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (password != confirmPassword) {
+            Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (contactNumber.length != 11) {
+            Toast.makeText(context, "Contact number must be exactly 11 digits", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Show progress bar and hide input fields
+        progressBar.visibility = View.VISIBLE
+        fullNameEditText.visibility = View.GONE
+        emailEditText.visibility = View.GONE
+        contactNumberEditText.visibility = View.GONE
+        passwordEditText.visibility = View.GONE
+        confirmPasswordEditText.visibility = View.GONE
+        otpEditText.visibility = View.GONE
+        userTypeSpinner.visibility = View.GONE
+        termsConditionsCheckbox.visibility = View.GONE
+        termsConditionsText.visibility = View.GONE
+        termsConditionsLabel.visibility = View.GONE
+        otpTimerTextView.visibility = View.GONE // Hide the timer
+        sendOtpButton.visibility = View.GONE // Hide the Send OTP button
+        sendOtpProgressBar.visibility = View.GONE // Hide the Send OTP progress bar
+
+        // Hash the password
+        val hashedPassword = hashPassword(password)
+
+        // Register user
+        CoroutineScope(Dispatchers.Main).launch {
+            val userID = withContext(Dispatchers.IO) {
+                MySQLHelper.generateUserID()
+            }
+
+            if (userID != null) {
+                val isInserted = withContext(Dispatchers.IO) {
+                    MySQLHelper.insertUser(userID, fullName, userType, email, contactNumber, hashedPassword)
+                }
+
+                if (isInserted) {
+                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
+                    val loginBottomSheet = LoginBottomSheet()
+                    loginBottomSheet.show(parentFragmentManager, "LoginBottomSheet")
+                    dismiss()
+                } else {
+                    Toast.makeText(context, "Failed to register user", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(context, "Failed to generate user ID", Toast.LENGTH_SHORT).show()
+            }
+
+            // Hide progress bar and show input fields
+            progressBar.visibility = View.GONE
+            fullNameEditText.visibility = View.VISIBLE
+            emailEditText.visibility = View.VISIBLE
+            contactNumberEditText.visibility = View.VISIBLE
+            passwordEditText.visibility = View.VISIBLE
+            confirmPasswordEditText.visibility = View.VISIBLE
+            otpEditText.visibility = View.VISIBLE
+            userTypeSpinner.visibility = View.VISIBLE
+            termsConditionsCheckbox.visibility = View.VISIBLE
+            termsConditionsText.visibility = View.VISIBLE
+            termsConditionsLabel.visibility = View.VISIBLE
+            sendOtpButton.visibility = View.VISIBLE // Show the Send OTP button
+        }
+    }
+
+    private fun hashPassword(password: String): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val hashedBytes = md.digest(password.toByteArray())
+        return hashedBytes.joinToString("") { "%02x".format(it) }
     }
 
     private fun generateOtp(): String {
@@ -146,90 +301,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun registerUser(view: View) {
-        val fullName = fullNameEditText.text.toString()
-        val email = emailEditText.text.toString()
-        val contactNumber = contactNumberEditText.text.toString()
-        val password = passwordEditText.text.toString()
-        val otp = otpEditText.text.toString()
-        val userType = userTypeSpinner.selectedItem.toString()
-
-        // Validation
-        if (fullName.isEmpty() || email.isEmpty() || contactNumber.isEmpty() || password.isEmpty() || otp.isEmpty()) {
-            Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (userType == "User Types") {
-            Toast.makeText(context, "Please select a valid user type", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (!termsConditionsCheckbox.isChecked) {
-            Toast.makeText(context, "Please read and agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        if (otp != generatedOtp) {
-            Toast.makeText(context, "Invalid OTP", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // Show progress bar and hide input fields
-        progressBar.visibility = View.VISIBLE
-        fullNameEditText.visibility = View.GONE
-        emailEditText.visibility = View.GONE
-        contactNumberEditText.visibility = View.GONE
-        passwordEditText.visibility = View.GONE
-        otpEditText.visibility = View.GONE
-        userTypeSpinner.visibility = View.GONE
-        termsConditionsCheckbox.visibility = View.GONE
-        termsConditionsText.visibility = View.GONE
-
-        // Hash the password
-        val hashedPassword = hashPassword(password)
-
-        // Register user
-        CoroutineScope(Dispatchers.Main).launch {
-            val userID = withContext(Dispatchers.IO) {
-                MySQLHelper.generateUserID()
-            }
-
-            if (userID != null) {
-                val result = withContext(Dispatchers.IO) {
-                    MySQLHelper.insertUser(userID, fullName, userType, email, contactNumber, hashedPassword)
-                }
-                if (result) {
-                    Toast.makeText(view.context, "Registration Successful!", Toast.LENGTH_SHORT).show()
-                    dismiss()
-                    val loginBottomSheet = LoginBottomSheet()
-                    loginBottomSheet.show(parentFragmentManager, "LoginBottomSheet")
-                } else {
-                    Toast.makeText(view.context, "Failed to register user", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(view.context, "Failed to generate userID", Toast.LENGTH_SHORT).show()
-            }
-
-            // Hide progress bar and show input fields
-            progressBar.visibility = View.GONE
-            fullNameEditText.visibility = View.VISIBLE
-            emailEditText.visibility = View.VISIBLE
-            contactNumberEditText.visibility = View.VISIBLE
-            passwordEditText.visibility = View.VISIBLE
-            otpEditText.visibility = View.VISIBLE
-            userTypeSpinner.visibility = View.VISIBLE
-            termsConditionsCheckbox.visibility = View.VISIBLE
-            termsConditionsText.visibility = View.VISIBLE
-        }
-    }
-
-    private fun hashPassword(password: String): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val hashedBytes = md.digest(password.toByteArray())
-        return hashedBytes.joinToString("") { "%02x".format(it) }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

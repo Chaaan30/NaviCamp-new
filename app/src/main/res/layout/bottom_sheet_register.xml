@@ -26,15 +26,49 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp" />
 
-    <EditText
-        android:id="@+id/email"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Email"
-        android:fontFamily="@font/inter"
+        android:orientation="horizontal"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
+        android:layout_marginEnd="16dp">
+
+        <EditText
+            android:id="@+id/email"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Email"
+            android:fontFamily="@font/inter" />
+
+        <Button
+            android:id="@+id/send_otp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Send OTP"
+            android:fontFamily="@font/inter"
+            android:layout_marginStart="8dp" />
+
+        <ProgressBar
+            android:id="@+id/send_otp_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/otp_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_marginStart="8dp"
+            android:padding="8dp"
+            android:lineSpacingExtra="4dp"
+            android:textSize="10sp" />
+    </LinearLayout>
 
     <EditText
         android:id="@+id/otp"
@@ -46,16 +80,6 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:visibility="gone" />
-
-    <Button
-        android:id="@+id/send_otp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Send OTP to Email"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp" />
 
     <EditText
         android:id="@+id/contact_number"
@@ -73,6 +97,17 @@
         android:layout_height="wrap_content"
         android:inputType="textPassword"
         android:hint="Password"
+        android:fontFamily="@font/inter"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp" />
+
+    <EditText
+        android:id="@+id/confirm_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:hint="Confirm Password"
         android:fontFamily="@font/inter"
         android:layout_marginTop="8dp"
         android:layout_marginStart="16dp"
@@ -102,6 +137,7 @@
             android:buttonTint="?attr/colorControlActivated" />
 
         <TextView
+            android:id="@+id/terms_conditions_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/inter"
