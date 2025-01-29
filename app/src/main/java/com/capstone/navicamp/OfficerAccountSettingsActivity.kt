@@ -171,6 +171,12 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     }
                 }
 
+                // Validate contact number
+                if (newContactNumber.isNotBlank() && newContactNumber.length != 11) {
+                    Toast.makeText(this, "Contact number must be exactly 11 digits", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
                 progressBar.visibility = View.VISIBLE
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
