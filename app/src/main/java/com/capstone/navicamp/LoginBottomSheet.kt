@@ -22,6 +22,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     private lateinit var emailEditText: EditText
     private lateinit var passwordEditText: EditText
     private lateinit var progressBar: ProgressBar
+    private lateinit var forgotPasswordTextView: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,9 +33,16 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         emailEditText = view.findViewById(R.id.email)
         passwordEditText = view.findViewById(R.id.password)
         progressBar = view.findViewById(R.id.progress_bar)
+        forgotPasswordTextView = view.findViewById(R.id.forgot_password) // Initialize forgotPasswordTextView
 
         val loginButton = view.findViewById<Button>(R.id.login_button)
         val createAccountButton = view.findViewById<Button>(R.id.create_account_button)
+
+        forgotPasswordTextView.setOnClickListener {
+            val forgotPasswordBottomSheet = ForgotPasswordBottomSheet()
+            forgotPasswordBottomSheet.show(parentFragmentManager, forgotPasswordBottomSheet.tag)
+            dismiss() // Hide the login bottom sheet
+        }
 
         loginButton.setOnClickListener {
             loginUser(view)
@@ -59,10 +67,11 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
-        // Show progress bar and hide EditText fields
+        // Show progress bar and hide EditText fields and Forgot Password TextView
         progressBar.visibility = View.VISIBLE
         emailEditText.visibility = View.GONE
         passwordEditText.visibility = View.GONE
+        forgotPasswordTextView.visibility = View.GONE
 
         // Handle login logic
         CoroutineScope(Dispatchers.Main).launch {
@@ -104,10 +113,11 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 Log.e("LoginBottomSheet", "Error during login", e)
                 Toast.makeText(context, "An error occurred during login", Toast.LENGTH_SHORT).show()
             } finally {
-                // Hide progress bar and show EditText fields
+                // Hide progress bar and show EditText fields and Forgot Password TextView
                 progressBar.visibility = View.GONE
                 emailEditText.visibility = View.VISIBLE
                 passwordEditText.visibility = View.VISIBLE
+                forgotPasswordTextView.visibility = View.VISIBLE
 
                 // Check if the internet is slow
                 val endTime = System.currentTimeMillis()

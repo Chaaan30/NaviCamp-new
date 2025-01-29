@@ -799,6 +799,34 @@ object MySQLHelper {
         }
     }
 
+    suspend fun updateUserPasswordByEmail(email: String, newPassword: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                val query = "UPDATE user_table SET password = ? WHERE email = ?"
+                statement = connection.prepareStatement(query)
+                statement.setString(1, newPassword)
+                statement.setString(2, email)
+
+                val rowsAffected = statement.executeUpdate()
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
     fun updateStatus(locationID: String, newStatus: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
