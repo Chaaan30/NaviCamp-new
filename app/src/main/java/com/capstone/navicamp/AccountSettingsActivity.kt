@@ -53,7 +53,7 @@ class AccountSettingsActivity : AppCompatActivity() {
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Account Information"
+        supportActionBar?.title = "Account Settings"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -137,7 +137,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_item2 -> {
-                    // Navigate to LocomotorDisabilityActivity and clear the activity stack
+                    // Navigate to SecurityOfficerActivity and clear the activity stack
                     val intent = Intent(this, LocomotorDisabilityActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
@@ -218,6 +218,16 @@ class AccountSettingsActivity : AppCompatActivity() {
         }
 
         cancelEditButton.setOnClickListener {
+            // Clear the text fields
+            editFullName.text.clear()
+            editEmail.text.clear()
+            editContactNumber.text.clear()
+            editOtp.text.clear()
+
+            // Re-enable the disabled fields
+            editEmail.isEnabled = true
+
+            // Hide the editable fields and buttons
             editFullName.visibility = View.GONE
             editEmail.visibility = View.GONE
             editContactNumber.visibility = View.GONE
@@ -230,17 +240,33 @@ class AccountSettingsActivity : AppCompatActivity() {
         sendOtpButton.setOnClickListener {
             val newEmail = editEmail.text.toString()
             if (newEmail.isNotBlank()) {
+                if (newEmail == email) {
+                    Toast.makeText(this, "The new email is the same as the current email", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
                 progressBar.visibility = View.VISIBLE
                 editEmail.isEnabled = false // Disable the email EditText
+
                 CoroutineScope(Dispatchers.Main).launch {
-                    generatedOtp = generateOtp()
-                    withContext(Dispatchers.IO) {
-                        sendOtpEmail(newEmail, generatedOtp!!)
+                    val emailExists = withContext(Dispatchers.IO) {
+                        MySQLHelper.isEmailExists(newEmail, userID!!)
                     }
-                    progressBar.visibility = View.GONE
-                    editOtp.visibility = View.VISIBLE
-                    confirmOtpButton.visibility = View.VISIBLE
-                    Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+
+                    if (emailExists) {
+                        progressBar.visibility = View.GONE
+                        editEmail.isEnabled = true
+                        Toast.makeText(this@AccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
+                    } else {
+                        generatedOtp = generateOtp()
+                        withContext(Dispatchers.IO) {
+                            sendOtpEmail(newEmail, generatedOtp!!)
+                        }
+                        progressBar.visibility = View.GONE
+                        editOtp.visibility = View.VISIBLE
+                        confirmOtpButton.visibility = View.VISIBLE
+                        Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } else {
                 Toast.makeText(this, "Please enter a new email", Toast.LENGTH_SHORT).show()
