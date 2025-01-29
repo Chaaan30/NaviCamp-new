@@ -171,42 +171,40 @@ class AccountSettingsActivity : AppCompatActivity() {
                     }
                 }
 
-                if (isOtpConfirmed || editEmail.visibility != View.VISIBLE) {
-                    progressBar.visibility = View.VISIBLE
-                    CoroutineScope(Dispatchers.Main).launch {
-                        val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-                        val result = withContext(Dispatchers.IO) {
-                            MySQLHelper.updateUserWithUserID(
-                                if (newFullName.isNotBlank()) newFullName else "",
-                                if (newEmail.isNotBlank()) newEmail else "",
-                                if (newContactNumber.isNotBlank()) newContactNumber else "",
-                                userID!!,
-                                updatedOn
-                            )
-                        }
-                        withContext(Dispatchers.Main) {
-                            progressBar.visibility = View.GONE
-                            Log.d("AccountSettingsActivity", "Update result: $result")
-                            if (result) {
-                                Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
-                                // Update the TextViews with the new values
-                                if (newFullName.isNotBlank()) {
-                                    findViewById<TextView>(R.id.full_name_text).text = "Full Name: $newFullName"
-                                    sharedPreferences.edit().putString("fullName", newFullName).apply()
-                                }
-                                if (newEmail.isNotBlank()) {
-                                    findViewById<TextView>(R.id.email_text).text = "Email: $newEmail"
-                                    sharedPreferences.edit().putString("email", newEmail).apply()
-                                }
-                                if (newContactNumber.isNotBlank()) {
-                                    findViewById<TextView>(R.id.contact_number_text).text = "Contact Number: $newContactNumber"
-                                    sharedPreferences.edit().putString("contactNumber", newContactNumber).apply()
-                                }
-                                finish()
-                                startActivity(intent)
-                            } else {
-                                Toast.makeText(this@AccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
+                progressBar.visibility = View.VISIBLE
+                CoroutineScope(Dispatchers.Main).launch {
+                    val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                    val result = withContext(Dispatchers.IO) {
+                        MySQLHelper.updateUserWithUserID(
+                            if (newFullName.isNotBlank()) newFullName else "",
+                            if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
+                            if (newContactNumber.isNotBlank()) newContactNumber else "",
+                            userID!!,
+                            updatedOn
+                        )
+                    }
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        Log.d("AccountSettingsActivity", "Update result: $result")
+                        if (result) {
+                            Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
+                            // Update the TextViews with the new values
+                            if (newFullName.isNotBlank()) {
+                                findViewById<TextView>(R.id.full_name_text).text = "Full Name: $newFullName"
+                                sharedPreferences.edit().putString("fullName", newFullName).apply()
                             }
+                            if (isOtpConfirmed && newEmail.isNotBlank()) {
+                                findViewById<TextView>(R.id.email_text).text = "Email: $newEmail"
+                                sharedPreferences.edit().putString("email", newEmail).apply()
+                            }
+                            if (newContactNumber.isNotBlank()) {
+                                findViewById<TextView>(R.id.contact_number_text).text = "Contact Number: $newContactNumber"
+                                sharedPreferences.edit().putString("contactNumber", newContactNumber).apply()
+                            }
+                            finish()
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@AccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
