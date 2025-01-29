@@ -20,21 +20,40 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Properties
+import javax.mail.Message
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
 
 class OfficerAccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var progressBar: ProgressBar
+    private lateinit var sendOtpButton: Button
+    private lateinit var confirmOtpButton: Button
+    private lateinit var editOtp: EditText
+    private lateinit var editEmail: EditText
+    private var generatedOtp: String? = null
+    private var isOtpConfirmed: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_officer_account_settings)
 
+        // Initialize views
+        sendOtpButton = findViewById(R.id.send_otp_button)
+        confirmOtpButton = findViewById(R.id.confirm_otp_button)
+        editOtp = findViewById(R.id.edit_otp)
+        editEmail = findViewById(R.id.edit_email)
+
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.title = "Officer Account Information"
+        supportActionBar?.title = "Officer Account Settings"
 
         // Set up the DrawerLayout and ActionBarDrawerToggle
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -112,7 +131,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_item1 -> {
-                    // Navigate to OfficerAccountSettingsActivity
+                    // Navigate to AccountSettingsActivity
                     val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
                     startActivity(intent)
                     true
@@ -132,86 +151,68 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         val updateInfoButton: Button = findViewById(R.id.update_info_button)
         val cancelEditButton: Button = findViewById(R.id.cancel_edit_button)
         val editFullName: EditText = findViewById(R.id.edit_full_name)
-        val editEmail: EditText = findViewById(R.id.edit_email)
         val editContactNumber: EditText = findViewById(R.id.edit_contact_number)
 
         updateInfoButton.setOnClickListener {
-            if (editFullName.visibility == View.VISIBLE) {
+            if (editFullName.visibility == View.VISIBLE || editEmail.visibility == View.VISIBLE || editContactNumber.visibility == View.VISIBLE) {
                 val newFullName = editFullName.text.toString()
                 val newEmail = editEmail.text.toString()
                 val newContactNumber = editContactNumber.text.toString()
-                val currentDateTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                val otp = editOtp.text.toString()
 
-                // Show ProgressBar and hide EditText and Buttons
+                Log.d("OfficerAccountSettingsActivity", "newFullName: $newFullName")
+                Log.d("OfficerAccountSettingsActivity", "newEmail: $newEmail")
+                Log.d("OfficerAccountSettingsActivity", "newContactNumber: $newContactNumber")
+                Log.d("OfficerAccountSettingsActivity", "userID: $userID") // Log the userID
+
+                if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
+                    if (otp == generatedOtp) {
+                        isOtpConfirmed = true
+                    }
+                }
+
                 progressBar.visibility = View.VISIBLE
-                editFullName.visibility = View.GONE
-                editEmail.visibility = View.GONE
-                editContactNumber.visibility = View.GONE
-                updateInfoButton.visibility = View.GONE
-                cancelEditButton.visibility = View.GONE
-
                 CoroutineScope(Dispatchers.Main).launch {
-                    val userId = userID ?: return@launch // Handle null userID case
-                    if (newEmail.isNotBlank() && MySQLHelper.isEmailExists(newEmail, userId)) {
-                        Toast.makeText(this@OfficerAccountSettingsActivity, "Email already exists. Please use a different email.", Toast.LENGTH_SHORT).show()
-                    } else if (newContactNumber.isNotBlank() && MySQLHelper.isContactNumberExists(newContactNumber, userId)) {
-                        Toast.makeText(this@OfficerAccountSettingsActivity, "Contact number already exists. Please use a different contact number.", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val success = withContext(Dispatchers.IO) {
-                            MySQLHelper.updateUserWithUserID(newFullName, newEmail, newContactNumber, userId, currentDateTime)
-                        }
-                        if (success) {
-                            // Update SharedPreferences and UI
-                            val editor = sharedPreferences.edit()
+                    val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                    val result = withContext(Dispatchers.IO) {
+                        MySQLHelper.updateUserWithUserID(
+                            if (newFullName.isNotBlank()) newFullName else "",
+                            if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
+                            if (newContactNumber.isNotBlank()) newContactNumber else "",
+                            userID!!,
+                            updatedOn
+                        )
+                    }
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        Log.d("OfficerAccountSettingsActivity", "Update result: $result")
+                        if (result) {
+                            Toast.makeText(this@OfficerAccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
+                            // Update the TextViews with the new values
                             if (newFullName.isNotBlank()) {
-                                editor.putString("fullName", newFullName)
-                                findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $newFullName"
-                                // Update the header view
-                                val headerView = navigationView.getHeaderView(0)
-                                headerView.findViewById<TextView>(R.id.nav_name_header)?.text = newFullName
-                                // Update UserSingleton
-                                UserSingleton.fullName = newFullName
+                                findViewById<TextView>(R.id.full_name_text).text = "Full Name: $newFullName"
+                                sharedPreferences.edit().putString("fullName", newFullName).apply()
                             }
-                            if (newEmail.isNotBlank()) {
-                                editor.putString("email", newEmail)
-                                findViewById<TextView>(R.id.email_text)?.text = "Email: $newEmail"
-                            } else {
-                                findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
+                            if (isOtpConfirmed && newEmail.isNotBlank()) {
+                                findViewById<TextView>(R.id.email_text).text = "Email: $newEmail"
+                                sharedPreferences.edit().putString("email", newEmail).apply()
                             }
                             if (newContactNumber.isNotBlank()) {
-                                editor.putString("contactNumber", newContactNumber)
-                                findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $newContactNumber"
-                            } else {
-                                findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
+                                findViewById<TextView>(R.id.contact_number_text).text = "Contact Number: $newContactNumber"
+                                sharedPreferences.edit().putString("contactNumber", newContactNumber).apply()
                             }
-                            editor.putString("updatedOn", currentDateTime)
-                            editor.apply()
-
-                            findViewById<TextView>(R.id.updated_on_text)?.text = "Updated On: ${SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()).format(Date())}"
-                            findViewById<View>(R.id.updated_on_card)?.visibility = View.VISIBLE
-
-                            // Show toast message
-                            Toast.makeText(this@OfficerAccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
-
-                            // Clear EditText fields
-                            editFullName.text.clear()
-                            editEmail.text.clear()
-                            editContactNumber.text.clear()
+                            finish()
+                            startActivity(intent)
+                        } else {
+                            Toast.makeText(this@OfficerAccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
                         }
                     }
-
-                    // Hide ProgressBar and show EditText and Buttons
-                    progressBar.visibility = View.GONE
-                    editFullName.visibility = View.GONE
-                    editEmail.visibility = View.GONE
-                    editContactNumber.visibility = View.GONE
-                    updateInfoButton.visibility = View.VISIBLE
-                    cancelEditButton.visibility = View.GONE
                 }
             } else {
                 editFullName.visibility = View.VISIBLE
                 editEmail.visibility = View.VISIBLE
                 editContactNumber.visibility = View.VISIBLE
+                sendOtpButton.visibility = View.VISIBLE
                 cancelEditButton.visibility = View.VISIBLE
             }
         }
@@ -220,7 +221,87 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
             editFullName.visibility = View.GONE
             editEmail.visibility = View.GONE
             editContactNumber.visibility = View.GONE
+            sendOtpButton.visibility = View.GONE
+            editOtp.visibility = View.GONE
+            confirmOtpButton.visibility = View.GONE
             cancelEditButton.visibility = View.GONE
+        }
+
+        sendOtpButton.setOnClickListener {
+            val newEmail = editEmail.text.toString()
+            if (newEmail.isNotBlank()) {
+                progressBar.visibility = View.VISIBLE
+                editEmail.isEnabled = false // Disable the email EditText
+                CoroutineScope(Dispatchers.Main).launch {
+                    generatedOtp = generateOtp()
+                    withContext(Dispatchers.IO) {
+                        sendOtpEmail(newEmail, generatedOtp!!)
+                    }
+                    progressBar.visibility = View.GONE
+                    editOtp.visibility = View.VISIBLE
+                    confirmOtpButton.visibility = View.VISIBLE
+                    Toast.makeText(this@OfficerAccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Please enter a new email", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        confirmOtpButton.setOnClickListener {
+            val otp = editOtp.text.toString()
+            if (otp == generatedOtp) {
+                isOtpConfirmed = true
+                Toast.makeText(this, "OTP confirmed", Toast.LENGTH_SHORT).show()
+                editOtp.visibility = View.GONE
+                confirmOtpButton.visibility = View.GONE
+            } else {
+                Toast.makeText(this, "Invalid OTP", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun generateOtp(): String {
+        val random = Random()
+        val otp = StringBuilder()
+        for (i in 0 until 6) {
+            otp.append(random.nextInt(10))
+        }
+        return otp.toString()
+    }
+
+    private suspend fun sendOtpEmail(toEmail: String, otp: String) {
+        withContext(Dispatchers.IO) {
+            val username = "navicamp.noreply@gmail.com"
+            val password = "tcwp hour hlzz tcag" // App password
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props,
+                object : javax.mail.Authenticator() {
+                    override fun getPasswordAuthentication(): PasswordAuthentication {
+                        return PasswordAuthentication(username, password)
+                    }
+                })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(username))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail))
+                    subject = "Your OTP Code"
+                    setText("Your OTP code is: $otp")
+                }
+
+                Transport.send(message)
+                println("OTP email sent successfully")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
