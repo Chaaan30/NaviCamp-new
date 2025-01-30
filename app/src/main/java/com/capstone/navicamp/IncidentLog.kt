@@ -1,9 +1,14 @@
 package com.capstone.navicamp
 
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.widget.AdapterView
+import android.widget.Button
+import android.widget.Spinner
 import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
@@ -14,6 +19,10 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class IncidentLog : AppCompatActivity() {
 
@@ -21,6 +30,8 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var tableLayout: TableLayout
+    private lateinit var filterTypeSpinner: Spinner
+    private lateinit var selectDateButton: Button
 
     private val viewModel: IncidentLogViewModel by viewModels()
     private lateinit var dataChangeReceiver: DataChangeReceiver
@@ -107,6 +118,81 @@ class IncidentLog : AppCompatActivity() {
 
         // Start refreshing incident data every second
         handler.postDelayed(refreshRunnable, refreshInterval)
+
+        filterTypeSpinner = findViewById(R.id.filter_type_spinner)
+        selectDateButton = findViewById(R.id.select_date_button)
+
+        selectDateButton.setOnClickListener { showFilterPicker() }
+
+        filterTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedFilter = parent?.getItemAtPosition(position).toString()
+                viewModel.incidentData.observe(this@IncidentLog) { data ->
+                    val filteredData = filterDataByDate(data, selectedFilter)
+                    displayDataInTable(filteredData)
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun showFilterPicker() {
+        val selectedFilterType = filterTypeSpinner.selectedItem.toString()
+        when (selectedFilterType) {
+            "Year" -> showYearPicker()
+            "Month" -> showMonthPicker()
+            "Week" -> showWeekPicker()
+            "Day" -> showDayPicker()
+        }
+    }
+
+    private fun showYearPicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(this, { _, year, _, _ ->
+            val selectedDate = Calendar.getInstance()
+            selectedDate.set(year, 0, 1)
+            viewModel.incidentData.observe(this) { data ->
+                val filteredData = filterDataByDate(data, "Year", selectedDate.time)
+                displayDataInTable(filteredData)
+            }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun showMonthPicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(this, { _, year, month, _ ->
+            val selectedDate = Calendar.getInstance()
+            selectedDate.set(year, month, 1)
+            viewModel.incidentData.observe(this) { data ->
+                val filteredData = filterDataByDate(data, "Month", selectedDate.time)
+                displayDataInTable(filteredData)
+            }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun showWeekPicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(this, { _, year, month, dayOfMonth ->
+            val selectedDate = Calendar.getInstance()
+            selectedDate.set(year, month, dayOfMonth)
+            viewModel.incidentData.observe(this) { data ->
+                val filteredData = filterDataByDate(data, "Week", selectedDate.time)
+                displayDataInTable(filteredData)
+            }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun showDayPicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(this, { _, year, month, dayOfMonth ->
+            val selectedDate = Calendar.getInstance()
+            selectedDate.set(year, month, dayOfMonth)
+            viewModel.incidentData.observe(this) { data ->
+                val filteredData = filterDataByDate(data, "Day", selectedDate.time)
+                displayDataInTable(filteredData)
+            }
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
 
     private fun displayDataInTable(incidentData: List<List<String>>) {
@@ -163,5 +249,31 @@ class IncidentLog : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(refreshRunnable) // Stop the handler when the activity is destroyed
+    }
+
+    private fun filterDataByDate(data: List<List<String>>, filterType: String, selectedDate: Date = Date()): List<List<String>> {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val calendar = Calendar.getInstance()
+        calendar.time = selectedDate
+
+        return when (filterType) {
+            "Year" -> data.filter { it[9].startsWith("${calendar.get(Calendar.YEAR)}") }
+            "Month" -> data.filter { it[9].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
+            "Week" -> data.filter {
+                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
+                val incidentCalendar = Calendar.getInstance()
+                incidentCalendar.time = incidentDate
+                calendar.get(Calendar.WEEK_OF_YEAR) == incidentCalendar.get(Calendar.WEEK_OF_YEAR) &&
+                        calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
+            }
+            "Day" -> data.filter {
+                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
+                val incidentCalendar = Calendar.getInstance()
+                incidentCalendar.time = incidentDate
+                calendar.get(Calendar.DAY_OF_YEAR) == incidentCalendar.get(Calendar.DAY_OF_YEAR) &&
+                        calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
+            }
+            else -> data
+        }
     }
 }
