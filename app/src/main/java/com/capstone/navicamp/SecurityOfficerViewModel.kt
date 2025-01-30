@@ -18,6 +18,7 @@ class SecurityOfficerViewModel : ViewModel() {
     private val _deviceCount = MutableLiveData<Int>()
     val deviceCount: LiveData<Int> get() = _deviceCount
 
+
     fun fetchPendingItems() {
         viewModelScope.launch {
             val items = withContext(Dispatchers.IO) {
@@ -44,4 +45,5 @@ class SecurityOfficerViewModel : ViewModel() {
             _deviceCount.postValue(count)
         }
     }
+
 }

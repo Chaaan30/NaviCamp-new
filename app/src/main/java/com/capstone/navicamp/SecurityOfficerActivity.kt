@@ -69,6 +69,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
+        val incidentLogBtn: Button = findViewById(R.id.incidentLogBtn)
+        incidentLogBtn.setOnClickListener {
+            val intent = Intent(this, IncidentLog::class.java)
+            startActivity(intent)
+        }
+
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
