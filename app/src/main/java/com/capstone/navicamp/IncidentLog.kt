@@ -69,6 +69,11 @@ class IncidentLog : AppCompatActivity() {
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
 
+        // Set the officer's full name in the navigation header
+        val headerView = navigationView.getHeaderView(0)
+        val navNameHeader: TextView = headerView.findViewById(R.id.nav_name_header)
+        navNameHeader.text = UserSingleton.fullName
+
         // Set up NavigationView item click listener
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
@@ -88,16 +93,14 @@ class IncidentLog : AppCompatActivity() {
                 }
 
                 R.id.nav_item1 -> {
-                    // Navigate to AccountSettingsActivity
-                    val intent = Intent(this, AccountSettingsActivity::class.java)
+                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     true
                 }
 
                 R.id.nav_item2 -> {
-                    // Navigate to LocomotorDisabilityActivity and clear the activity stack
-                    val intent = Intent(this, LocomotorDisabilityActivity::class.java)
+                    val intent = Intent(this, SecurityOfficerActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     true

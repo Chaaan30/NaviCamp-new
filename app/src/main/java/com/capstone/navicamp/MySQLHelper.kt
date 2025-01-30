@@ -298,6 +298,7 @@ object MySQLHelper {
             if (rowsAffected > 0) {
                 // Send broadcast
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
+                intent.setClassName("com.capstone.navicamp", "com.capstone.navicamp.DataChangeReceiver")
                 context.sendBroadcast(intent)
             }
 
