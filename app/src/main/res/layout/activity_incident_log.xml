@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/drawer_layout"
+    android:background="#F0F3FD">
+
+    <!-- Main Content -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- App Bar with Toolbar -->
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:title="Security Officer"
+                android:titleTextColor="@android:color/white" />
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <!-- Main Screen Content -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="Filter by"
+                        android:textColor="#000000"
+                        android:textSize="16sp"
+                        android:layout_marginRight="10dp"/>
+
+                    <Spinner
+                        android:id="@+id/filter_type_spinner"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/inter"
+                        android:entries="@array/filter_types"
+                        android:backgroundTint="@color/primaryColor"
+                        android:layout_marginEnd="8dp" />
+
+                    <Button
+                        android:id="@+id/select_date_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/primaryColor"
+                        android:elevation="4dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Select Date"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold" />
+
+
+                </LinearLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fillViewport="true"
+                    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+                    <TableLayout
+                        android:id="@+id/tableLayout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@android:color/white">
+
+                        <!-- Table Header -->
+                        <TableRow
+                            android:background="@color/custom_blue">
+
+
+                            <TextView
+                                android:layout_width="300sp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/inter_bold"
+                                android:gravity="left"
+                                android:padding="20dp"
+                                android:text="@string/col1"
+                                android:textColor="@android:color/white"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col2"
+                                android:fontFamily="@font/inter_bold"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+                            <TextView
+                                android:layout_width="250sp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col3"
+                                android:fontFamily="@font/inter_bold"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col4"
+                                android:fontFamily="@font/inter_bold"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col5"
+                                android:fontFamily="@font/inter_bold"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/inter_bold"
+                                android:gravity="left"
+                                android:padding="20dp"
+                                android:text="@string/col6"
+                                android:textColor="@android:color/white"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="left"
+                                android:fontFamily="@font/inter_bold"
+                                android:padding="20dp"
+                                android:text="@string/col7"
+                                android:textColor="@android:color/white"
+                                android:textSize="14sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col8"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:fontFamily="@font/inter_bold"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col9"
+                                android:textColor="@android:color/white"
+                                android:padding="20dp"
+                                android:fontFamily="@font/inter_bold"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/col10"
+                                android:textColor="@android:color/white"
+                                android:fontFamily="@font/inter_bold"
+                                android:padding="20dp"
+                                android:textSize="14sp"
+                                android:layout_weight="1"
+                                android:gravity="left" />
+                        </TableRow>
+
+                        <!-- Table Data -->
+                        <TableRow android:background="#FDFDFD"></TableRow>
+                    </TableLayout>
+                </HorizontalScrollView>
+
+            </LinearLayout>
+        </ScrollView>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <!-- Navigation Drawer -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/navigation_view"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="true"
+        android:background="@color/primaryColor"
+        android:fontFamily="@font/inter"
+        app:headerLayout="@layout/nav_header_officer"
+        app:itemTextColor="@color/onPrimaryColor"
+        app:menu="@menu/drawer_menu_officer" />
+</androidx.drawerlayout.widget.DrawerLayout>
