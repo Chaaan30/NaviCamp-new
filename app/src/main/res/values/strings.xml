@@ -2,12 +2,29 @@
     <string name="app_name">NaviCamp</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="col1">Alert ID</string>
+    <string name="col2">Name</string>
+    <string name="col3">User Type</string>
+    <string name="col4">Device ID</string>
+    <string name="col5">Coordinates</string>
+    <string name="col6">Floor Level</string>
+    <string name="col7">Reported Incident Type</string>
+    <string name="col8">Status</string>
+    <string name="col9">Time of Alert</string>
+    <string name="col10">Resolved On</string>
 
     <string-array name="user_types_reg">
         <item>User Types</item>
         <item>Student</item>
         <item>Personnel</item>
         <item>Visitor</item>
+    </string-array>
+
+    <string-array name="filter_types">
+        <item>Year</item>
+        <item>Month</item>
+        <item>Week</item>
+        <item>Day</item>
     </string-array>
 
     <string-array name="user_types_log">
