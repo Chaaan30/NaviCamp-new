@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -27,7 +28,6 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
-import android.graphics.drawable.ColorDrawable
 
 class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
 
@@ -39,6 +39,7 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
     private lateinit var otpTimerTextView: TextView
     private lateinit var confirmOtpButton: Button
     private lateinit var resetPasswordButton: Button
+    private lateinit var progressBar: ProgressBar
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
 
@@ -56,26 +57,38 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         otpTimerTextView = view.findViewById(R.id.otp_timer)
         confirmOtpButton = view.findViewById(R.id.confirm_otp_button)
         resetPasswordButton = view.findViewById(R.id.reset_password_button)
+        progressBar = view.findViewById(R.id.progress_bar)
 
         sendOtpButton.setOnClickListener {
             val email = emailEditText.text.toString()
             if (email.isNotEmpty()) {
-                val loadingDialog = showLoadingDialog()
+                progressBar.visibility = View.VISIBLE
+                emailEditText.visibility = View.GONE
+                otpEditText.visibility = View.GONE
+                newPasswordEditText.visibility = View.GONE
+                confirmPasswordEditText.visibility = View.GONE
+                sendOtpButton.visibility = View.GONE
+                otpTimerTextView.visibility = View.GONE
+                confirmOtpButton.visibility = View.GONE
+                resetPasswordButton.visibility = View.GONE
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val userData = withContext(Dispatchers.IO) {
                         MySQLHelper.getUserDataByEmail(email)
                     }
-                    loadingDialog.dismiss()
+
                     if (userData != null) {
                         generatedOtp = generateOtp()
                         withContext(Dispatchers.IO) {
                             sendOtpEmail(email, generatedOtp!!)
                         }
+                        progressBar.visibility = View.GONE
                         otpEditText.visibility = View.VISIBLE
                         confirmOtpButton.visibility = View.VISIBLE
                         startOtpTimer()
                         Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
                     } else {
+                        progressBar.visibility = View.GONE
                         emailEditText.visibility = View.VISIBLE
                         sendOtpButton.visibility = View.VISIBLE
                         Toast.makeText(context, "Email not found", Toast.LENGTH_SHORT).show()
@@ -113,14 +126,14 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
             }
 
             if (newPassword == confirmPassword) {
-                val loadingDialog = showLoadingDialog()
+                progressBar.visibility = View.VISIBLE
                 CoroutineScope(Dispatchers.Main).launch {
                     val hashedPassword = hashPassword(newPassword)
                     val email = emailEditText.text.toString()
                     val result = withContext(Dispatchers.IO) {
                         MySQLHelper.updateUserPasswordByEmail(email, hashedPassword)
                     }
-                    loadingDialog.dismiss()
+                    progressBar.visibility = View.GONE
                     if (result) {
                         Toast.makeText(context, "Password reset successfully", Toast.LENGTH_SHORT).show()
                         dismiss()
@@ -210,15 +223,6 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         val md = MessageDigest.getInstance("SHA-256")
         val hashedBytes = md.digest(password.toByteArray())
         return hashedBytes.joinToString("") { "%02x".format(it) }
-    }
-
-    private fun showLoadingDialog(): Dialog {
-        val dialog = Dialog(requireContext())
-        dialog.setContentView(R.layout.dialog_loading)
-        dialog.setCancelable(false)
-        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
-        dialog.show()
-        return dialog
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
