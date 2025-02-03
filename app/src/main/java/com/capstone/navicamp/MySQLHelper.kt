@@ -421,7 +421,8 @@ object MySQLHelper {
         userType: String,
         email: String,
         contactNumber: String,
-        password: String
+        password: String,
+        proofDisability: String?
     ): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -448,7 +449,7 @@ object MySQLHelper {
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
             val query =
-                "INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, createdOn) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofDisability, createdOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             statement = connection.prepareStatement(query)
             statement.setString(1, userID)
             statement.setString(2, fullName)
@@ -456,7 +457,8 @@ object MySQLHelper {
             statement.setString(4, email)
             statement.setString(5, contactNumber)
             statement.setString(6, password)
-            statement.setString(7, currentDateTime)
+            statement.setString(7, proofDisability)
+            statement.setString(8, currentDateTime)
 
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "User inserted: $rowsAffected rows affected.")
