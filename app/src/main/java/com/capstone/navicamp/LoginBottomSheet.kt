@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.Context
 import android.util.Log
+import android.graphics.drawable.ColorDrawable
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
 
@@ -57,6 +58,15 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         return view
     }
 
+    private fun showLoadingDialog(): Dialog {
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(R.layout.dialog_loading)
+        dialog.setCancelable(false)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.show()
+        return dialog
+    }
+
     private fun loginUser(view: View) {
         val email = emailEditText.text.toString()
         val password = passwordEditText.text.toString()
@@ -67,11 +77,8 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
-        // Show progress bar and hide EditText fields and Forgot Password TextView
-        progressBar.visibility = View.VISIBLE
-        emailEditText.visibility = View.GONE
-        passwordEditText.visibility = View.GONE
-        forgotPasswordTextView.visibility = View.GONE
+        // Show loading dialog
+        val loadingDialog = showLoadingDialog()
 
         // Handle login logic
         CoroutineScope(Dispatchers.Main).launch {
@@ -113,11 +120,8 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 Log.e("LoginBottomSheet", "Error during login", e)
                 Toast.makeText(context, "An error occurred during login", Toast.LENGTH_SHORT).show()
             } finally {
-                // Hide progress bar and show EditText fields and Forgot Password TextView
-                progressBar.visibility = View.GONE
-                emailEditText.visibility = View.VISIBLE
-                passwordEditText.visibility = View.VISIBLE
-                forgotPasswordTextView.visibility = View.VISIBLE
+                // Dismiss loading dialog
+                loadingDialog.dismiss()
 
                 // Check if the internet is slow
                 val endTime = System.currentTimeMillis()

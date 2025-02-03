@@ -46,13 +46,13 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    packagingOptions {
+        resources {
+            pickFirsts += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/mimetypes.default")
+        }
+    }
 
     // Adding packaging options to handle duplicate files
-    packagingOptions {
-        pickFirst("META-INF/AL2.0")  // Pick the first occurrence of the AL2.0 file
-        pickFirst("META-INF/LGPL2.1") // Pick the first occurrence of the LGPL2.1 file
-        pickFirst("META-INF/mimetypes.default")
-    }
 }
 
 
@@ -82,6 +82,7 @@ dependencies {
     implementation ("org.mariadb.jdbc:mariadb-java-client:3.5.1")
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     implementation ("org.mindrot:jbcrypt:0.4")
+    implementation ("com.amazonaws:aws-android-sdk-s3:2.22.0")
 
     //firebase and notification
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
