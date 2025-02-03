@@ -33,7 +33,6 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
 
         emailEditText = view.findViewById(R.id.email)
         passwordEditText = view.findViewById(R.id.password)
-        progressBar = view.findViewById(R.id.progress_bar)
         forgotPasswordTextView = view.findViewById(R.id.forgot_password) // Initialize forgotPasswordTextView
 
         val loginButton = view.findViewById<Button>(R.id.login_button)
