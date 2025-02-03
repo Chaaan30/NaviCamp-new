@@ -6,19 +6,15 @@ import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.SQLException
 import java.sql.ResultSet
-import java.text.SimpleDateFormat
 import java.util.*
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 import android.content.Context
 import android.content.Intent
-import org.mindrot.jbcrypt.BCrypt
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-
 
 object MySQLHelper {
 
@@ -43,38 +39,6 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             null
-        }
-    }
-
-    fun countPendingItems(location: String): Int {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return 0
-            }
-
-            val query =
-                "SELECT COUNT(*) AS count FROM location_table WHERE floorLevel = ? AND status = 'pending'"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, location)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                resultSet.getInt("count")
-            } else {
-                0
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            0
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
         }
     }
 
@@ -110,37 +74,6 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             pendingItems
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun getFullNameByUserName(userName: String): String? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return null
-            }
-
-            val query = "SELECT fullName FROM user_table WHERE userName = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, userName)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                resultSet.getString("fullName")
-            } else {
-                null
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            null
         } finally {
             resultSet?.close()
             statement?.close()
@@ -226,37 +159,6 @@ object MySQLHelper {
         }
     }
 
-    fun getUserCreationDate(userID: String): String? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return null
-            }
-
-            val query = "SELECT createdOn FROM user_table WHERE userID = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, userID)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                resultSet.getString("createdOn")
-            } else {
-                null
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            null
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
     fun insertLocationData(context: Context, userID: String, fullName: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -307,68 +209,6 @@ object MySQLHelper {
             e.printStackTrace()
             false
         } finally {
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun getUserTypeByUserName(userName: String): String? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return null
-            }
-
-            val query = "SELECT userType FROM user_table WHERE userName = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, userName)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                resultSet.getString("userType")
-            } else {
-                null
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            null
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun getUserIDByUserName(userName: String): String? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return null
-            }
-
-            val query = "SELECT userID FROM user_table WHERE userName = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, userName)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                resultSet.getString("userID")
-            } else {
-                null
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            null
-        } finally {
-            resultSet?.close()
             statement?.close()
             connection?.close()
         }
@@ -526,36 +366,6 @@ object MySQLHelper {
         }
     }
 
-    suspend fun isContactNumberExists(contactNumber: String, userID: String): Boolean {
-        return withContext(Dispatchers.IO) {
-            var connection: Connection? = null
-            var statement: PreparedStatement? = null
-            var resultSet: ResultSet? = null
-            try {
-                connection = getConnection()
-                if (connection == null) {
-                    println("Database connection failed.")
-                    return@withContext false
-                }
-
-                val query = "SELECT COUNT(*) AS count FROM user_table WHERE contactNumber = ? AND userID != ?"
-                statement = connection.prepareStatement(query)
-                statement.setString(1, contactNumber)
-                statement.setString(2, userID)
-
-                resultSet = statement.executeQuery()
-                resultSet.next() && resultSet.getInt("count") > 0
-            } catch (e: SQLException) {
-                e.printStackTrace()
-                false
-            } finally {
-                resultSet?.close()
-                statement?.close()
-                connection?.close()
-            }
-        }
-    }
-
     suspend fun isEmailExists(email: String, userID: String): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -638,74 +448,6 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             0
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun validateUserWithType(email: String, password: String, userType: String): Boolean {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return false
-            }
-
-            val query = "SELECT password, userType FROM user_table WHERE email = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, email)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                val storedPassword = resultSet.getString("password")
-                val storedUserType = resultSet.getString("userType")
-                val hashedPassword = hashPassword(password)
-                val isValidUserType = storedUserType == userType
-                hashedPassword == storedPassword && isValidUserType // Verify the password and userType
-            } else {
-                false
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            false
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun validateUser(email: String, password: String): Boolean {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return false
-            }
-
-            val query = "SELECT password FROM user_table WHERE email = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, email)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                val storedPassword = resultSet.getString("password")
-                val hashedPassword = hashPassword(password)
-                storedPassword == hashedPassword // Compare the hashed password with the stored password
-            } else {
-                false
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            false
         } finally {
             resultSet?.close()
             statement?.close()
