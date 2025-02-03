@@ -98,8 +98,8 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         selectedImageName = view.findViewById(R.id.selected_image_name)
         removeImageButton = view.findViewById(R.id.remove_image_button)
 
-        uploadProofButton.setOnClickListener {
-            showImagePickerDialog()
+        uploadProofButton.setOnClickListener { view ->
+            onUploadProofButtonClick(view)
         }
 
         removeImageButton.setOnClickListener {
@@ -187,6 +187,10 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }.start()
     }
 
+    private fun onUploadProofButtonClick(view: View) {
+        openImagePicker()
+    }
+
     private fun registerUser(view: View) {
         val fullName = fullNameEditText.text.toString()
         val email = emailEditText.text.toString()
@@ -237,6 +241,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        if (selectedImageUri == null) {
+            Toast.makeText(context, "Please select an image for proof of disability", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         // Show loading dialog
         val loadingDialog = showLoadingDialog()
 
@@ -245,31 +254,36 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
         // Upload image and register user
         CoroutineScope(Dispatchers.Main).launch {
-            if (selectedImageUri != null) {
-                uploadedImageName = withContext(Dispatchers.IO) {
-                    uploadImageToS3(selectedImageUri!!)
+            try {
+                if (selectedImageUri != null) {
+                    uploadedImageName = withContext(Dispatchers.IO) {
+                        uploadImageToS3(selectedImageUri!!)
+                    }
                 }
-            }
-            val userID: String? = withContext(Dispatchers.IO) {
-                MySQLHelper.generateUserID()
-            }
-            val isInserted = withContext(Dispatchers.IO) {
-                MySQLHelper.insertUser(
-                    userID ?: "",
-                    fullName,
-                    userType,
-                    email,
-                    contactNumber,
-                    hashedPassword,
-                    uploadedImageName
-                )
-            }
-            loadingDialog.dismiss()
-            if (isInserted) {
-                Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
-                dismiss()
-            } else {
-                Toast.makeText(context, "Registration failed", Toast.LENGTH_SHORT).show()
+                val userID: String? = withContext(Dispatchers.IO) {
+                    MySQLHelper.generateUserID()
+                }
+                val isInserted = withContext(Dispatchers.IO) {
+                    MySQLHelper.insertUser(
+                        userID ?: "",
+                        fullName,
+                        userType,
+                        email,
+                        contactNumber,
+                        hashedPassword,
+                        uploadedImageName
+                    )
+                }
+                loadingDialog.dismiss()
+                if (isInserted) {
+                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
+                    dismiss()
+                } else {
+                    Toast.makeText(context, "Registration failed", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                loadingDialog.dismiss()
+                Toast.makeText(context, "Image upload failed. Try Again.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -372,27 +386,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             .setView(dialogView)
             .setPositiveButton("OK", null)
             .show()
-    }
-
-    private fun showImagePickerDialog() {
-        val options = arrayOf("Choose from Gallery", "Take a Picture")
-        AlertDialog.Builder(requireContext())
-            .setTitle("Select Option")
-            .setItems(options) { dialog, which ->
-                when (which) {
-                    0 -> openImagePicker()
-                    1 -> openCamera()
-                }
-            }
-            .show()
-    }
-
-    private fun openCamera() {
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.CAMERA), REQUEST_IMAGE_CAPTURE)
-        } else {
-            dispatchTakePictureIntent()
-        }
     }
 
     @Throws(IOException::class)
