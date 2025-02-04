@@ -94,6 +94,10 @@ dependencies {
     implementation("io.ktor:ktor-client-serialization:3.0.3")
     implementation("io.ktor:ktor-client-logging:3.0.3")
 
+    //amazon s3 bucket
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
+
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)

@@ -7,5 +7,6 @@ data class UserData(
     val email: String,
     val contactNumber: String,
     val createdOn: String,
-    val updatedOn: String
+    val updatedOn: String,
+    val proofDisability: String // Add this line
 )

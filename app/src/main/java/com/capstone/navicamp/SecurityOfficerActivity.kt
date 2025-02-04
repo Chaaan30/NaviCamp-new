@@ -24,6 +24,11 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import android.view.View
 import android.widget.ProgressBar
+import com.bumptech.glide.Glide
+import android.widget.ImageView
+import android.net.Uri
+import androidx.appcompat.app.AlertDialog
+import com.bumptech.glide.request.RequestOptions
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -48,6 +53,8 @@ class SecurityOfficerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security_officer)
+
+        fetchUnverifiedUsers()
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
@@ -185,6 +192,72 @@ class SecurityOfficerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(dataChangeReceiver)
+    }
+
+    private fun fetchUnverifiedUsers() {
+        lifecycleScope.launch {
+            val unverifiedUsers = withContext(Dispatchers.IO) {
+                MySQLHelper.getUnverifiedUsers()
+            }
+            updateVerificationCards(unverifiedUsers)
+        }
+    }
+
+    private fun updateVerificationCards(users: List<UserData>) {
+        val verificationLayout = findViewById<LinearLayout>(R.id.verification_layout)
+        verificationLayout.removeAllViews()
+
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
+        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+
+        for (user in users) {
+            val cardView = layoutInflater.inflate(R.layout.verification_card, verificationLayout, false)
+
+            val userIdText = cardView.findViewById<TextView>(R.id.user_id_text)
+            val fullNameText = cardView.findViewById<TextView>(R.id.full_name_text)
+            val emailText = cardView.findViewById<TextView>(R.id.email_text)
+            val contactNumberText = cardView.findViewById<TextView>(R.id.contact_number_text)
+            val userTypeText = cardView.findViewById<TextView>(R.id.user_type_text)
+            val createdOnText = cardView.findViewById<TextView>(R.id.created_on_text)
+            val viewProofButton = cardView.findViewById<Button>(R.id.view_proof_button)
+
+            userIdText.text = user.userID
+            fullNameText.text = user.fullName
+            emailText.text = user.email
+            contactNumberText.text = user.contactNumber
+            userTypeText.text = user.userType
+
+            val date = inputFormat.parse(user.createdOn)
+            val formattedDate = date?.let { dateFormat.format(it) } ?: user.createdOn
+            val formattedTime = date?.let { timeFormat.format(it) } ?: user.createdOn
+            createdOnText.text = "$formattedDate\n$formattedTime"
+
+            viewProofButton.setOnClickListener {
+                showProofDialog(user.proofDisability)
+            }
+
+            verificationLayout.addView(cardView)
+        }
+    }
+
+    private fun showProofDialog(proofUri: String) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_proof_image, null)
+        val proofImageView = dialogView.findViewById<ImageView>(R.id.proof_image_view)
+
+        val s3BaseUrl = "https://navicampbucket.s3.amazonaws.com/"
+        val fullImageUrl = s3BaseUrl + proofUri
+        Glide.with(this)
+            .load(fullImageUrl)
+            .apply(RequestOptions().placeholder(R.drawable.placeholder).error(R.drawable.error))
+            .into(proofImageView)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("Close", null)
+            .create()
+
+        dialog.show()
     }
 
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {

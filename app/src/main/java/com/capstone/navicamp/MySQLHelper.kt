@@ -217,46 +217,6 @@ object MySQLHelper {
         }
     }
 
-    fun getUserDataByEmail(email: String): UserData? {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return null
-            }
-
-            val query =
-                "SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn FROM user_table WHERE email = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, email)
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                UserData(
-                    resultSet.getString("userID") ?: return null,
-                    resultSet.getString("fullName") ?: return null,
-                    resultSet.getString("userType") ?: return null,
-                    resultSet.getString("email") ?: return null,
-                    resultSet.getString("contactNumber") ?: return null,
-                    resultSet.getString("createdOn") ?: return null,
-                    resultSet.getString("updatedOn") ?: return null
-                )
-            } else {
-                null
-            }
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            null
-        } finally {
-            resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
     fun getUserCreationDate(userID: String): String? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -800,8 +760,11 @@ object MySQLHelper {
                 return null
             }
 
-            val query =
-                "SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, password FROM user_table WHERE email = ?"
+            val query = """
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, password
+            FROM user_table
+            WHERE email = ?
+        """
             statement = connection.prepareStatement(query)
             statement.setString(1, email)
 
@@ -817,7 +780,8 @@ object MySQLHelper {
                         resultSet.getString("email") ?: "",
                         resultSet.getString("contactNumber") ?: "",
                         resultSet.getString("createdOn") ?: "",
-                        resultSet.getString("updatedOn") ?: ""
+                        resultSet.getString("updatedOn") ?: "",
+                        resultSet.getString("proofDisability") ?: ""
                     )
                 } else {
                     null
@@ -995,5 +959,90 @@ object MySQLHelper {
         return data
     }
 
+    fun getUserDataByEmail(email: String): UserData? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
 
+            val query = """
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability
+            FROM user_table
+            WHERE email = ?
+        """
+            statement = connection.prepareStatement(query)
+            statement.setString(1, email)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                UserData(
+                    resultSet.getString("userID"),
+                    resultSet.getString("fullName"),
+                    resultSet.getString("userType"),
+                    resultSet.getString("email"),
+                    resultSet.getString("contactNumber"),
+                    resultSet.getString("createdOn"),
+                    resultSet.getString("updatedOn"),
+                    resultSet.getString("proofDisability")
+                )
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getUnverifiedUsers(): List<UserData> {
+        val unverifiedUsers = mutableListOf<UserData>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return unverifiedUsers
+            }
+
+            val query = """
+            SELECT * FROM user_table
+            WHERE userType IN ('Student', 'Visitor', 'Personnel')
+            AND verified = 0
+        """
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            while (resultSet.next()) {
+                val user = UserData(
+                    resultSet.getString("userID") ?: "",
+                    resultSet.getString("fullName") ?: "",
+                    resultSet.getString("userType") ?: "",
+                    resultSet.getString("email") ?: "",
+                    resultSet.getString("contactNumber") ?: "",
+                    resultSet.getString("createdOn") ?: "",
+                    resultSet.getString("updatedOn") ?: "",
+                    resultSet.getString("proofDisability") ?: ""
+                )
+                unverifiedUsers.add(user)
+            }
+            unverifiedUsers
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            unverifiedUsers
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
 }
