@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Ignore config.properties file
+app/src/main/assets/config.properties

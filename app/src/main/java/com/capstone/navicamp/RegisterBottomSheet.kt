@@ -45,6 +45,7 @@ import androidx.core.content.FileProvider
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.io.InputStream
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
@@ -341,8 +342,18 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         startActivityForResult(intent, PICK_IMAGE_REQUEST)
     }
 
+    private fun loadAwsCredentials(): BasicAWSCredentials {
+        val props = Properties()
+        val assetManager = context?.assets
+        val inputStream: InputStream = assetManager?.open("config.properties")!!
+        props.load(inputStream)
+        val accessKey = props.getProperty("aws.accessKeyId")
+        val secretKey = props.getProperty("aws.secretKey")
+        return BasicAWSCredentials(accessKey, secretKey)
+    }
+
     private suspend fun uploadImageToS3(imageUri: Uri): String {
-        val credentials = BasicAWSCredentials("AKIAQUFLQAKBX4RSNVUY", "2CjqRS+caoswhyXOpA7JOtA3aBxfokHxlxNxRNlP")
+        val credentials = loadAwsCredentials()
         val s3Client = AmazonS3Client(credentials)
         val bucketName = "navicampbucket"
 
