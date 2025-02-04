@@ -23,7 +23,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 android:background="?attr/colorPrimary"
-                android:title="Security Officer"
+                android:title="Incident Log"
                 android:titleTextColor="@android:color/white" />
         </com.google.android.material.appbar.AppBarLayout>
 
@@ -39,8 +39,7 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-
-
+                <!-- Filter Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -76,10 +75,9 @@
                         android:text="Select Date"
                         android:textColor="@android:color/white"
                         android:textStyle="bold" />
-
-
                 </LinearLayout>
 
+                <!-- Table Layout for Incident Data -->
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -96,113 +94,75 @@
                         <TableRow
                             android:background="@color/custom_blue">
 
-
                             <TextView
-                                android:layout_width="300sp"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/inter_bold"
-                                android:gravity="left"
                                 android:padding="20dp"
-                                android:text="@string/col1"
-                                android:textColor="@android:color/white"
-                                android:textSize="14sp" />
+                                android:text="Alert ID"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/col2"
-                                android:fontFamily="@font/inter_bold"
-                                android:textColor="@android:color/white"
                                 android:padding="20dp"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
-                            <TextView
-                                android:layout_width="250sp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/col3"
-                                android:fontFamily="@font/inter_bold"
-                                android:textColor="@android:color/white"
-                                android:padding="20dp"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/col4"
-                                android:fontFamily="@font/inter_bold"
-                                android:textColor="@android:color/white"
-                                android:padding="20dp"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/col5"
-                                android:fontFamily="@font/inter_bold"
-                                android:textColor="@android:color/white"
-                                android:padding="20dp"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
+                                android:text="Name"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/inter_bold"
-                                android:gravity="left"
                                 android:padding="20dp"
-                                android:text="@string/col6"
-                                android:textColor="@android:color/white"
-                                android:textSize="14sp" />
+                                android:text="User Type"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:gravity="left"
-                                android:fontFamily="@font/inter_bold"
                                 android:padding="20dp"
-                                android:text="@string/col7"
-                                android:textColor="@android:color/white"
-                                android:textSize="14sp" />
+                                android:text="Device ID"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/col8"
-                                android:textColor="@android:color/white"
                                 android:padding="20dp"
-                                android:fontFamily="@font/inter_bold"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
+                                android:text="Coordinates"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/col9"
-                                android:textColor="@android:color/white"
                                 android:padding="20dp"
-                                android:fontFamily="@font/inter_bold"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
+                                android:text="Floor Level"
+                                android:textColor="@android:color/white" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/col10"
-                                android:textColor="@android:color/white"
-                                android:fontFamily="@font/inter_bold"
                                 android:padding="20dp"
-                                android:textSize="14sp"
-                                android:layout_weight="1"
-                                android:gravity="left" />
+                                android:text="Reported Incident Type"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="20dp"
+                                android:text="Status"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="20dp"
+                                android:text="Time of Alert"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="20dp"
+                                android:text="Resolved On"
+                                android:textColor="@android:color/white" />
                         </TableRow>
 
                         <!-- Table Data -->
@@ -210,6 +170,14 @@
                     </TableLayout>
                 </HorizontalScrollView>
 
+                <!-- Circular Progress Bar -->
+                <ProgressBar
+                    android:id="@+id/loading_progress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone"
+                    style="?android:attr/progressBarStyleLarge" />
             </LinearLayout>
         </ScrollView>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
@@ -222,8 +190,8 @@
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         android:background="@color/primaryColor"
-        android:fontFamily="@font/inter"
         app:headerLayout="@layout/nav_header_officer"
         app:itemTextColor="@color/onPrimaryColor"
-        app:menu="@menu/drawer_menu_officer" />
+        app:menu="@menu/drawer_menu_officer"
+        android:fontFamily="@font/inter"/>
 </androidx.drawerlayout.widget.DrawerLayout>

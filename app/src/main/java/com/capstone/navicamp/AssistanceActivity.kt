@@ -1,11 +1,11 @@
 package com.capstone.navicamp
 
+import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -23,7 +23,7 @@ class AssistanceActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var assistanceButton: Button
-    private lateinit var progressBar: ProgressBar
+    private var loadingDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,9 +82,8 @@ class AssistanceActivity : AppCompatActivity() {
         UserSingleton.userID = sharedPreferences.getString("userID", null)
         UserSingleton.fullName = sharedPreferences.getString("fullName", null)
 
-        // Set up the Request Assistance button and ProgressBar
+        // Set up the Request Assistance button
         assistanceButton = findViewById(R.id.requestAssistanceButton)
-        progressBar = findViewById(R.id.progressBar)
 
         assistanceButton.setOnClickListener {
             Log.d("AssistanceActivity", "Request Assistance button clicked")
@@ -95,9 +94,8 @@ class AssistanceActivity : AppCompatActivity() {
             Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
 
             if (userID != null && fullName != null) {
-                // Show ProgressBar and hide Button
-                progressBar.visibility = View.VISIBLE
-                assistanceButton.visibility = View.GONE
+                // Show loading dialog
+                showLoadingDialog()
 
                 CoroutineScope(Dispatchers.Main).launch {
                     val success = withContext(Dispatchers.IO) {
@@ -111,15 +109,27 @@ class AssistanceActivity : AppCompatActivity() {
                         Toast.makeText(this@AssistanceActivity, "Failed to request assistance. Please try again.", Toast.LENGTH_SHORT).show()
                     }
 
-                    // Hide ProgressBar and show Button
-                    progressBar.visibility = View.GONE
-                    assistanceButton.visibility = View.VISIBLE
+                    // Dismiss loading dialog
+                    dismissLoadingDialog()
                 }
             } else {
                 Log.e("AssistanceActivity", "User ID or Full Name is null")
                 Toast.makeText(this, "User ID or Full Name is missing. Please log in again.", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun showLoadingDialog() {
+        loadingDialog = Dialog(this).apply {
+            setContentView(R.layout.dialog_loading)
+            setCancelable(false)
+            window?.setBackgroundDrawableResource(android.R.color.transparent)
+            show()
+        }
+    }
+
+    private fun dismissLoadingDialog() {
+        loadingDialog?.dismiss()
     }
 
     override fun onResume() {
