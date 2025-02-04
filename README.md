@@ -1,7 +1,7 @@
 # NaviCamp-new
  This project will serve as an assistance request and assistance responder mobile application to be used for locomotor disabled people or safety officers inside our campus, MMCL.
 
-# PLEASE SEE
+# IMPORANT P.S
 
 **STEP 1:** inside the project files of android studio then go to app/src/main/assets (if assets folder does not exist make one)
 
