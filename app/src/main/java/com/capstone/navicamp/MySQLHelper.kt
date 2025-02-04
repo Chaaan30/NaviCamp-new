@@ -186,6 +186,37 @@ object MySQLHelper {
         }
     }
 
+    fun fetchUserEmailByEmail(email: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT email FROM user_table WHERE email = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, email)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("email")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun getUserDataByEmail(email: String): UserData? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null

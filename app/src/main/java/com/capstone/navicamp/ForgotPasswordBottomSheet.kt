@@ -2,6 +2,7 @@ package com.capstone.navicamp
 
 import android.app.Dialog
 import android.content.DialogInterface
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.LayoutInflater
@@ -9,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -39,7 +39,6 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
     private lateinit var otpTimerTextView: TextView
     private lateinit var confirmOtpButton: Button
     private lateinit var resetPasswordButton: Button
-    private lateinit var progressBar: ProgressBar
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
 
@@ -57,96 +56,88 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         otpTimerTextView = view.findViewById(R.id.otp_timer)
         confirmOtpButton = view.findViewById(R.id.confirm_otp_button)
         resetPasswordButton = view.findViewById(R.id.reset_password_button)
-        progressBar = view.findViewById(R.id.progress_bar)
 
-        sendOtpButton.setOnClickListener {
-            val email = emailEditText.text.toString()
-            if (email.isNotEmpty()) {
-                progressBar.visibility = View.VISIBLE
-                emailEditText.visibility = View.GONE
-                otpEditText.visibility = View.GONE
-                newPasswordEditText.visibility = View.GONE
-                confirmPasswordEditText.visibility = View.GONE
-                sendOtpButton.visibility = View.GONE
-                otpTimerTextView.visibility = View.GONE
-                confirmOtpButton.visibility = View.GONE
-                resetPasswordButton.visibility = View.GONE
-
-                CoroutineScope(Dispatchers.Main).launch {
-                    val userData = withContext(Dispatchers.IO) {
-                        MySQLHelper.getUserDataByEmail(email)
-                    }
-
-                    if (userData != null) {
-                        generatedOtp = generateOtp()
-                        withContext(Dispatchers.IO) {
-                            sendOtpEmail(email, generatedOtp!!)
-                        }
-                        progressBar.visibility = View.GONE
-                        otpEditText.visibility = View.VISIBLE
-                        confirmOtpButton.visibility = View.VISIBLE
-                        startOtpTimer()
-                        Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
-                    } else {
-                        progressBar.visibility = View.GONE
-                        emailEditText.visibility = View.VISIBLE
-                        sendOtpButton.visibility = View.VISIBLE
-                        Toast.makeText(context, "Email not found", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        confirmOtpButton.setOnClickListener {
-            val otp = otpEditText.text.toString()
-            if (otp == generatedOtp) {
-                isOtpConfirmed = true
-                newPasswordEditText.visibility = View.VISIBLE
-                confirmPasswordEditText.visibility = View.VISIBLE
-                resetPasswordButton.visibility = View.VISIBLE
-                confirmOtpButton.visibility = View.GONE
-                sendOtpButton.visibility = View.GONE
-                otpEditText.visibility = View.GONE
-                otpTimerTextView.visibility = View.GONE
-                Toast.makeText(context, "OTP confirmed", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Invalid OTP", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        resetPasswordButton.setOnClickListener {
-            val newPassword = newPasswordEditText.text.toString()
-            val confirmPassword = confirmPasswordEditText.text.toString()
-
-            if (newPassword.length < 7) {
-                Toast.makeText(context, "Password must be at least 7 characters long", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (newPassword == confirmPassword) {
-                progressBar.visibility = View.VISIBLE
-                CoroutineScope(Dispatchers.Main).launch {
-                    val hashedPassword = hashPassword(newPassword)
-                    val email = emailEditText.text.toString()
-                    val result = withContext(Dispatchers.IO) {
-                        MySQLHelper.updateUserPasswordByEmail(email, hashedPassword)
-                    }
-                    progressBar.visibility = View.GONE
-                    if (result) {
-                        Toast.makeText(context, "Password reset successfully", Toast.LENGTH_SHORT).show()
-                        dismiss()
-                    } else {
-                        Toast.makeText(context, "Failed to reset password", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-            }
-        }
+        sendOtpButton.setOnClickListener { onSendOtpButtonClick() }
+        confirmOtpButton.setOnClickListener { onConfirmOtpButtonClick() }
+        resetPasswordButton.setOnClickListener { onResetPasswordButtonClick() }
 
         return view
+    }
+
+    private fun onSendOtpButtonClick() {
+        val email = emailEditText.text.toString()
+        if (email.isNotEmpty()) {
+            val loadingDialog = showLoadingDialog()
+            CoroutineScope(Dispatchers.Main).launch {
+                val userEmail = withContext(Dispatchers.IO) {
+                    MySQLHelper.fetchUserEmailByEmail(email)
+                }
+                loadingDialog.dismiss()
+                if (userEmail != null) {
+                    generatedOtp = generateOtp()
+                    // Assuming you still need to send the OTP email
+                    withContext(Dispatchers.IO) {
+                        sendOtpEmail(userEmail, generatedOtp!!)
+                    }
+                    otpEditText.visibility = View.VISIBLE
+                    confirmOtpButton.visibility = View.VISIBLE
+                    startOtpTimer()
+                    Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                } else {
+                    emailEditText.visibility = View.VISIBLE
+                    sendOtpButton.visibility = View.VISIBLE
+                    Toast.makeText(context, "Email not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
+        }
+    }
+    private fun onConfirmOtpButtonClick() {
+        val otp = otpEditText.text.toString()
+        if (otp == generatedOtp) {
+            isOtpConfirmed = true
+            newPasswordEditText.visibility = View.VISIBLE
+            confirmPasswordEditText.visibility = View.VISIBLE
+            resetPasswordButton.visibility = View.VISIBLE
+            confirmOtpButton.visibility = View.GONE
+            sendOtpButton.visibility = View.GONE
+            otpEditText.visibility = View.GONE
+            otpTimerTextView.visibility = View.GONE
+            Toast.makeText(context, "OTP confirmed", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Invalid OTP", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun onResetPasswordButtonClick() {
+        val newPassword = newPasswordEditText.text.toString()
+        val confirmPassword = confirmPasswordEditText.text.toString()
+
+        if (newPassword.length < 7) {
+            Toast.makeText(context, "Password must be at least 7 characters long", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (newPassword == confirmPassword) {
+            val loadingDialog = showLoadingDialog()
+            CoroutineScope(Dispatchers.Main).launch {
+                val hashedPassword = hashPassword(newPassword)
+                val email = emailEditText.text.toString()
+                val result = withContext(Dispatchers.IO) {
+                    MySQLHelper.updateUserPasswordByEmail(email, hashedPassword)
+                }
+                loadingDialog.dismiss()
+                if (result) {
+                    Toast.makeText(context, "Password reset successfully", Toast.LENGTH_SHORT).show()
+                    dismiss()
+                } else {
+                    Toast.makeText(context, "Failed to reset password", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startOtpTimer() {
@@ -223,6 +214,15 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         val md = MessageDigest.getInstance("SHA-256")
         val hashedBytes = md.digest(password.toByteArray())
         return hashedBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun showLoadingDialog(): Dialog {
+        val dialog = Dialog(requireContext())
+        dialog.setContentView(R.layout.dialog_loading)
+        dialog.setCancelable(false)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        dialog.show()
+        return dialog
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
