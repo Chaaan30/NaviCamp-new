@@ -46,6 +46,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.io.InputStream
+import android.content.Context
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
@@ -258,7 +259,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             try {
                 if (selectedImageUri != null) {
                     uploadedImageName = withContext(Dispatchers.IO) {
-                        uploadImageToS3(selectedImageUri!!)
+                        uploadImageToS3(context!!, selectedImageUri!!)
                     }
                 }
                 val userID: String? = withContext(Dispatchers.IO) {
@@ -352,9 +353,9 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return BasicAWSCredentials(accessKey, secretKey)
     }
 
-    private suspend fun uploadImageToS3(imageUri: Uri): String {
-        val credentials = loadAwsCredentials()
-        val s3Client = AmazonS3Client(credentials)
+    private suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
+        AwsUtils.initialize(context)
+        val s3Client = AwsUtils.s3Client
         val bucketName = "navicampbucket"
 
         val filePath = getPathFromUri(imageUri)
