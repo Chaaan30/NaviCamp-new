@@ -1,12 +1,12 @@
 package com.capstone.navicamp
 
+import android.app.Dialog
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -14,12 +14,12 @@ import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.Properties
 import javax.mail.Message
 import javax.mail.PasswordAuthentication
@@ -32,13 +32,13 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
-    private lateinit var progressBar: ProgressBar
     private lateinit var sendOtpButton: Button
     private lateinit var confirmOtpButton: Button
     private lateinit var editOtp: EditText
     private lateinit var editEmail: EditText
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
+    private var loadingDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,9 +63,6 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
-
-        // Initialize ProgressBar
-        progressBar = findViewById(R.id.progressBar)
 
         // Retrieve data from SharedPreferences
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
@@ -177,7 +174,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                progressBar.visibility = View.VISIBLE
+                showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                     val result = withContext(Dispatchers.IO) {
@@ -190,7 +187,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                         )
                     }
                     withContext(Dispatchers.Main) {
-                        progressBar.visibility = View.GONE
+                        dismissLoadingDialog()
                         Log.d("OfficerAccountSettingsActivity", "Update result: $result")
                         if (result) {
                             Toast.makeText(this@OfficerAccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
@@ -251,7 +248,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                progressBar.visibility = View.VISIBLE
+                showLoadingDialog()
                 editEmail.isEnabled = false // Disable the email EditText
 
                 CoroutineScope(Dispatchers.Main).launch {
@@ -260,7 +257,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                     }
 
                     if (emailExists) {
-                        progressBar.visibility = View.GONE
+                        dismissLoadingDialog()
                         editEmail.isEnabled = true
                         Toast.makeText(this@OfficerAccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
                     } else {
@@ -268,7 +265,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                         withContext(Dispatchers.IO) {
                             sendOtpEmail(newEmail, generatedOtp!!)
                         }
-                        progressBar.visibility = View.GONE
+                        dismissLoadingDialog()
                         editOtp.visibility = View.VISIBLE
                         confirmOtpButton.visibility = View.VISIBLE
                         Toast.makeText(this@OfficerAccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
@@ -335,6 +332,22 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun showLoadingDialog() {
+        if (loadingDialog == null) {
+            loadingDialog = Dialog(this).apply {
+                setContentView(R.layout.dialog_loading)
+                setCancelable(false)
+                window?.setBackgroundDrawableResource(android.R.color.transparent)
+            }
+        }
+        loadingDialog?.show()
+    }
+
+    private fun dismissLoadingDialog() {
+        loadingDialog?.dismiss()
+        loadingDialog = null
     }
 
     override fun onResume() {

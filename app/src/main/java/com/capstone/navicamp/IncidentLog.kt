@@ -8,6 +8,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TableLayout
 import android.widget.TableRow
@@ -32,9 +33,9 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var tableLayout: TableLayout
     private lateinit var filterTypeSpinner: Spinner
     private lateinit var selectDateButton: Button
+    private lateinit var loadingProgress: ProgressBar
 
     private val viewModel: IncidentLogViewModel by viewModels()
-    private lateinit var dataChangeReceiver: DataChangeReceiver
     private val handler = Handler(Looper.getMainLooper())
     private val refreshInterval = 1000L // 1 second
 
@@ -74,52 +75,19 @@ class IncidentLog : AppCompatActivity() {
         val navNameHeader: TextView = headerView.findViewById(R.id.nav_name_header)
         navNameHeader.text = UserSingleton.fullName
 
-        // Set up NavigationView item click listener
-        navigationView.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_logout -> {
-                    // Clear SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-                    val editor = sharedPreferences.edit()
-                    editor.clear()
-                    editor.apply()
-
-                    // Navigate to MainActivity
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                    true
-                }
-
-                R.id.nav_item1 -> {
-                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    true
-                }
-
-                R.id.nav_item2 -> {
-                    val intent = Intent(this, SecurityOfficerActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    true
-                }
-
-                else -> false
-            }
-        }
-
-        // Initialize the TableLayout
-        tableLayout = findViewById(R.id.tableLayout)  // Make sure this ID exists in your layout
+        // Initialize the TableLayout and ProgressBar
+        tableLayout = findViewById(R.id.tableLayout)
+        loadingProgress = findViewById(R.id.loading_progress)
 
         // Observe incident data from ViewModel
         viewModel.incidentData.observe(this, Observer { data ->
+            loadingProgress.visibility = View.GONE
             val sortedData = data.sortedBy { it[0].toIntOrNull() ?: 0 }
             displayDataInTable(sortedData)
         })
 
-        // Start refreshing incident data every second
+        // Show ProgressBar and start refreshing incident data every second
+        loadingProgress.visibility = View.VISIBLE
         handler.postDelayed(refreshRunnable, refreshInterval)
 
         filterTypeSpinner = findViewById(R.id.filter_type_spinner)

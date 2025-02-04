@@ -27,18 +27,19 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
+import android.app.Dialog
 
 class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
-    private lateinit var progressBar: ProgressBar
     private lateinit var sendOtpButton: Button
     private lateinit var confirmOtpButton: Button
     private lateinit var editOtp: EditText
     private lateinit var editEmail: EditText
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
+    private var loadingDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,8 +65,6 @@ class AccountSettingsActivity : AppCompatActivity() {
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
 
-        // Initialize ProgressBar
-        progressBar = findViewById(R.id.progressBar)
 
         // Retrieve data from SharedPreferences
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
@@ -177,7 +176,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                progressBar.visibility = View.VISIBLE
+                showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                     val result = withContext(Dispatchers.IO) {
@@ -190,7 +189,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                         )
                     }
                     withContext(Dispatchers.Main) {
-                        progressBar.visibility = View.GONE
+                        dismissLoadingDialog()
                         Log.d("AccountSettingsActivity", "Update result: $result")
                         if (result) {
                             Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
@@ -251,7 +250,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
-                progressBar.visibility = View.VISIBLE
+                showLoadingDialog()
                 editEmail.isEnabled = false // Disable the email EditText
 
                 CoroutineScope(Dispatchers.Main).launch {
@@ -260,7 +259,6 @@ class AccountSettingsActivity : AppCompatActivity() {
                     }
 
                     if (emailExists) {
-                        progressBar.visibility = View.GONE
                         editEmail.isEnabled = true
                         Toast.makeText(this@AccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
                     } else {
@@ -268,7 +266,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                         withContext(Dispatchers.IO) {
                             sendOtpEmail(newEmail, generatedOtp!!)
                         }
-                        progressBar.visibility = View.GONE
+                        dismissLoadingDialog()
                         editOtp.visibility = View.VISIBLE
                         confirmOtpButton.visibility = View.VISIBLE
                         Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
@@ -335,6 +333,22 @@ class AccountSettingsActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun showLoadingDialog() {
+        if (loadingDialog == null) {
+            loadingDialog = Dialog(this).apply {
+                setContentView(R.layout.dialog_loading)
+                setCancelable(false)
+                window?.setBackgroundDrawableResource(android.R.color.transparent)
+            }
+        }
+        loadingDialog?.show()
+    }
+
+    private fun dismissLoadingDialog() {
+        loadingDialog?.dismiss()
+        loadingDialog = null
     }
 
     override fun onResume() {

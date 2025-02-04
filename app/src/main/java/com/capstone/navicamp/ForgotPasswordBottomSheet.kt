@@ -72,18 +72,18 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
                 val userEmail = withContext(Dispatchers.IO) {
                     MySQLHelper.fetchUserEmailByEmail(email)
                 }
-                loadingDialog.dismiss()
                 if (userEmail != null) {
                     generatedOtp = generateOtp()
-                    // Assuming you still need to send the OTP email
                     withContext(Dispatchers.IO) {
                         sendOtpEmail(userEmail, generatedOtp!!)
                     }
+                    loadingDialog.dismiss()
                     otpEditText.visibility = View.VISIBLE
                     confirmOtpButton.visibility = View.VISIBLE
                     startOtpTimer()
                     Toast.makeText(context, "OTP sent to email", Toast.LENGTH_SHORT).show()
                 } else {
+                    loadingDialog.dismiss()
                     emailEditText.visibility = View.VISIBLE
                     sendOtpButton.visibility = View.VISIBLE
                     Toast.makeText(context, "Email not found", Toast.LENGTH_SHORT).show()
@@ -93,6 +93,7 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
             Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
         }
     }
+
     private fun onConfirmOtpButtonClick() {
         val otp = otpEditText.text.toString()
         if (otp == generatedOtp) {
