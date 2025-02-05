@@ -67,7 +67,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var uploadProofButton: Button
     private lateinit var imageContainer: LinearLayout
     private lateinit var selectedImageName: TextView
-    private lateinit var removeImageButton: Button
+    private lateinit var removeImageButton: ImageButton
     private var selectedImageUri: Uri? = null
     private var uploadedImageName: String? = null
     private val PICK_IMAGE_REQUEST = 1
@@ -111,18 +111,25 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             uploadProofButton.visibility = View.VISIBLE
         }
 
-        val infoButton = view.findViewById<ImageButton>(R.id.info_button)
+        val infoButton = view.findViewById<ImageButton>(R.id.info_button_upload)
         infoButton.setOnClickListener {
-            showInfoDialog()
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
+            val dialog = AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .setPositiveButton("OK", null)
+                .create()
+            dialog.show()
         }
 
+
         // Set input filter for contact number to accept only 11 digits
-        contactNumberEditText.filters = arrayOf(InputFilter.LengthFilter(11), InputFilter { source, _, _, dest, _, _ ->
-            if (source.isEmpty()) return@InputFilter null // Allow deletion
-            if (source.length + dest.length > 11) return@InputFilter "" // Restrict to 11 digits
-            if (!source.matches(Regex("\\d+"))) return@InputFilter "" // Allow only digits
-            null
-        })
+        contactNumberEditText.filters =
+            arrayOf(InputFilter.LengthFilter(11), InputFilter { source, _, _, dest, _, _ ->
+                if (source.isEmpty()) return@InputFilter null // Allow deletion
+                if (source.length + dest.length > 11) return@InputFilter "" // Restrict to 11 digits
+                if (!source.matches(Regex("\\d+"))) return@InputFilter "" // Allow only digits
+                null
+            })
 
         ArrayAdapter.createFromResource(
             requireContext(),
@@ -214,7 +221,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
 
         if (!termsConditionsCheckbox.isChecked) {
-            Toast.makeText(context, "Please read and agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Please read and agree to the Terms and Conditions",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -229,7 +240,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
 
         if (password.length < 7) {
-            Toast.makeText(context, "Password must be at least 7 characters long", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Password must be at least 7 characters long",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -239,12 +254,17 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
 
         if (contactNumber.length != 11) {
-            Toast.makeText(context, "Contact number must be exactly 11 digits", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Contact number must be exactly 11 digits", Toast.LENGTH_SHORT)
+                .show()
             return
         }
 
         if (selectedImageUri == null) {
-            Toast.makeText(context, "Please select an image for proof of disability", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Please select an image for proof of disability",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -278,14 +298,16 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 }
                 loadingDialog.dismiss()
                 if (isInserted) {
-                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT)
+                        .show()
                     dismiss()
                 } else {
                     Toast.makeText(context, "Registration failed", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 loadingDialog.dismiss()
-                Toast.makeText(context, "Image upload failed. Try Again.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Image upload failed. Try Again.", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
     }
@@ -353,7 +375,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return BasicAWSCredentials(accessKey, secretKey)
     }
 
-    private suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
+    suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
         AwsUtils.initialize(context)
         val s3Client = AwsUtils.s3Client
         val bucketName = "navicampbucket"
@@ -455,9 +477,12 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
-        dialog.setOnShowListener {
-            val bottomSheet = dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-            bottomSheet?.background = ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet =
+                bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet) as FrameLayout?
+            bottomSheet?.background =
+                ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
         }
         return dialog
     }

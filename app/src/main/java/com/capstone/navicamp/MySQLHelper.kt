@@ -37,7 +37,7 @@ object MySQLHelper {
     }
 
     // Get the connection to the database
-    private fun getConnection(): Connection? {
+    fun getConnection(): Connection? {
         return try {
             DriverManager.getConnection(JDBC_URL, USERNAME, PASSWORD)
         } catch (e: SQLException) {
@@ -90,7 +90,8 @@ object MySQLHelper {
                 return pendingItems
             }
 
-            val query = "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
+            val query =
+                "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
             while (resultSet.next()) {
@@ -289,7 +290,10 @@ object MySQLHelper {
             if (rowsAffected > 0) {
                 // Send broadcast
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
-                intent.setClassName("com.capstone.navicamp", "com.capstone.navicamp.DataChangeReceiver")
+                intent.setClassName(
+                    "com.capstone.navicamp",
+                    "com.capstone.navicamp.DataChangeReceiver"
+                )
                 context.sendBroadcast(intent)
             }
 
@@ -465,7 +469,13 @@ object MySQLHelper {
     }
 
     // Update user with userID
-    suspend fun updateUserWithUserID(newFullName: String, newEmail: String, newContactNumber: String, userID: String, updatedOn: String): Boolean {
+    suspend fun updateUserWithUserID(
+        newFullName: String,
+        newEmail: String,
+        newContactNumber: String,
+        userID: String,
+        updatedOn: String
+    ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
             var statement: PreparedStatement? = null
@@ -503,7 +513,10 @@ object MySQLHelper {
                 statement.setString(index, userID)
 
                 Log.d("MySQLHelper", "Executing query: $query")
-                Log.d("MySQLHelper", "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID")
+                Log.d(
+                    "MySQLHelper",
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID"
+                )
                 val rowsAffected = statement.executeUpdate()
                 Log.d("MySQLHelper", "Rows affected: $rowsAffected")
                 rowsAffected > 0
@@ -529,7 +542,8 @@ object MySQLHelper {
                     return@withContext false
                 }
 
-                val query = "SELECT COUNT(*) AS count FROM user_table WHERE contactNumber = ? AND userID != ?"
+                val query =
+                    "SELECT COUNT(*) AS count FROM user_table WHERE contactNumber = ? AND userID != ?"
                 statement = connection.prepareStatement(query)
                 statement.setString(1, contactNumber)
                 statement.setString(2, userID)
@@ -559,7 +573,8 @@ object MySQLHelper {
                     return@withContext false
                 }
 
-                val query = "SELECT COUNT(*) AS count FROM user_table WHERE email = ? AND userID != ?"
+                val query =
+                    "SELECT COUNT(*) AS count FROM user_table WHERE email = ? AND userID != ?"
                 statement = connection.prepareStatement(query)
                 statement.setString(1, email)
                 statement.setString(2, userID)
@@ -647,7 +662,7 @@ object MySQLHelper {
                 return false
             }
 
-            val query = "SELECT password, userType FROM user_table WHERE email = ?"
+            val query = "SELECT password, userType, verified FROM user_table WHERE email = ?"
             statement = connection.prepareStatement(query)
             statement.setString(1, email)
 
@@ -655,9 +670,10 @@ object MySQLHelper {
             if (resultSet.next()) {
                 val storedPassword = resultSet.getString("password")
                 val storedUserType = resultSet.getString("userType")
+                val verified = resultSet.getInt("verified")
                 val hashedPassword = hashPassword(password)
                 val isValidUserType = storedUserType == userType
-                hashedPassword == storedPassword && isValidUserType // Verify the password and userType
+                hashedPassword == storedPassword && isValidUserType && verified == 1 // Verify the password, userType, and check if verified
             } else {
                 false
             }
@@ -682,15 +698,16 @@ object MySQLHelper {
                 return false
             }
 
-            val query = "SELECT password FROM user_table WHERE email = ?"
+            val query = "SELECT password, verified FROM user_table WHERE email = ?"
             statement = connection.prepareStatement(query)
             statement.setString(1, email)
 
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
                 val storedPassword = resultSet.getString("password")
+                val verified = resultSet.getInt("verified")
                 val hashedPassword = hashPassword(password)
-                storedPassword == hashedPassword // Compare the hashed password with the stored password
+                storedPassword == hashedPassword && verified == 1 // Compare the hashed password with the stored password and check if verified
             } else {
                 false
             }
@@ -761,7 +778,7 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, password
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, password, verified
             FROM user_table
             WHERE email = ?
         """
@@ -781,7 +798,8 @@ object MySQLHelper {
                         resultSet.getString("contactNumber") ?: "",
                         resultSet.getString("createdOn") ?: "",
                         resultSet.getString("updatedOn") ?: "",
-                        resultSet.getString("proofDisability") ?: ""
+                        resultSet.getString("proofDisability") ?: "",
+                        resultSet.getInt("verified") // Add this line
                     )
                 } else {
                     null
@@ -959,6 +977,7 @@ object MySQLHelper {
         return data
     }
 
+
     fun getUserDataByEmail(email: String): UserData? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -971,7 +990,7 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, verified
             FROM user_table
             WHERE email = ?
         """
@@ -981,14 +1000,15 @@ object MySQLHelper {
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
                 UserData(
-                    resultSet.getString("userID"),
-                    resultSet.getString("fullName"),
-                    resultSet.getString("userType"),
-                    resultSet.getString("email"),
-                    resultSet.getString("contactNumber"),
-                    resultSet.getString("createdOn"),
-                    resultSet.getString("updatedOn"),
-                    resultSet.getString("proofDisability")
+                    resultSet.getString("userID") ?: "",
+                    resultSet.getString("fullName") ?: "",
+                    resultSet.getString("userType") ?: "",
+                    resultSet.getString("email") ?: "",
+                    resultSet.getString("contactNumber") ?: "",
+                    resultSet.getString("createdOn") ?: "",
+                    resultSet.getString("updatedOn") ?: "",
+                    resultSet.getString("proofDisability") ?: "",
+                    resultSet.getInt("verified") // Add this line
                 )
             } else {
                 null
@@ -1016,24 +1036,26 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT * FROM user_table
-            WHERE userType IN ('Student', 'Visitor', 'Personnel')
-            AND verified = 0
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, verified
+            FROM user_table
+            WHERE verified = 0
         """
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
             while (resultSet.next()) {
-                val user = UserData(
-                    resultSet.getString("userID") ?: "",
-                    resultSet.getString("fullName") ?: "",
-                    resultSet.getString("userType") ?: "",
-                    resultSet.getString("email") ?: "",
-                    resultSet.getString("contactNumber") ?: "",
-                    resultSet.getString("createdOn") ?: "",
-                    resultSet.getString("updatedOn") ?: "",
-                    resultSet.getString("proofDisability") ?: ""
+                unverifiedUsers.add(
+                    UserData(
+                        resultSet.getString("userID") ?: "",
+                        resultSet.getString("fullName") ?: "",
+                        resultSet.getString("userType") ?: "",
+                        resultSet.getString("email") ?: "",
+                        resultSet.getString("contactNumber") ?: "",
+                        resultSet.getString("createdOn") ?: "",
+                        resultSet.getString("updatedOn") ?: "",
+                        resultSet.getString("proofDisability") ?: "",
+                        resultSet.getInt("verified") // Add this line
+                    )
                 )
-                unverifiedUsers.add(user)
             }
             unverifiedUsers
         } catch (e: SQLException) {
@@ -1045,4 +1067,33 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    suspend fun updateUserVerificationStatus(userID: String, status: Int): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
+                statement = connection.prepareStatement(query)
+                statement.setInt(1, status)
+                statement.setString(2, userID)
+
+                val rowsAffected = statement.executeUpdate()
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
 }
