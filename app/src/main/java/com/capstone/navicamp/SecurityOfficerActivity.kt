@@ -1,5 +1,6 @@
 package com.capstone.navicamp
 
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
@@ -24,11 +25,30 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import android.view.View
 import android.widget.ProgressBar
-import com.bumptech.glide.Glide
 import android.widget.ImageView
 import android.net.Uri
 import androidx.appcompat.app.AlertDialog
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.load.engine.GlideException
+import android.graphics.drawable.Drawable
+import android.widget.Toast
+import com.bumptech.glide.load.DataSource
+import kotlinx.coroutines.CoroutineScope
+import java.util.Properties
+import javax.mail.Message
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
+import java.sql.Connection
+import java.sql.PreparedStatement
+import java.sql.SQLException
+import com.capstone.navicamp.MySQLHelper
+
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -39,7 +59,11 @@ class SecurityOfficerActivity : AppCompatActivity() {
     private val viewModel: SecurityOfficerViewModel by viewModels()
     private lateinit var dataChangeReceiver: DataChangeReceiver
     private val handler = Handler(Looper.getMainLooper())
-    private val refreshInterval = 1000L // 1 second
+    private val refreshInterval = 3000L // 1 second
+
+    private val verificationHandler = Handler(Looper.getMainLooper())
+    private val verificationRefreshInterval = 3000L // 1 second
+
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
@@ -159,39 +183,45 @@ class SecurityOfficerActivity : AppCompatActivity() {
             viewModel.fetchDeviceCount()
         }
         val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
-        registerReceiver(dataChangeReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
+        registerReceiver(dataChangeReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
     }
 
+    // Update onResume to start the verification refresh timer
     override fun onResume() {
         super.onResume()
-        // Update secoff_fullname
         findViewById<TextView>(R.id.secoff_fullname)?.text = UserSingleton.fullName
 
-        // Update nav_name_header in NavigationView
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
             headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
 
-        // Fetch pending items and update UI
         viewModel.fetchPendingItems()
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
 
-        // Start the refresh timer
         handler.post(refreshRunnable)
+        verificationHandler.post(verificationRefreshRunnable) // Start the verification refresh timer
     }
 
+    // Update onPause to stop the verification refresh timer
     override fun onPause() {
         super.onPause()
-        // Stop the refresh timer
         handler.removeCallbacks(refreshRunnable)
+        verificationHandler.removeCallbacks(verificationRefreshRunnable) // Stop the verification refresh timer
     }
 
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(dataChangeReceiver)
+    }
+
+    private val verificationRefreshRunnable = object : Runnable {
+        override fun run() {
+            fetchUnverifiedUsers()
+            verificationHandler.postDelayed(this, verificationRefreshInterval)
+        }
     }
 
     private fun fetchUnverifiedUsers() {
@@ -207,57 +237,267 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val verificationLayout = findViewById<LinearLayout>(R.id.verification_layout)
         verificationLayout.removeAllViews()
 
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
-        val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+        val noVerificationTextView = findViewById<TextView>(R.id.no_verification_text)
 
-        for (user in users) {
-            val cardView = layoutInflater.inflate(R.layout.verification_card, verificationLayout, false)
+        if (users.isEmpty()) {
+            noVerificationTextView.visibility = View.VISIBLE
+        } else {
+            noVerificationTextView.visibility = View.GONE
 
-            val userIdText = cardView.findViewById<TextView>(R.id.user_id_text)
-            val fullNameText = cardView.findViewById<TextView>(R.id.full_name_text)
-            val emailText = cardView.findViewById<TextView>(R.id.email_text)
-            val contactNumberText = cardView.findViewById<TextView>(R.id.contact_number_text)
-            val userTypeText = cardView.findViewById<TextView>(R.id.user_type_text)
-            val createdOnText = cardView.findViewById<TextView>(R.id.created_on_text)
-            val viewProofButton = cardView.findViewById<Button>(R.id.view_proof_button)
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
+            val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
-            userIdText.text = user.userID
-            fullNameText.text = user.fullName
-            emailText.text = user.email
-            contactNumberText.text = user.contactNumber
-            userTypeText.text = user.userType
+            for (user in users) {
+                val cardView =
+                    layoutInflater.inflate(R.layout.verification_card, verificationLayout, false)
 
-            val date = inputFormat.parse(user.createdOn)
-            val formattedDate = date?.let { dateFormat.format(it) } ?: user.createdOn
-            val formattedTime = date?.let { timeFormat.format(it) } ?: user.createdOn
-            createdOnText.text = "$formattedDate\n$formattedTime"
+                val userIdText = cardView.findViewById<TextView>(R.id.user_id_text)
+                val fullNameText = cardView.findViewById<TextView>(R.id.full_name_text)
+                val emailText = cardView.findViewById<TextView>(R.id.email_text)
+                val contactNumberText = cardView.findViewById<TextView>(R.id.contact_number_text)
+                val userTypeText = cardView.findViewById<TextView>(R.id.user_type_text)
+                val createdOnText = cardView.findViewById<TextView>(R.id.created_on_text)
+                val viewProofButton = cardView.findViewById<Button>(R.id.view_proof_button)
 
-            viewProofButton.setOnClickListener {
-                showProofDialog(user.proofDisability)
+                userIdText.text = user.userID
+                fullNameText.text = user.fullName
+                emailText.text = user.email
+                contactNumberText.text = user.contactNumber
+                userTypeText.text = user.userType
+
+                val date = inputFormat.parse(user.createdOn)
+                val formattedDate = date?.let { dateFormat.format(it) } ?: user.createdOn
+                val formattedTime = date?.let { timeFormat.format(it) } ?: user.createdOn
+                createdOnText.text = "$formattedDate\n$formattedTime"
+
+                viewProofButton.setOnClickListener {
+                    showProofDialog(user)
+                }
+
+                verificationLayout.addView(cardView)
             }
-
-            verificationLayout.addView(cardView)
         }
     }
 
-    private fun showProofDialog(proofUri: String) {
+    private fun showLoadingDialog(): AlertDialog {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_loading, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        dialog.show()
+        return dialog
+    }
+
+    private fun showProofDialog(user: UserData) {
+        val loadingDialog = showLoadingDialog()
+
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_proof_image, null)
         val proofImageView = dialogView.findViewById<ImageView>(R.id.proof_image_view)
 
         val s3BaseUrl = "https://navicampbucket.s3.amazonaws.com/"
-        val fullImageUrl = s3BaseUrl + proofUri
+        val fullImageUrl = s3BaseUrl + user.proofDisability
         Glide.with(this)
             .load(fullImageUrl)
             .apply(RequestOptions().placeholder(R.drawable.placeholder).error(R.drawable.error))
+            .listener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
+                ): Boolean {
+                    loadingDialog.dismiss()
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
+                ): Boolean {
+                    loadingDialog.dismiss()
+                    return false
+                }
+            })
             .into(proofImageView)
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
-            .setPositiveButton("Close", null)
+            .setPositiveButton("Accept") { _, _ ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    val isUpdated = withContext(Dispatchers.IO) {
+                        MySQLHelper.updateUserVerificationStatus(user.userID, 1)
+                    }
+                    if (isUpdated) {
+                        acceptedEmail(
+                            user.email,
+                            "Verification Accepted",
+                            """
+                        Dear User,
+
+                        We are pleased to inform you that your proof of disability has been successfully verified. You may now log in to your account and access all available features.
+
+                        Thank you,
+                        CampusNavigator Team
+                        """.trimIndent()
+                        )
+                        Toast.makeText(this@SecurityOfficerActivity, "User's proof of disability accepted and notified the user", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@SecurityOfficerActivity, "Failed to update status", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Decline") { _, _ ->
+                CoroutineScope(Dispatchers.Main).launch {
+                    val isUpdated = withContext(Dispatchers.IO) {
+                        MySQLHelper.updateUserVerificationStatus(user.userID, 2)
+                    }
+                    if (isUpdated) {
+                        declinedEmail(
+                            user.email,
+                            "Verification Declined",
+                            """
+                        Dear User,
+
+                        Unfortunately, your proof of disability was declined due to insufficient or unclear evidence. Please log in using your email and password, where you will be prompted to re-upload a valid proof of disability.
+
+                        Thank you,
+                        CampusNavigator Team
+                        """.trimIndent()
+                        )
+                        Toast.makeText(this@SecurityOfficerActivity, "User's proof of disability declined and notified the user", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@SecurityOfficerActivity, "Failed to update status", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNeutralButton("Close", null)
             .create()
 
         dialog.show()
+    }
+
+    private fun acceptedEmail(toEmail: String, subject: String, body: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val username = "navicamp.noreply@gmail.com"
+            val password = "tcwp hour hlzz tcag"
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props, object : javax.mail.Authenticator() {
+                override fun getPasswordAuthentication(): PasswordAuthentication {
+                    return PasswordAuthentication(username, password)
+                }
+            })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(username))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail))
+                    setSubject(subject)
+                    setText(body)
+                }
+
+                Transport.send(message)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun declinedEmail(toEmail: String, subject: String, body: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val username = "navicamp.noreply@gmail.com"
+            val password = "tcwp hour hlzz tcag"
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props, object : javax.mail.Authenticator() {
+                override fun getPasswordAuthentication(): PasswordAuthentication {
+                    return PasswordAuthentication(username, password)
+                }
+            })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(username))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail))
+                    setSubject(subject)
+                    setText(body)
+                }
+
+                Transport.send(message)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    suspend fun updateUserVerificationStatus(userID: String, status: Int): Boolean {
+        val success = withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = MySQLHelper.getConnection() // Use MySQLHelper to access getConnection
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+                val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
+                statement = connection.prepareStatement(query)
+                statement.setInt(1, status)
+                statement.setString(2, userID)
+                val rowsAffected = statement.executeUpdate()
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+        return success
+    }
+
+    private suspend fun sendVerificationStatusEmail(toEmail: String, isAccepted: Boolean) {
+        withContext(Dispatchers.IO) {
+            val username = "navicamp.noreply@gmail.com"
+            val password = "tcwp hour hlzz tcag" // App password
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props,
+                object : javax.mail.Authenticator() {
+                    override fun getPasswordAuthentication(): PasswordAuthentication {
+                        return PasswordAuthentication(username, password)
+                    }
+                })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress(username))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(toEmail))
+                    subject = if (isAccepted) "Verification Accepted" else "Verification Declined"
+                    setText(if (isAccepted) "Your verification has been accepted." else "Your verification has been declined.")
+                }
+                Transport.send(message)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
