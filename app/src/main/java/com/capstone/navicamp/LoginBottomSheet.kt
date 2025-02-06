@@ -183,11 +183,13 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                     return@setOnClickListener
                 }
 
+                val loadingDialog = showLoadingDialog()
+
                 CoroutineScope(Dispatchers.Main).launch {
                     val email = emailEditText.text.toString()
 
                     val userID = withContext(Dispatchers.IO) {
-                        MySQLHelper.getUserIDByEmail(email)?.toInt()
+                        MySQLHelper.getUserIDByEmail(email)
                     }
 
                     if (userID != null) {
@@ -196,26 +198,20 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                         val proofDisability = "proof_of_disability/${file.name}"
 
                         val isUpdated = withContext(Dispatchers.IO) {
-                            MySQLHelper.updateProofDisability(userID, proofDisability) &&
-                                    MySQLHelper.updateUserVerificationStatus(userID.toString(), 0)
+                            MySQLHelper.updateProofDisability(userID.toInt(), proofDisability) &&
+                                    MySQLHelper.updateUserVerificationStatus(userID, 0)
                         }
 
                         if (isUpdated) {
-                            try {
-                                val uploadedImageName = withContext(Dispatchers.IO) {
-                                    uploadImageToS3(requireContext(), selectedImageUri!!)
-                                }
-                                Toast.makeText(requireContext(), "Image uploaded successfully", Toast.LENGTH_SHORT).show()
-                                dialog.dismiss()
-                            } catch (e: Exception) {
-                                Toast.makeText(requireContext(), "Image upload failed. Try again.", Toast.LENGTH_SHORT).show()
-                            }
+                            Toast.makeText(requireContext(), "Proof uploaded successfully", Toast.LENGTH_SHORT).show()
+                            dialog.dismiss()
                         } else {
-                            Toast.makeText(requireContext(), "Failed to update proof of disability.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), "Failed to upload proof", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(requireContext(), "User not found.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "User not found", Toast.LENGTH_SHORT).show()
                     }
+                    loadingDialog.dismiss()
                 }
             }
         }
