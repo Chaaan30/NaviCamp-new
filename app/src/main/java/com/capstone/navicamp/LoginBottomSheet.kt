@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.amazonaws.services.s3.model.PutObjectRequest
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
 
@@ -144,44 +145,99 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun showReuploadProofDialog() {
-        dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_reupload_proof, null)
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        val uploadProofButton = dialogView!!.findViewById<Button>(R.id.upload_proof_button)
-        val infoButton = dialogView!!.findViewById<ImageButton>(R.id.info_button_login)
-        val selectedImageName = dialogView!!.findViewById<TextView>(R.id.selected_image_name)
-        val removeImageButton = dialogView!!.findViewById<ImageButton>(R.id.remove_image_button)
-        val confirmUploadButton = dialogView!!.findViewById<Button>(R.id.confirm_upload_button)
-
-        uploadProofButton.setOnClickListener {
-            openImagePicker()
-        }
-
-        infoButton.setOnClickListener {
-            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
+        CoroutineScope(Dispatchers.Main).launch {
+            dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_reupload_proof, null)
             val dialog = AlertDialog.Builder(requireContext())
                 .setView(dialogView)
-                .setPositiveButton("OK", null)
+                .setCancelable(false)
                 .create()
             dialog.show()
-        }
 
-        removeImageButton.setOnClickListener {
-            selectedImageUri = null
-            selectedImageName.text = "No file selected"
-        }
+            val uploadProofButton = dialogView!!.findViewById<Button>(R.id.upload_proof_button)
+            val infoButton = dialogView!!.findViewById<ImageButton>(R.id.info_button_login)
+            val selectedImageName = dialogView!!.findViewById<TextView>(R.id.selected_image_name)
+            val removeImageButton = dialogView!!.findViewById<ImageButton>(R.id.remove_image_button)
+            val confirmUploadButton = dialogView!!.findViewById<Button>(R.id.confirm_upload_button)
 
-        confirmUploadButton.setOnClickListener {
-            selectedImageUri?.let { uri ->
-                uploadImageAndSaveUri(uri)
+            uploadProofButton.setOnClickListener {
+                openImagePicker()
+            }
+
+            infoButton.setOnClickListener {
+                val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
+                val dialog = AlertDialog.Builder(requireContext())
+                    .setView(dialogView)
+                    .setPositiveButton("OK", null)
+                    .create()
+                dialog.show()
+            }
+
+            removeImageButton.setOnClickListener {
+                selectedImageUri = null
+                selectedImageName.text = "No file selected"
+            }
+
+            confirmUploadButton.setOnClickListener {
+                if (selectedImageUri == null) {
+                    Toast.makeText(requireContext(), "Please select an image", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    val email = emailEditText.text.toString()
+
+                    val userID = withContext(Dispatchers.IO) {
+                        MySQLHelper.getUserIDByEmail(email)?.toInt()
+                    }
+
+                    if (userID != null) {
+                        val filePath = getPathFromUri(selectedImageUri!!)
+                        val file = File(filePath)
+                        val proofDisability = "proof_of_disability/${file.name}"
+
+                        val isUpdated = withContext(Dispatchers.IO) {
+                            MySQLHelper.updateProofDisability(userID, proofDisability) &&
+                                    MySQLHelper.updateUserVerificationStatus(userID.toString(), 0)
+                        }
+
+                        if (isUpdated) {
+                            try {
+                                val uploadedImageName = withContext(Dispatchers.IO) {
+                                    uploadImageToS3(requireContext(), selectedImageUri!!)
+                                }
+                                Toast.makeText(requireContext(), "Image uploaded successfully", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            } catch (e: Exception) {
+                                Toast.makeText(requireContext(), "Image upload failed. Try again.", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(requireContext(), "Failed to update proof of disability.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(requireContext(), "User not found.", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
-
-        dialog.show()
     }
+
+    private suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
+        AwsUtils.initialize(context)
+        val s3Client = AwsUtils.s3Client
+        val bucketName = "navicampbucket"
+
+        val filePath = getPathFromUri(imageUri)
+        val file = File(filePath)
+        val fileName = "proof_of_disability/${file.name}"
+
+        val putObjectRequest = PutObjectRequest(bucketName, fileName, file)
+
+        return withContext(Dispatchers.IO) {
+            s3Client.putObject(putObjectRequest)
+            fileName
+        }
+    }
+
 
     private fun uploadImageAndSaveUri(imageUri: Uri) {
         val loadingDialog = showLoadingDialog()

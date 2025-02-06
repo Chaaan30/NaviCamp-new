@@ -338,6 +338,37 @@ object MySQLHelper {
         }
     }
 
+    fun getUserIDByEmail(email: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT userID FROM user_table WHERE email = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, email)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("userID")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun getUserIDByUserName(userName: String): String? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -1096,4 +1127,29 @@ object MySQLHelper {
         }
     }
 
+    fun updateProofDisability(userID: Int, proofDisability: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE user_table SET proofDisability = ? WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, proofDisability)
+            statement.setInt(2, userID) // Ensure userID is set as an integer
+
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
 }

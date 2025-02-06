@@ -387,8 +387,13 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val putObjectRequest = PutObjectRequest(bucketName, fileName, file)
 
         return withContext(Dispatchers.IO) {
-            s3Client.putObject(putObjectRequest)
-            fileName
+            try {
+                s3Client.putObject(putObjectRequest)
+                fileName
+            } catch (e: Exception) {
+                e.printStackTrace()
+                throw e
+            }
         }
     }
 
