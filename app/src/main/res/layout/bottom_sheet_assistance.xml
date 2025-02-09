@@ -26,77 +26,121 @@
             android:id="@id/floor_level_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="24sp"
-            android:gravity="center"
-            android:textColor="#000000"
             android:fontFamily="@font/inter_bold"
-            android:text="Floor Level" />
+            android:gravity="center"
+            android:text="Floor Level"
+            android:textColor="#000000"
+            android:textSize="24sp" />
 
         <TextView
             android:id="@+id/date_time_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:paddingTop="8dp"
-            android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Date and Time:" />
-
+            android:paddingTop="8dp"
+            android:text="Date and Time:"
+            android:textColor="#000000"
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/full_name_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:paddingTop="8dp"
-            android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Full Name:" />
+            android:paddingTop="8dp"
+            android:text="Full Name:"
+            android:textColor="#000000"
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/user_id_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:paddingTop="8dp"
-            android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="User ID:" />
+            android:paddingTop="8dp"
+            android:text="User ID:"
+            android:textColor="#000000"
+            android:textSize="16sp" />
 
         <TextView
             android:id="@+id/status_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:paddingTop="8dp"
-            android:textColor="#000000"
             android:fontFamily="@font/inter"
-            android:text="Status:" />
+            android:paddingTop="8dp"
+            android:text="Status:"
+            android:textColor="#000000"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/officer_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter"
+            android:paddingTop="8dp"
+            android:text="Officer:"
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/false_alarm_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/inter"
+            android:hint="Enter reason for false alarm"
+            android:inputType="textMultiLine"
+            android:maxLines="5"
+            android:minLines="3"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/officer_on_the_way_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/inter"
+            android:text="An officer is now on the way to assist the locomotor disabled user"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/respond_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/inter_bold"
             android:text="Respond"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/false_alarm_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/inter_bold"
+            android:text="False Alarm"
             android:textSize="16sp"
-            android:layout_marginTop="16dp"
-            android:fontFamily="@font/inter_bold" />
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/resolve_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_bold"
             android:text="Resolve"
             android:textSize="16sp"
-            android:fontFamily="@font/inter_bold"
             android:visibility="gone" />
 
         <ProgressBar
             android:id="@+id/respond_progress"
+            style="?android:attr/progressBarStyleLarge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="gone"
-            style="?android:attr/progressBarStyleLarge" />
+            android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

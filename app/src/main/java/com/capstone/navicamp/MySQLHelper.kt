@@ -83,17 +83,18 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        return try {
+
+        try {
             connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return pendingItems
             }
 
-            val query =
-                "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
+            val query = "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
+
             while (resultSet.next()) {
                 val locationItem = LocationItem(
                     resultSet.getString("locationID"),
@@ -103,14 +104,17 @@ object MySQLHelper {
                     resultSet.getString("status"),
                     resultSet.getDouble("latitude"),
                     resultSet.getDouble("longitude"),
-                    resultSet.getString("dateTime")
+                    resultSet.getString("dateTime"),
+                    resultSet.getString("officerResponded")  // Ensure this line is correct
                 )
                 pendingItems.add(locationItem)
             }
-            pendingItems
+            return pendingItems
+
         } catch (e: SQLException) {
             e.printStackTrace()
-            pendingItems
+            return pendingItems
+
         } finally {
             resultSet?.close()
             statement?.close()
@@ -366,6 +370,42 @@ object MySQLHelper {
             resultSet?.close()
             statement?.close()
             connection?.close()
+        }
+    }
+    
+    suspend fun updateStatusAndOfficer(locationID: String, status: String, officerName: String, falseDescription: String? = null): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+                val query = if (falseDescription != null) {
+                    "UPDATE location_table SET status = ?, officerResponded = ?, falseDescription = ? WHERE locationID = ?"
+                } else {
+                    "UPDATE location_table SET status = ?, officerResponded = ? WHERE locationID = ?"
+                }
+                statement = connection.prepareStatement(query)
+                statement.setString(1, status)
+                statement.setString(2, officerName)
+                if (falseDescription != null) {
+                    statement.setString(3, falseDescription)
+                    statement.setString(4, locationID)
+                } else {
+                    statement.setString(3, locationID)
+                }
+                val rowsAffected = statement.executeUpdate()
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
         }
     }
 
@@ -1148,6 +1188,86 @@ object MySQLHelper {
             e.printStackTrace()
             false
         } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getOfficerNameByLocationID(locationID: String?): String? {
+        if (locationID == null) return null
+
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = """
+            SELECT officerResponded FROM location_table WHERE locationID = ?
+        """
+            statement = connection.prepareStatement(query)
+            statement.setString(1, locationID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                val officerName = resultSet.getString("officerResponded")
+                if (officerName.isNullOrBlank()) null else officerName
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    // In MySQLHelper.kt, update the getAssistanceDetails function
+    fun getAssistanceDetails(locationId: String): LocationItem? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = """
+            SELECT * FROM location_table WHERE locationID = ?
+        """
+            statement = connection.prepareStatement(query)
+            statement.setString(1, locationId)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                LocationItem(
+                    locationID = resultSet.getString("locationID"),
+                    userID = resultSet.getString("userID"),
+                    fullName = resultSet.getString("fullName"),
+                    floorLevel = resultSet.getString("floorLevel"),
+                    status = resultSet.getString("status"),
+                    latitude = resultSet.getDouble("latitude"),
+                    longitude = resultSet.getDouble("longitude"),
+                    dateTime = resultSet.getString("dateTime"),
+                    officerName = resultSet.getString("officerResponded")  // Changed parameter name
+                )
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
             statement?.close()
             connection?.close()
         }

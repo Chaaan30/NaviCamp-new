@@ -303,14 +303,21 @@ class SecurityOfficerActivity : AppCompatActivity() {
             .apply(RequestOptions().placeholder(R.drawable.placeholder).error(R.drawable.error))
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(
-                    e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    isFirstResource: Boolean
                 ): Boolean {
                     loadingDialog.dismiss()
                     return false
                 }
 
                 override fun onResourceReady(
-                    resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean
+                    resource: Drawable?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
                 ): Boolean {
                     loadingDialog.dismiss()
                     return false
@@ -338,9 +345,17 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         CampusNavigator Team
                         """.trimIndent()
                         )
-                        Toast.makeText(this@SecurityOfficerActivity, "User's proof of disability accepted and notified the user", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SecurityOfficerActivity,
+                            "User's proof of disability accepted and notified the user",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(this@SecurityOfficerActivity, "Failed to update status", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SecurityOfficerActivity,
+                            "Failed to update status",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -362,9 +377,17 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         CampusNavigator Team
                         """.trimIndent()
                         )
-                        Toast.makeText(this@SecurityOfficerActivity, "User's proof of disability declined and notified the user", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SecurityOfficerActivity,
+                            "User's proof of disability declined and notified the user",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(this@SecurityOfficerActivity, "Failed to update status", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SecurityOfficerActivity,
+                            "Failed to update status",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -521,11 +544,10 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 val cardView = LayoutInflater.from(this)
                     .inflate(R.layout.assistance_card, assistanceLayout, false)
                 val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
-                val createdOnDateTextView =
-                    cardView.findViewById<TextView>(R.id.created_on_date_text)
-                val createdOnTimeTextView =
-                    cardView.findViewById<TextView>(R.id.created_on_time_text)
+                val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
+                val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
                 val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
+                val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
                 val respondButton = cardView.findViewById<Button>(R.id.respond_button)
 
                 fullNameTextView.text = item.fullName
@@ -537,6 +559,19 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 createdOnTimeTextView.text = formattedTime
 
                 floorLevelTextView.text = item.floorLevel
+
+                val officerName = item.officerName
+                if (!officerName.isNullOrEmpty()) {
+                    officerRespondedTextView.text = if (officerName == UserSingleton.fullName) {
+                        "Officer: $officerName (You)"
+                    } else {
+                        "Officer: $officerName"
+                    }
+                    officerRespondedTextView.visibility = View.VISIBLE
+                } else {
+                    officerRespondedTextView.text = "No officer responded yet"
+                }
+
                 respondButton.setOnClickListener {
                     val locationID = item.locationID
                     val officerName = UserSingleton.fullName
@@ -544,8 +579,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     lifecycleScope.launch(Dispatchers.IO) {
                         val locationItem = MySQLHelper.getLocationItemById(locationID)
                         withContext(Dispatchers.Main) {
-                            val intent =
-                                Intent(this@SecurityOfficerActivity, MapActivity::class.java)
+                            val intent = Intent(this@SecurityOfficerActivity, MapActivity::class.java)
                             intent.putExtra("OFFICER_NAME", officerName)
                             intent.putExtra("LATITUDE", locationItem.latitude)
                             intent.putExtra("LONGITUDE", locationItem.longitude)
