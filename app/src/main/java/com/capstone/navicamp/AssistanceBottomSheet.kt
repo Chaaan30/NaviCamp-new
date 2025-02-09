@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.lifecycle.lifecycleScope
 
 class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
@@ -30,7 +32,19 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     private lateinit var respondProgress: ProgressBar
     private lateinit var falseAlarmButton: Button
     private lateinit var falseAlarmReason: EditText
+    private lateinit var officerOnTheWayTextView: TextView
     private var locationID: String? = null
+    private var loadingDialog: AlertDialog? = null
+
+    private fun showLoadingDialog(): AlertDialog {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_loading, null)
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+        dialog.show()
+        return dialog
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -41,6 +55,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         // Initialize views
         falseAlarmButton = view.findViewById(R.id.false_alarm_button)
         falseAlarmReason = view.findViewById(R.id.false_alarm_reason)
+        officerOnTheWayTextView = view.findViewById(R.id.officer_on_the_way_text)
 
         // Set up click listener for the False Alarm button
         falseAlarmButton.setOnClickListener {
@@ -53,14 +68,39 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val officerName = fetchOfficerName(locationID)
-        
-        val officerTextView = view.findViewById<TextView>(R.id.officer_text)
-        if (!officerName.isNullOrEmpty()) {
-            officerTextView.text = "Officer: $officerName"
-            officerTextView.visibility = View.VISIBLE
-        } else {
-            officerTextView.visibility = View.GONE
+        // Get locationID from arguments first
+        locationID = arguments?.getString("LOCATION_ID")
+
+        // Use lifecycleScope to launch a coroutine
+        lifecycleScope.launch {
+            // Fetch officer name in background thread
+            val officerName = withContext(Dispatchers.IO) {
+                MySQLHelper.getOfficerNameByLocationID(locationID)
+            }
+
+            // Update UI on main thread
+            val officerTextView = view.findViewById<TextView>(R.id.officer_text)
+            if (!officerName.isNullOrEmpty()) {
+                officerTextView.text = "Officer: $officerName"
+                officerTextView.visibility = View.VISIBLE
+
+                // Check if the currently logged-in officer is the one who responded
+                if (officerName == UserSingleton.fullName) {
+                    falseAlarmButton.visibility = View.VISIBLE
+                    resolveButton.visibility = View.VISIBLE
+                    officerOnTheWayTextView.visibility = View.GONE
+                } else {
+                    falseAlarmButton.visibility = View.GONE
+                    resolveButton.visibility = View.GONE
+                    officerOnTheWayTextView.visibility = View.VISIBLE
+                }
+            } else {
+                officerTextView.visibility = View.GONE
+                falseAlarmButton.visibility = View.GONE
+                resolveButton.visibility = View.GONE
+                officerOnTheWayTextView.visibility = View.GONE
+            }
+            loadingDialog?.dismiss()
         }
 
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
@@ -86,25 +126,27 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         }
 
         respondButton.setOnClickListener {
-            Log.d("AssistanceBottomSheet", "Respond button clicked")
-            respondProgress.visibility = View.VISIBLE
             updateStatus(locationID, "ongoing")
         }
 
         resolveButton.setOnClickListener {
-            Log.d("AssistanceBottomSheet", "Resolve button clicked")
-            updateStatus(locationID, "resolved")
+            val falseAlarmDescription = falseAlarmReason.text.toString().trim()
+            if (falseAlarmReason.visibility == View.VISIBLE && falseAlarmDescription.isNotEmpty()) {
+                updateStatus(locationID, "false alarm", falseAlarmDescription)
+            } else {
+                updateStatus(locationID, "resolved")
+            }
             Toast.makeText(requireContext(), "Assistance has been resolved", Toast.LENGTH_SHORT).show()
             activity?.finish() // Close MapActivity
         }
     }
 
-    private fun updateStatus(locationID: String?, newStatus: String) {
+    private fun updateStatus(locationID: String?, newStatus: String, falseDescription: String? = null) {
         if (locationID != null) {
             val officerName = UserSingleton.fullName ?: "Unknown Officer"
-    
+
             CoroutineScope(Dispatchers.IO).launch {
-                val success = MySQLHelper.updateStatusAndOfficer(locationID, newStatus, officerName)
+                val success = MySQLHelper.updateStatusAndOfficer(locationID, newStatus, officerName, falseDescription)
                 withContext(Dispatchers.Main) {
                     respondProgress.visibility = View.GONE
                     if (success) {
@@ -112,7 +154,14 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                         Log.d("AssistanceBottomSheet", "Status updated to $newStatus by $officerName")
                         respondButton.isEnabled = false
                         resolveButton.visibility = View.VISIBLE
-    
+
+                        // Update officer text and show buttons
+                        val officerTextView = view?.findViewById<TextView>(R.id.officer_text)
+                        officerTextView?.text = "Officer: $officerName (You)"
+                        officerTextView?.visibility = View.VISIBLE
+                        falseAlarmButton.visibility = View.VISIBLE
+                        resolveButton.visibility = View.VISIBLE
+
                         // Send broadcast to notify data change
                         val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                         requireContext().sendBroadcast(intent)
