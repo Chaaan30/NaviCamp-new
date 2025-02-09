@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -27,17 +28,40 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     private lateinit var respondButton: Button
     private lateinit var resolveButton: Button
     private lateinit var respondProgress: ProgressBar
+    private lateinit var falseAlarmButton: Button
+    private lateinit var falseAlarmReason: EditText
     private var locationID: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.bottom_sheet_assistance, container, false)
+        val view = inflater.inflate(R.layout.bottom_sheet_assistance, container, false)
+
+        // Initialize views
+        falseAlarmButton = view.findViewById(R.id.false_alarm_button)
+        falseAlarmReason = view.findViewById(R.id.false_alarm_reason)
+
+        // Set up click listener for the False Alarm button
+        falseAlarmButton.setOnClickListener {
+            toggleFalseAlarmReason()
+        }
+
+        return view
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        val officerName = fetchOfficerName(locationID)
+        
+        val officerTextView = view.findViewById<TextView>(R.id.officer_text)
+        if (!officerName.isNullOrEmpty()) {
+            officerTextView.text = "Officer: $officerName"
+            officerTextView.visibility = View.VISIBLE
+        } else {
+            officerTextView.visibility = View.GONE
+        }
 
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
         locationID = arguments?.getString("LOCATION_ID")
@@ -78,18 +102,17 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     private fun updateStatus(locationID: String?, newStatus: String) {
         if (locationID != null) {
             val officerName = UserSingleton.fullName ?: "Unknown Officer"
-            val statusWithOfficer = "$newStatus by Officer: $officerName"
-
+    
             CoroutineScope(Dispatchers.IO).launch {
-                val success = MySQLHelper.updateStatus(locationID, statusWithOfficer)
+                val success = MySQLHelper.updateStatusAndOfficer(locationID, newStatus, officerName)
                 withContext(Dispatchers.Main) {
                     respondProgress.visibility = View.GONE
                     if (success) {
                         view?.findViewById<TextView>(R.id.status_text)?.text = "Status: $newStatus"
-                        Log.d("AssistanceBottomSheet", "Status updated to $statusWithOfficer")
+                        Log.d("AssistanceBottomSheet", "Status updated to $newStatus by $officerName")
                         respondButton.isEnabled = false
                         resolveButton.visibility = View.VISIBLE
-
+    
                         // Send broadcast to notify data change
                         val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                         requireContext().sendBroadcast(intent)
@@ -138,6 +161,20 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
             }
         }
         return dialog
+    }
+
+    private fun toggleFalseAlarmReason() {
+        if (falseAlarmReason.visibility == View.VISIBLE) {
+            falseAlarmReason.visibility = View.GONE
+            falseAlarmButton.text = "False Alarm"
+        } else {
+            falseAlarmReason.visibility = View.VISIBLE
+            falseAlarmButton.text = "Cancel False Alarm"
+        }
+    }
+
+    private fun fetchOfficerName(locationID: String?): String? {
+        return MySQLHelper.getOfficerNameByLocationID(locationID)
     }
 
     companion object {

@@ -368,6 +368,33 @@ object MySQLHelper {
             connection?.close()
         }
     }
+    
+    suspend fun updateStatusAndOfficer(locationID: String, status: String, officerName: String): Boolean {
+    return withContext(Dispatchers.IO) {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return@withContext false
+            }
+            val query = "UPDATE location_table SET status = ?, officerResponded = ? WHERE locationID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, status)
+            statement.setString(2, officerName)
+            statement.setString(3, locationID)
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+}
 
     fun getUserIDByUserName(userName: String): String? {
         var connection: Connection? = null
@@ -1152,4 +1179,82 @@ object MySQLHelper {
             connection?.close()
         }
     }
+    
+        fun getOfficerNameByLocationID(locationID: String?): String? {
+            if (locationID == null) return null
+
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            var resultSet: ResultSet? = null
+            return try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return null
+                }
+
+                val query = """
+                    SELECT officerResponded FROM location_table WHERE locationID = ?
+                """
+                statement = connection.prepareStatement(query)
+                statement.setString(1, locationID)
+
+                resultSet = statement.executeQuery()
+                if (resultSet.next()) {
+                    resultSet.getString("officerResponded")
+                } else {
+                    null
+                }
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                null
+            } finally {
+                resultSet?.close()
+                statement?.close()
+                connection?.close()
+            }
+        }
+    
+    fun getAssistanceDetails(locationId: String): LocationItem? {
+    var connection: Connection? = null
+    var statement: PreparedStatement? = null
+    var resultSet: ResultSet? = null
+    return try {
+        connection = getConnection()
+        if (connection == null) {
+            println("Database connection failed.")
+            return null
+        }
+
+        val query = """
+            SELECT * FROM location_table WHERE locationID = ?
+        """
+        statement = connection.prepareStatement(query)
+        statement.setString(1, locationId)
+
+        resultSet = statement.executeQuery()
+        if (resultSet.next()) {
+            LocationItem(
+                locationID = resultSet.getString("locationID"),
+                userID = resultSet.getString("userID"),
+                fullName = resultSet.getString("fullName"),
+                floorLevel = resultSet.getString("floorLevel"),
+                status = resultSet.getString("status"),
+                latitude = resultSet.getDouble("latitude"),
+                longitude = resultSet.getDouble("longitude"),
+                dateTime = resultSet.getString("dateTime"),
+                officerResponded = resultSet.getString("officerResponded")
+            )
+        } else {
+            null
+        }
+    } catch (e: SQLException) {
+        e.printStackTrace()
+        null
+    } finally {
+        resultSet?.close()
+        statement?.close()
+        connection?.close()
+    }
+}
 }

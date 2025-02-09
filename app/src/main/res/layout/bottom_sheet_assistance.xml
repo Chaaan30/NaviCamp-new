@@ -42,7 +42,6 @@
             android:fontFamily="@font/inter"
             android:text="Date and Time:" />
 
-
         <TextView
             android:id="@+id/full_name_text"
             android:layout_width="match_parent"
@@ -73,6 +72,29 @@
             android:fontFamily="@font/inter"
             android:text="Status:" />
 
+        <TextView
+            android:id="@+id/officer_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:paddingTop="8dp"
+            android:textColor="#000000"
+            android:fontFamily="@font/inter"
+            android:text="Officer:"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/false_alarm_reason"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Enter reason for false alarm"
+            android:inputType="textMultiLine"
+            android:minLines="3"
+            android:maxLines="5"
+            android:visibility="gone"
+            android:fontFamily="@font/inter" />
+
         <Button
             android:id="@+id/respond_button"
             android:layout_width="match_parent"
@@ -80,6 +102,16 @@
             android:text="Respond"
             android:textSize="16sp"
             android:layout_marginTop="16dp"
+            android:fontFamily="@font/inter_bold" />
+
+        <!-- New False Alarm button -->
+        <Button
+            android:id="@+id/false_alarm_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="False Alarm"
+            android:textSize="16sp"
+            android:layout_marginTop="8dp"
             android:fontFamily="@font/inter_bold" />
 
         <Button
