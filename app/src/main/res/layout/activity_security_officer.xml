@@ -87,19 +87,45 @@
                     android:visibility="gone"
                     style="?android:attr/progressBarStyleLarge" />
 
-                <!-- Horizontal ScrollView for Assistance Cards -->
-                <HorizontalScrollView
+
+                <androidx.core.widget.NestedScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="8dp">
+                    android:layout_height="260dp"
+                    android:fillViewport="true"
+                    android:scrollbarFadeDuration="0"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    android:scrollbarSize="4dp"
+                    android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
+                    android:background="#F0F3FD">
 
                     <LinearLayout
-                        android:id="@+id/assistance_layout"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="4dp"
+                        android:background="#F0F3FD">
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            app:cardElevation="0dp"
+                            app:cardCornerRadius="8dp"
+                            android:background="#F0F3FD">
+
+                            <LinearLayout
+                                android:id="@+id/assistance_layout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="4dp"
+                                android:background="#F0F3FD">
+                            </LinearLayout>
+
+                        </androidx.cardview.widget.CardView>
                     </LinearLayout>
-                </HorizontalScrollView>
+                </androidx.core.widget.NestedScrollView>
+
 
                 <!-- Monitoring Section -->
                 <TextView

@@ -156,21 +156,20 @@ class SecurityOfficerActivity : AppCompatActivity() {
         iotDevicesProgress.visibility = View.VISIBLE
 
         // Observe the LiveData from the ViewModel
-        viewModel.pendingItems.observe(this, Observer { pendingItems ->
+        viewModel.pendingItems.observe(this) { pendingItems ->
             updateAssistanceCards(pendingItems)
-            noAssistanceProgress.visibility = View.GONE
-        })
+            findViewById<ProgressBar>(R.id.no_assistance_progress).visibility = View.GONE
+        }
 
-        viewModel.userCount.observe(this, Observer { count ->
-            findViewById<TextView>(R.id.registered_users)?.text = count.toString()
-            registeredUsersProgress.visibility = View.GONE
-        })
+        viewModel.userCount.observe(this) { count ->
+            findViewById<TextView>(R.id.registered_users).text = count.toString()
+            findViewById<ProgressBar>(R.id.registered_users_progress).visibility = View.GONE
+        }
 
-        viewModel.deviceCount.observe(this, Observer { count ->
-            findViewById<TextView>(R.id.iot_devices)?.text = count.toString()
-            iotDevicesProgress.visibility = View.GONE
-        })
-
+        viewModel.deviceCount.observe(this) { count ->
+            findViewById<TextView>(R.id.iot_devices).text = count.toString()
+            findViewById<ProgressBar>(R.id.iot_devices_progress).visibility = View.GONE
+        }
         // Fetch the initial data
         viewModel.fetchPendingItems()
         viewModel.fetchUserCount()
@@ -540,62 +539,101 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 inputFormat.parse(item.dateTime)
             }
 
-            for (item in sortedItems) {
+            // Take only the first 2 items
+            val itemsToShow = sortedItems.take(2)
+
+            // Add first 2 cards
+            for (item in itemsToShow) {
                 val cardView = LayoutInflater.from(this)
                     .inflate(R.layout.assistance_card, assistanceLayout, false)
-                val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
-                val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
-                val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
-                val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
-                val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
-                val respondButton = cardView.findViewById<Button>(R.id.respond_button)
-
-                fullNameTextView.text = item.fullName
-
-                val date = inputFormat.parse(item.dateTime)
-                val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
-                val formattedTime = date?.let { timeFormat.format(it) } ?: item.dateTime
-                createdOnDateTextView.text = formattedDate
-                createdOnTimeTextView.text = formattedTime
-
-                floorLevelTextView.text = item.floorLevel
-
-                val officerName = item.officerName
-                if (!officerName.isNullOrEmpty()) {
-                    officerRespondedTextView.text = if (officerName == UserSingleton.fullName) {
-                        "Officer: $officerName (You)"
-                    } else {
-                        "Officer: $officerName"
-                    }
-                    officerRespondedTextView.visibility = View.VISIBLE
-                } else {
-                    officerRespondedTextView.text = "No officer responded yet"
-                }
-
-                respondButton.setOnClickListener {
-                    val locationID = item.locationID
-                    val officerName = UserSingleton.fullName
-
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val locationItem = MySQLHelper.getLocationItemById(locationID)
-                        withContext(Dispatchers.Main) {
-                            val intent = Intent(this@SecurityOfficerActivity, MapActivity::class.java)
-                            intent.putExtra("OFFICER_NAME", officerName)
-                            intent.putExtra("LATITUDE", locationItem.latitude)
-                            intent.putExtra("LONGITUDE", locationItem.longitude)
-                            intent.putExtra("FLOOR_LEVEL", locationItem.floorLevel)
-                            intent.putExtra("LOCATION_ID", locationItem.locationID)
-                            intent.putExtra("USER_ID", locationItem.userID)
-                            intent.putExtra("FULL_NAME", locationItem.fullName)
-                            intent.putExtra("DATE_TIME", locationItem.dateTime)
-                            intent.putExtra("STATUS", locationItem.status)
-                            startActivity(intent)
-                        }
-                    }
-                }
+                setupAssistanceCard(cardView, item, inputFormat, dateFormat, timeFormat)
                 assistanceLayout.addView(cardView)
+            }
+
+            // If there are more items, add remaining cards
+            if (sortedItems.size > 2) {
+                // Add a divider
+                View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    ).apply {
+                        setMargins(16, 16, 16, 16)
+                    }
+                    setBackgroundColor(resources.getColor(R.color.primaryColor))
+                    alpha = 0.2f
+                    assistanceLayout.addView(this)
+                }
+
+                // Add remaining cards
+                for (item in sortedItems.drop(2)) {
+                    val cardView = LayoutInflater.from(this)
+                        .inflate(R.layout.assistance_card, assistanceLayout, false)
+                    setupAssistanceCard(cardView, item, inputFormat, dateFormat, timeFormat)
+                    assistanceLayout.addView(cardView)
+                }
             }
         }
         noAssistanceProgress.visibility = View.GONE
+    }
+
+    private fun setupAssistanceCard(
+        cardView: View,
+        item: LocationItem,
+        inputFormat: SimpleDateFormat,
+        dateFormat: SimpleDateFormat,
+        timeFormat: SimpleDateFormat
+    ) {
+        val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
+        val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
+        val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
+        val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
+        val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
+        val respondButton = cardView.findViewById<Button>(R.id.respond_button)
+
+        fullNameTextView.text = item.fullName
+
+        val date = inputFormat.parse(item.dateTime)
+        val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
+        val formattedTime = date?.let { timeFormat.format(it) } ?: item.dateTime
+        createdOnDateTextView.text = formattedDate
+        createdOnTimeTextView.text = formattedTime
+
+        floorLevelTextView.text = item.floorLevel
+
+        val officerName = item.officerName
+        if (!officerName.isNullOrEmpty()) {
+            officerRespondedTextView.text = if (officerName == UserSingleton.fullName) {
+                "Officer: $officerName (You)"
+            } else {
+                "Officer: $officerName"
+            }
+            officerRespondedTextView.visibility = View.VISIBLE
+        } else {
+            officerRespondedTextView.text = "No officer responded yet"
+        }
+
+        respondButton.setOnClickListener {
+            val locationID = item.locationID
+            val officerName = UserSingleton.fullName
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                val locationItem = MySQLHelper.getLocationItemById(locationID)
+                withContext(Dispatchers.Main) {
+                    val intent = Intent(cardView.context, MapActivity::class.java).apply {
+                        putExtra("OFFICER_NAME", officerName)
+                        putExtra("LATITUDE", locationItem.latitude)
+                        putExtra("LONGITUDE", locationItem.longitude)
+                        putExtra("FLOOR_LEVEL", locationItem.floorLevel)
+                        putExtra("LOCATION_ID", locationItem.locationID)
+                        putExtra("USER_ID", locationItem.userID)
+                        putExtra("FULL_NAME", locationItem.fullName)
+                        putExtra("DATE_TIME", locationItem.dateTime)
+                        putExtra("STATUS", locationItem.status)
+                    }
+                    cardView.context.startActivity(intent)
+                }
+            }
+        }
     }
 }
