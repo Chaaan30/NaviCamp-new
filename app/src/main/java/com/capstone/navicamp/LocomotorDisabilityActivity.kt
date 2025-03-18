@@ -72,13 +72,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             }
         }
 
-        // Set up the Feedback button to navigate to UserFeedbackActivity
-        val feedbackButton: Button = findViewById(R.id.feedback_button)
-        feedbackButton.setOnClickListener {
-            val intent = Intent(this, UserFeedbackActivity::class.java)
-            startActivity(intent)
-        }
-
         // Set up the Ask for assistance button to navigate to AssistanceActivity
         val assistanceButton: Button = findViewById(R.id.assistance_button)
         assistanceButton.setOnClickListener {
