@@ -17,8 +17,8 @@ inside of config.properties place the aws access key and secret access key then 
 ![image](https://github.com/user-attachments/assets/7878ce0e-a828-4eef-8a1b-d8566f5dbffb)
 
 ```
-aws.accessKeyId=AKIAQUFLQAKB4BQ6MX4Q
-aws.secretKey=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
+aws.accessKeyId=AKIAQUFLQAKB2YGNDXGX
+aws.secretKey=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
 ```
 **STEP 4:** go to github desktop > repository tab > show in explorer
 
