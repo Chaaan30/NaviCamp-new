@@ -230,18 +230,23 @@ class SecurityOfficerActivity : AppCompatActivity() {
             }
             updateVerificationCards(unverifiedUsers)
         }
-    }
-
-    private fun updateVerificationCards(users: List<UserData>) {
+    }    private fun updateVerificationCards(users: List<UserData>) {
         val verificationLayout = findViewById<LinearLayout>(R.id.verification_layout)
         verificationLayout.removeAllViews()
 
         val noVerificationTextView = findViewById<TextView>(R.id.no_verification_text)
+        val verificationSectionTitle = findViewById<TextView>(R.id.verification_section_title)
+        val verificationScrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.verification_scroll_view)
+
+        // Update section title with user count
+        verificationSectionTitle.text = "Proof of Disability Verification (${users.size}):"
 
         if (users.isEmpty()) {
             noVerificationTextView.visibility = View.VISIBLE
+            verificationScrollView.visibility = View.GONE
         } else {
             noVerificationTextView.visibility = View.GONE
+            verificationScrollView.visibility = View.VISIBLE
 
             val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
@@ -520,17 +525,22 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
-    }
-
-    private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
+    }    private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
         val noAssistanceTextView = findViewById<TextView>(R.id.no_assistance_text)
         val noAssistanceProgress = findViewById<ProgressBar>(R.id.no_assistance_progress)
+        val assistanceSectionTitle = findViewById<TextView>(R.id.assistance_section_title)
+        val assistanceScrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.assistance_scroll_view)
+
+        // Update section title with count
+        assistanceSectionTitle.text = "People currently in need of assistance (${pendingItems.size}):"
 
         if (pendingItems.isEmpty()) {
             noAssistanceTextView.visibility = View.VISIBLE
+            assistanceScrollView.visibility = View.GONE
         } else {
             noAssistanceTextView.visibility = View.GONE
+            assistanceScrollView.visibility = View.VISIBLE
             val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
             val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
@@ -637,3 +647,11 @@ class SecurityOfficerActivity : AppCompatActivity() {
         }
     }
 }
+
+
+
+
+
+
+
+
