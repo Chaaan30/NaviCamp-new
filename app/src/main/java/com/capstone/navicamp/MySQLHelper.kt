@@ -269,13 +269,11 @@ object MySQLHelper {
 
             // Get current datetime in UTC+8 and format it to 24-hour format
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-
-            // Fixed latitude, longitude, and floorLevel values for testing
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))            // Fixed latitude, longitude, and floorLevel values for testing
             val latitude = 14.243667
             val longitude = 121.111429
             val floorLevel = "Einstein Building Ground Floor"
-
+            
             val query =
                 "INSERT INTO location_table (locationID, userID, fullName, dateTime, status, latitude, longitude, floorLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             statement = connection.prepareStatement(query)
@@ -287,18 +285,20 @@ object MySQLHelper {
             statement.setDouble(6, latitude)
             statement.setDouble(7, longitude)
             statement.setString(8, floorLevel)
-
+            
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "Location data inserted: $rowsAffected rows affected.")
-
+            
             if (rowsAffected > 0) {
                 // Send broadcast
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
-                intent.setClassName(
-                    "com.capstone.navicamp",
+                intent.setClassName(                "com.capstone.navicamp",
                     "com.capstone.navicamp.DataChangeReceiver"
                 )
                 context.sendBroadcast(intent)
+                
+                // Trigger fast polling for immediate updates
+                SmartPollingManager.getInstance().triggerFastUpdate()
             }
 
             rowsAffected > 0
@@ -393,11 +393,15 @@ object MySQLHelper {
                 statement.setString(2, officerName)
                 if (falseDescription != null) {
                     statement.setString(3, falseDescription)
-                    statement.setString(4, locationID)
-                } else {
-                    statement.setString(3, locationID)
+                    statement.setString(4, locationID)                } else {                    statement.setString(3, locationID)
                 }
                 val rowsAffected = statement.executeUpdate()
+                
+                // Trigger fast polling if update was successful
+                if (rowsAffected > 0) {
+                    SmartPollingManager.getInstance().triggerFastUpdate()
+                }
+                
                 rowsAffected > 0
             } catch (e: SQLException) {
                 e.printStackTrace()
@@ -1140,8 +1144,7 @@ object MySQLHelper {
     }
 
     suspend fun updateUserVerificationStatus(userID: String, status: Int): Boolean {
-        return withContext(Dispatchers.IO) {
-            var connection: Connection? = null
+        return withContext(Dispatchers.IO) {            var connection: Connection? = null
             var statement: PreparedStatement? = null
             try {
                 connection = getConnection()
@@ -1149,13 +1152,18 @@ object MySQLHelper {
                     println("Database connection failed.")
                     return@withContext false
                 }
-
-                val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
+                  val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
                 statement = connection.prepareStatement(query)
                 statement.setInt(1, status)
                 statement.setString(2, userID)
 
                 val rowsAffected = statement.executeUpdate()
+                
+                // Trigger fast polling if update was successful
+                if (rowsAffected > 0) {
+                    SmartPollingManager.getInstance().triggerFastUpdate()
+                }
+                
                 rowsAffected > 0
             } catch (e: SQLException) {
                 e.printStackTrace()

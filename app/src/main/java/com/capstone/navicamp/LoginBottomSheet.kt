@@ -184,29 +184,35 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 }
 
                 val loadingDialog = showLoadingDialog()
-
                 CoroutineScope(Dispatchers.Main).launch {
                     val email = emailEditText.text.toString()
-
+                    
                     val userID = withContext(Dispatchers.IO) {
                         MySQLHelper.getUserIDByEmail(email)
                     }
-
+                    
                     if (userID != null) {
-                        val filePath = getPathFromUri(selectedImageUri!!)
-                        val file = File(filePath)
-                        val proofDisability = "proof_of_disability/${file.name}"
+                        try {
+                            // First upload the image to S3
+                            val uploadedImageName = withContext(Dispatchers.IO) {
+                                uploadImageToS3(requireContext(), selectedImageUri!!)
+                            }
 
-                        val isUpdated = withContext(Dispatchers.IO) {
-                            MySQLHelper.updateProofDisability(userID.toInt(), proofDisability) &&
-                                    MySQLHelper.updateUserVerificationStatus(userID, 0)
-                        }
+                            // Then update the database with the S3 path
+                            val isUpdated = withContext(Dispatchers.IO) {
+                                MySQLHelper.updateProofDisability(userID.toInt(), uploadedImageName) &&
+                                        MySQLHelper.updateUserVerificationStatus(userID, 0)
+                            }
 
-                        if (isUpdated) {
-                            Toast.makeText(requireContext(), "Proof uploaded successfully", Toast.LENGTH_SHORT).show()
-                            dialog.dismiss()
-                        } else {
-                            Toast.makeText(requireContext(), "Failed to upload proof", Toast.LENGTH_SHORT).show()
+                            if (isUpdated) {
+                                Toast.makeText(requireContext(), "Proof uploaded successfully", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(requireContext(), "Failed to update database", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Log.e("LoginBottomSheet", "Error uploading image", e)
+                            Toast.makeText(requireContext(), "Failed to upload image: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     } else {
                         Toast.makeText(requireContext(), "User not found", Toast.LENGTH_SHORT).show()

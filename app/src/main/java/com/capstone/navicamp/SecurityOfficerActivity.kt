@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.LinearLayout
@@ -55,28 +56,19 @@ class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var assistanceLayout: LinearLayout
-
     private val viewModel: SecurityOfficerViewModel by viewModels()
     private lateinit var dataChangeReceiver: DataChangeReceiver
-    private val handler = Handler(Looper.getMainLooper())
-    private val refreshInterval = 3000L // 1 second
-
-    private val verificationHandler = Handler(Looper.getMainLooper())
-    private val verificationRefreshInterval = 3000L // 1 second
-
-
-    private val refreshRunnable = object : Runnable {
-        override fun run() {
-            viewModel.fetchPendingItems()
-            viewModel.fetchUserCount()
-            viewModel.fetchDeviceCount()
-            handler.postDelayed(this, refreshInterval)
-        }
-    }
+    
+    // Smart Polling Manager for real-time updates
+    private lateinit var smartPollingManager: SmartPollingManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security_officer)
+
+        // Initialize Smart Polling Manager
+        smartPollingManager = SmartPollingManager.getInstance()
+        setupSmartPollingListeners()
 
         fetchUnverifiedUsers()
 
@@ -183,9 +175,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         }
         val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
         registerReceiver(dataChangeReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-    }
-
-    // Update onResume to start the verification refresh timer
+    }    // Update onResume to start smart polling
     override fun onResume() {
         super.onResume()
         findViewById<TextView>(R.id.secoff_fullname)?.text = UserSingleton.fullName
@@ -196,31 +186,24 @@ class SecurityOfficerActivity : AppCompatActivity() {
             headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
 
+        // Start smart polling for real-time updates
+        smartPollingManager.startPolling()
+        
+        // Fetch initial data
         viewModel.fetchPendingItems()
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
-
-        handler.post(refreshRunnable)
-        verificationHandler.post(verificationRefreshRunnable) // Start the verification refresh timer
-    }
-
-    // Update onPause to stop the verification refresh timer
+        fetchUnverifiedUsers()
+    }    // Update onPause to pause polling but keep it ready for quick resume
     override fun onPause() {
         super.onPause()
-        handler.removeCallbacks(refreshRunnable)
-        verificationHandler.removeCallbacks(verificationRefreshRunnable) // Stop the verification refresh timer
-    }
-
-    override fun onDestroy() {
+        // Pause polling when activity is not visible to save battery
+        smartPollingManager.stopPolling()
+    }    override fun onDestroy() {
         super.onDestroy()
+        // Stop polling when activity is destroyed
+        smartPollingManager.stopPolling()
         unregisterReceiver(dataChangeReceiver)
-    }
-
-    private val verificationRefreshRunnable = object : Runnable {
-        override fun run() {
-            fetchUnverifiedUsers()
-            verificationHandler.postDelayed(this, verificationRefreshInterval)
-        }
     }
 
     private fun fetchUnverifiedUsers() {
@@ -296,7 +279,6 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
     private fun showProofDialog(user: UserData) {
         val loadingDialog = showLoadingDialog()
-
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_proof_image, null)
         val proofImageView = dialogView.findViewById<ImageView>(R.id.proof_image_view)
 
@@ -304,7 +286,11 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val fullImageUrl = s3BaseUrl + user.proofDisability
         Glide.with(this)
             .load(fullImageUrl)
-            .apply(RequestOptions().placeholder(R.drawable.placeholder).error(R.drawable.error))
+            .apply(RequestOptions()
+                .placeholder(R.drawable.placeholder)
+                .error(R.drawable.error)
+                .timeout(60000) // Increase timeout to 60 seconds
+            )
             .listener(object : RequestListener<Drawable> {
                 override fun onLoadFailed(
                     e: GlideException?,
@@ -313,6 +299,18 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     isFirstResource: Boolean
                 ): Boolean {
                     loadingDialog.dismiss()
+                    // Show error dialog with more information
+                    runOnUiThread {
+                        AlertDialog.Builder(this@SecurityOfficerActivity)
+                            .setTitle("Image Load Error")
+                            .setMessage("Failed to load proof of disability image.\nReason: ${e?.rootCauses?.firstOrNull()?.message ?: "Unknown error"}")
+                            .setPositiveButton("Retry") { _, _ ->
+                                // Retry loading the image
+                                showProofDialog(user)
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    }
                     return false
                 }
 
@@ -349,11 +347,14 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         CampusNavigator Team
                         """.trimIndent()
                         )
-                        Toast.makeText(
+                          Toast.makeText(
                             this@SecurityOfficerActivity,
                             "User's proof of disability accepted and notified the user",
                             Toast.LENGTH_SHORT
                         ).show()
+                        
+                        // Trigger fast polling for immediate updates
+                        SmartPollingManager.getInstance().triggerFastUpdate()
                     } else {
                         Toast.makeText(
                             this@SecurityOfficerActivity,
@@ -381,11 +382,14 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         CampusNavigator Team
                         """.trimIndent()
                         )
-                        Toast.makeText(
+                          Toast.makeText(
                             this@SecurityOfficerActivity,
                             "User's proof of disability declined and notified the user",
                             Toast.LENGTH_SHORT
                         ).show()
+                        
+                        // Trigger fast polling for immediate updates
+                        SmartPollingManager.getInstance().triggerFastUpdate()
                     } else {
                         Toast.makeText(
                             this@SecurityOfficerActivity,
@@ -644,6 +648,20 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     cardView.context.startActivity(intent)
                 }
             }
+        }
+    }    private fun setupSmartPollingListeners() {
+        // Set up smart polling data update callback
+        smartPollingManager.onDataUpdate = {
+            // Fetch fresh data when changes are detected
+            viewModel.fetchPendingItems()
+            viewModel.fetchUserCount() 
+            viewModel.fetchDeviceCount()
+            fetchUnverifiedUsers()
+        }
+
+        smartPollingManager.onConnectionStatusChange = { isConnected ->
+            // You can add a connection status indicator here if needed
+            Log.d("SecurityOfficer", "Polling status: ${if (isConnected) "Active" else "Inactive"}")
         }
     }
 }

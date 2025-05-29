@@ -160,11 +160,12 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                         officerTextView?.text = "Officer: $officerName (You)"
                         officerTextView?.visibility = View.VISIBLE
                         falseAlarmButton.visibility = View.VISIBLE
-                        resolveButton.visibility = View.VISIBLE
-
-                        // Send broadcast to notify data change
+                        resolveButton.visibility = View.VISIBLE                        // Send broadcast to notify data change
                         val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                         requireContext().sendBroadcast(intent)
+                        
+                        // Trigger fast polling for immediate updates
+                        SmartPollingManager.getInstance().triggerFastUpdate()
                     } else {
                         Log.e("AssistanceBottomSheet", "Failed to update status")
                     }
