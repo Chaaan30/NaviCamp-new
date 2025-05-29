@@ -57,13 +57,12 @@
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="#000000"
-                    android:fontFamily="@font/inter_bold" />
-
-                <!-- Assistance Section -->
+                    android:fontFamily="@font/inter_bold" />                <!-- Assistance Section -->
                 <TextView
+                    android:id="@+id/assistance_section_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="People currently in need of assistance:"
+                    android:text="People currently in need of assistance (0):"
                     android:textSize="18sp"
                     android:textColor="#000000"
                     android:paddingTop="16dp"
@@ -85,10 +84,8 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:visibility="gone"
-                    style="?android:attr/progressBarStyleLarge" />
-
-
-                <androidx.core.widget.NestedScrollView
+                    style="?android:attr/progressBarStyleLarge" />                <androidx.core.widget.NestedScrollView
+                    android:id="@+id/assistance_scroll_view"
                     android:layout_width="match_parent"
                     android:layout_height="260dp"
                     android:fillViewport="true"
@@ -97,7 +94,8 @@
                     android:fadeScrollbars="false"
                     android:scrollbarSize="4dp"
                     android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
-                    android:background="#F0F3FD">
+                    android:background="#F0F3FD"
+                    android:visibility="gone">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -235,20 +233,17 @@
                                 style="?android:attr/progressBarStyleLarge" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>
-
-                <!-- Locomotor Disabled User Verification Section -->
+                </LinearLayout>                <!-- Locomotor Disabled User Verification Section -->
                 <TextView
+                    android:id="@+id/verification_section_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Proof of Disability Verification:"
+                    android:text="Proof of Disability Verification (0):"
                     android:fontFamily="@font/inter_bold"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:paddingTop="16dp"
-                    android:textColor="#000000" />
-
-                <TextView
+                    android:textColor="#000000" /><TextView
                     android:id="@+id/no_verification_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -256,20 +251,27 @@
                     android:text="There are currently no users in need of verification."
                     android:fontFamily="@font/inter"
                     android:textSize="16sp"
-                    android:textColor="#000000" />
-
-                <HorizontalScrollView
+                    android:textColor="#000000" />                <androidx.core.widget.NestedScrollView
+                    android:id="@+id/verification_scroll_view"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="8dp">
+                    android:layout_height="300dp"
+                    android:paddingTop="8dp"
+                    android:fillViewport="true"
+                    android:scrollbarFadeDuration="0"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    android:scrollbarSize="4dp"
+                    android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
+                    android:visibility="gone">
 
                     <LinearLayout
                         android:id="@+id/verification_layout"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="4dp">
                     </LinearLayout>
-                </HorizontalScrollView>
+                </androidx.core.widget.NestedScrollView>
 
                 <!-- Incident Log Section -->
                 <TextView
