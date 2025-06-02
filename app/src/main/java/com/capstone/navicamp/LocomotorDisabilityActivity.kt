@@ -2,18 +2,31 @@ package com.capstone.navicamp
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
-import androidx.appcompat.app.ActionBarDrawerToggle
-import android.widget.Button
-import android.widget.TextView
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+
+    private val qrCodeScannerLauncher = registerForActivityResult(ScanContract()) { result ->
+        if (result.contents == null) {
+            Toast.makeText(this, "Scan cancelled", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "Scanned: " + result.contents, Toast.LENGTH_LONG).show()
+            // TODO: Handle the scanned QR code content (e.g., connect to wheelchair)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +90,18 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         assistanceButton.setOnClickListener {
             val intent = Intent(this, AssistanceActivity::class.java)
             startActivity(intent)
+        }
+
+        val assistanceConnectButton: Button = findViewById(R.id.assistance_connect_button)
+        assistanceConnectButton.setOnClickListener {
+            val options = ScanOptions()
+            options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            options.setPrompt("Scan a QR code")
+            options.setCameraId(0) // Use a specific camera of the device
+            options.setBeepEnabled(true)
+            options.setBarcodeImageEnabled(true)
+            options.setOrientationLocked(false)
+            qrCodeScannerLauncher.launch(options)
         }
     }
 
