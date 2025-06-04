@@ -283,7 +283,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val proofImageView = dialogView.findViewById<ImageView>(R.id.proof_image_view)
 
         val s3BaseUrl = "https://navicampbucket.s3.amazonaws.com/"
-        val fullImageUrl = s3BaseUrl + user.proofDisability
+        val fullImageUrl = s3BaseUrl + user.proofPicture
         Glide.with(this)
             .load(fullImageUrl)
             .apply(RequestOptions()

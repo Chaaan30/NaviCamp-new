@@ -8,4 +8,5 @@
     <color name="onSecondaryColor">#000000</color>
 
     <color name="custom_blue">#678AE7</color>
+    <color name="dialogBackgroundColor">#F5F5F5</color> <!-- Light Grey -->
 </resources>

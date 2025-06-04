@@ -18,6 +18,12 @@ import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// Data class to hold active connection information
+data class ActiveConnectionInfo(
+    val deviceID: String,
+    val connectedUntilMillis: Long
+)
+
 
 
 object MySQLHelper {
@@ -91,7 +97,8 @@ object MySQLHelper {
                 return pendingItems
             }
 
-            val query = "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
+            val query =
+                "SELECT * FROM location_table WHERE status = 'pending' OR status LIKE '%ongoing%'"
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
 
@@ -273,7 +280,7 @@ object MySQLHelper {
             val latitude = 14.243667
             val longitude = 121.111429
             val floorLevel = "Einstein Building Ground Floor"
-            
+
             val query =
                 "INSERT INTO location_table (locationID, userID, fullName, dateTime, status, latitude, longitude, floorLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             statement = connection.prepareStatement(query)
@@ -285,18 +292,19 @@ object MySQLHelper {
             statement.setDouble(6, latitude)
             statement.setDouble(7, longitude)
             statement.setString(8, floorLevel)
-            
+
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "Location data inserted: $rowsAffected rows affected.")
-            
+
             if (rowsAffected > 0) {
                 // Send broadcast
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
-                intent.setClassName(                "com.capstone.navicamp",
+                intent.setClassName(
+                    "com.capstone.navicamp",
                     "com.capstone.navicamp.DataChangeReceiver"
                 )
                 context.sendBroadcast(intent)
-                
+
                 // Trigger fast polling for immediate updates
                 SmartPollingManager.getInstance().triggerFastUpdate()
             }
@@ -372,8 +380,13 @@ object MySQLHelper {
             connection?.close()
         }
     }
-    
-    suspend fun updateStatusAndOfficer(locationID: String, status: String, officerName: String, falseDescription: String? = null): Boolean {
+
+    suspend fun updateStatusAndOfficer(
+        locationID: String,
+        status: String,
+        officerName: String,
+        falseDescription: String? = null
+    ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
             var statement: PreparedStatement? = null
@@ -393,15 +406,17 @@ object MySQLHelper {
                 statement.setString(2, officerName)
                 if (falseDescription != null) {
                     statement.setString(3, falseDescription)
-                    statement.setString(4, locationID)                } else {                    statement.setString(3, locationID)
+                    statement.setString(4, locationID)
+                } else {
+                    statement.setString(3, locationID)
                 }
                 val rowsAffected = statement.executeUpdate()
-                
+
                 // Trigger fast polling if update was successful
                 if (rowsAffected > 0) {
                     SmartPollingManager.getInstance().triggerFastUpdate()
                 }
-                
+
                 rowsAffected > 0
             } catch (e: SQLException) {
                 e.printStackTrace()
@@ -413,7 +428,7 @@ object MySQLHelper {
         }
     }
 
-    fun getUserIDByUserName(userName: String): String? {
+    fun getDeviceLastLocation(deviceID: String): Triple<Double, Double, String>? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
@@ -424,13 +439,19 @@ object MySQLHelper {
                 return null
             }
 
-            val query = "SELECT userID FROM user_table WHERE userName = ?"
+            // Assuming devices_table has latitude, longitude, floorLevel
+            val query =
+                "SELECT latitude, longitude, floorLevel FROM devices_table WHERE deviceID = ?"
             statement = connection.prepareStatement(query)
-            statement.setString(1, userName)
+            statement.setString(1, deviceID)
 
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
-                resultSet.getString("userID")
+                Triple(
+                    resultSet.getDouble("latitude"),
+                    resultSet.getDouble("longitude"),
+                    resultSet.getString("floorLevel")
+                )
             } else {
                 null
             }
@@ -439,6 +460,137 @@ object MySQLHelper {
             null
         } finally {
             resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun insertAssistanceRequestFromDevice(
+        context: Context,
+        userID: String,
+        fullName: String,
+        deviceID: String,
+        latitude: Double,
+        longitude: Double,
+        floorLevel: String
+    ): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val locationID =
+                UUID.randomUUID().toString().replace("-", "").substring(0, 8).uppercase()
+            val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            // Assuming location_table also stores deviceID for assistance requests tied to a device
+            val query =
+                "INSERT INTO location_table (locationID, userID, fullName, deviceID, dateTime, status, latitude, longitude, floorLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, locationID)
+            statement.setString(2, userID)
+            statement.setString(3, fullName)
+            statement.setString(4, deviceID) // Store the deviceID
+            statement.setString(5, currentDateTime)
+            statement.setString(6, "pending") // Default status
+            statement.setDouble(7, latitude)
+            statement.setDouble(8, longitude)
+            statement.setString(9, floorLevel)
+
+            val rowsAffected = statement.executeUpdate()
+            Log.d("MySQLHelper", "Assistance request inserted: $rowsAffected rows affected.")
+
+            if (rowsAffected > 0) {
+                val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
+                intent.setClassName(
+                    "com.capstone.navicamp",
+                    "com.capstone.navicamp.DataChangeReceiver"
+                )
+                context.sendBroadcast(intent)
+                SmartPollingManager.getInstance().triggerFastUpdate()
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun updateDeviceConnectionStatus(
+        deviceID: String,
+        newUserID: String?, // Renamed for clarity
+        newConnectedUntil: String? // Renamed for clarity
+    ): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val newDeviceStatus = if (newUserID != null) "in_use" else "available"
+
+            val query: String
+            if (newUserID != null) {
+                // Trying to connect a user
+                // Ensure NOW() compares correctly with your stored connectedUntil format/timezone.
+                // It's best if connectedUntil is stored as UTC DATETIME/TIMESTAMP.
+                query = """
+                    UPDATE devices_table
+                    SET userID = ?, connectedUntil = ?, status = ?
+                    WHERE deviceID = ?
+                    AND (userID IS NULL OR connectedUntil IS NULL OR connectedUntil < NOW())
+                """.trimIndent()
+                statement = connection.prepareStatement(query)
+                statement.setString(1, newUserID)
+                if (newConnectedUntil != null) {
+                    statement.setString(2, newConnectedUntil)
+                } else {
+                    // This case should ideally not happen if newUserID is not null,
+                    // but as a safeguard, set connectedUntil to NULL or a very past time.
+                    // Forcing a valid connection to have an expiry.
+                    statement.setNull(2, java.sql.Types.TIMESTAMP)
+                }
+                statement.setString(3, newDeviceStatus)
+                statement.setString(4, deviceID)
+            } else {
+                // Disconnecting a user (newUserID is null)
+                query = "UPDATE devices_table SET userID = NULL, connectedUntil = NULL, status = ? WHERE deviceID = ?"
+                statement = connection.prepareStatement(query)
+                statement.setString(1, newDeviceStatus) // "available"
+                statement.setString(2, deviceID)
+            }
+
+            val rowsAffected = statement.executeUpdate()
+            Log.d(
+                "MySQLHelper",
+                "Device $deviceID connection status update attempt. Rows affected: $rowsAffected. User: $newUserID, Until: $newConnectedUntil, Status: $newDeviceStatus."
+            )
+            
+            // If we were trying to connect a user (newUserID != null) and no rows were affected,
+            // it means the device was busy with a still-valid connection or deviceID didn't exist.
+            if (newUserID != null && rowsAffected == 0) {
+                Log.w("MySQLHelper", "Failed to connect device $deviceID. It might be in use with a valid session or deviceID is invalid.")
+                return false // Explicitly return false as connection was not established
+            }
+            // If disconnecting, 0 rows affected is fine if already disconnected.
+            // If connecting, rowsAffected > 0 means success.
+            return rowsAffected > 0 || (newUserID == null)
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error updating device connection status for $deviceID: ${e.message}", e)
+            e.printStackTrace()
+            false
+        } finally {
             statement?.close()
             connection?.close()
         }
@@ -482,9 +634,7 @@ object MySQLHelper {
             statement?.close()
             connection?.close()
         }
-    }
-
-    // Insert user data into the database
+    }    // Insert user data into the database
     fun insertUser(
         userID: String,
         fullName: String,
@@ -492,7 +642,7 @@ object MySQLHelper {
         email: String,
         contactNumber: String,
         password: String,
-        proofDisability: String?
+        proofPicture: String?
     ): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -512,14 +662,12 @@ object MySQLHelper {
             if (resultSet.next() && resultSet.getInt("count") > 0) {
                 println("Email already exists.")
                 return false
-            }
-
-            // Get current datetime in UTC+8 and format it to 24-hour format
+            }            // Get current datetime in UTC+8 and format it to 24-hour format
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-
+            
             val query =
-                "INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofDisability, createdOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofPicture, createdOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?)" // Corrected column name in SQL
             statement = connection.prepareStatement(query)
             statement.setString(1, userID)
             statement.setString(2, fullName)
@@ -527,7 +675,11 @@ object MySQLHelper {
             statement.setString(4, email)
             statement.setString(5, contactNumber)
             statement.setString(6, password)
-            statement.setString(7, proofDisability)
+            if (proofPicture == null) { // Changed from proofDisability and added null check
+                statement.setNull(7, java.sql.Types.VARCHAR)
+            } else {
+                statement.setString(7, proofPicture) // Changed from proofDisability
+            }
             statement.setString(8, currentDateTime)
 
             val rowsAffected = statement.executeUpdate()
@@ -839,21 +991,19 @@ object MySQLHelper {
             statement?.close()
             connection?.close()
         }
-    }
-
-    fun loginUser(email: String, password: String): UserData? {
+    }    fun loginUser(email: String, password: String): UserData? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
+        
         return try {
             connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return null
             }
-
             val query = """
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, password, verified
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, password, verified
             FROM user_table
             WHERE email = ?
         """
@@ -861,8 +1011,7 @@ object MySQLHelper {
             statement.setString(1, email)
 
             resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                val storedPassword = resultSet.getString("password")
+            if (resultSet.next()) {                val storedPassword = resultSet.getString("password")
                 val hashedPassword = hashPassword(password)
                 if (storedPassword == hashedPassword) {
                     UserData(
@@ -873,7 +1022,7 @@ object MySQLHelper {
                         resultSet.getString("contactNumber") ?: "",
                         resultSet.getString("createdOn") ?: "",
                         resultSet.getString("updatedOn") ?: "",
-                        resultSet.getString("proofDisability") ?: "",
+                        resultSet.getString("proofPicture") ?: "",
                         resultSet.getInt("verified") // Add this line
                     )
                 } else {
@@ -1057,15 +1206,13 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
+        return try {            connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return null
             }
-
             val query = """
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, verified
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
             FROM user_table
             WHERE email = ?
         """
@@ -1082,7 +1229,7 @@ object MySQLHelper {
                     resultSet.getString("contactNumber") ?: "",
                     resultSet.getString("createdOn") ?: "",
                     resultSet.getString("updatedOn") ?: "",
-                    resultSet.getString("proofDisability") ?: "",
+                    resultSet.getString("proofPicture") ?: "",
                     resultSet.getInt("verified") // Add this line
                 )
             } else {
@@ -1103,15 +1250,13 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        return try {
-            connection = getConnection()
+        return try {            connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return unverifiedUsers
             }
-
             val query = """
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofDisability, verified
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
             FROM user_table
             WHERE verified = 0
         """
@@ -1124,10 +1269,9 @@ object MySQLHelper {
                         resultSet.getString("fullName") ?: "",
                         resultSet.getString("userType") ?: "",
                         resultSet.getString("email") ?: "",
-                        resultSet.getString("contactNumber") ?: "",
-                        resultSet.getString("createdOn") ?: "",
+                        resultSet.getString("contactNumber") ?: "",                        resultSet.getString("createdOn") ?: "",
                         resultSet.getString("updatedOn") ?: "",
-                        resultSet.getString("proofDisability") ?: "",
+                        resultSet.getString("proofPicture") ?: "",
                         resultSet.getInt("verified") // Add this line
                     )
                 )
@@ -1144,7 +1288,8 @@ object MySQLHelper {
     }
 
     suspend fun updateUserVerificationStatus(userID: String, status: Int): Boolean {
-        return withContext(Dispatchers.IO) {            var connection: Connection? = null
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
             var statement: PreparedStatement? = null
             try {
                 connection = getConnection()
@@ -1152,18 +1297,18 @@ object MySQLHelper {
                     println("Database connection failed.")
                     return@withContext false
                 }
-                  val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
+                val query = "UPDATE user_table SET verified = ? WHERE userID = ?"
                 statement = connection.prepareStatement(query)
                 statement.setInt(1, status)
                 statement.setString(2, userID)
 
                 val rowsAffected = statement.executeUpdate()
-                
+
                 // Trigger fast polling if update was successful
                 if (rowsAffected > 0) {
                     SmartPollingManager.getInstance().triggerFastUpdate()
                 }
-                
+
                 rowsAffected > 0
             } catch (e: SQLException) {
                 e.printStackTrace()
@@ -1173,9 +1318,7 @@ object MySQLHelper {
                 connection?.close()
             }
         }
-    }
-
-    fun updateProofDisability(userID: Int, proofDisability: String): Boolean {
+    }    fun updateProofPicture(userID: Int, proofPicture: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         return try {
@@ -1185,9 +1328,9 @@ object MySQLHelper {
                 return false
             }
 
-            val query = "UPDATE user_table SET proofDisability = ? WHERE userID = ?"
+            val query = "UPDATE user_table SET proofPicture = ? WHERE userID = ?"
             statement = connection.prepareStatement(query)
-            statement.setString(1, proofDisability)
+            statement.setString(1, proofPicture)
             statement.setInt(2, userID) // Ensure userID is set as an integer
 
             val rowsAffected = statement.executeUpdate()
@@ -1229,6 +1372,70 @@ object MySQLHelper {
             }
         } catch (e: SQLException) {
             e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getActiveConnectionForUser(userID: String): ActiveConnectionInfo? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                Log.e("MySQLHelper", "getActiveConnectionForUser: Database connection failed.")
+                return null
+            }
+
+            // Query devices_table for an active connection for this user
+            // Assumes 'connectedUntil' is a DATETIME/TIMESTAMP and 'status' is 'in_use'
+            val query = "SELECT deviceID, connectedUntil FROM devices_table WHERE userID = ? AND status = 'in_use'"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, userID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                val deviceID = resultSet.getString("deviceID")
+                val connectedUntilStr = resultSet.getString("connectedUntil")
+
+                if (deviceID != null && connectedUntilStr != null) {
+                    try {
+                        // Parse the datetime string to milliseconds
+                        // Ensure this format matches how it's stored by updateDeviceConnectionStatus
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
+                        dateFormat.timeZone = TimeZone.getTimeZone("Asia/Manila") // Consistent timezone
+                        val date = dateFormat.parse(connectedUntilStr)
+                        if (date != null) {
+                            val connectedUntilMillis = date.time
+                            // Optional: Check if current time is already past connectedUntilMillis
+                            // if (System.currentTimeMillis() > connectedUntilMillis) {
+                            // Log.d("MySQLHelper", "Found expired connection for user $userID, device $deviceID in DB.")
+                            // return null // Or trigger a cleanup
+                            // }
+                            Log.d("MySQLHelper", "Found active connection for user $userID: device $deviceID, until $connectedUntilStr ($connectedUntilMillis ms)")
+                            ActiveConnectionInfo(deviceID, connectedUntilMillis)
+                        } else {
+                            Log.e("MySQLHelper", "Failed to parse connectedUntil date string: $connectedUntilStr for user $userID")
+                            null
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MySQLHelper", "Error parsing date for getActiveConnectionForUser: ${e.message}", e)
+                        null
+                    }
+                } else {
+                    Log.d("MySQLHelper", "No valid deviceID or connectedUntil found for user $userID with status 'in_use'.")
+                    null
+                }
+            } else {
+                Log.d("MySQLHelper", "No active connection found for user $userID in devices_table.")
+                null
+            }
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "SQLException in getActiveConnectionForUser for $userID: ${e.message}", e)
             null
         } finally {
             resultSet?.close()

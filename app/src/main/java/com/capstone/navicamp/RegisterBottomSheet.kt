@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.core.content.ContextCompat
+import android.util.Log
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.PutObjectRequest
@@ -33,6 +34,8 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
+import javax.mail.internet.MimeBodyPart
+import javax.mail.internet.MimeMultipart
 import android.graphics.drawable.ColorDrawable
 import androidx.appcompat.widget.TooltipCompat
 import android.widget.PopupWindow
@@ -64,12 +67,18 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var termsConditionsCheckbox: CheckBox
     private lateinit var termsConditionsText: TextView
     private lateinit var termsConditionsLabel: TextView
-    private lateinit var uploadProofButton: Button
+    // private lateinit var uploadProofButton: Button // This seems to be a generic one, specific ones are used below
     private lateinit var imageContainer: LinearLayout
     private lateinit var selectedImageName: TextView
     private lateinit var removeImageButton: ImageButton
+    private lateinit var uploadGeneralProofButton: Button
+    private lateinit var uploadProofOfficerButton: Button
+    private lateinit var generalProofLayout: LinearLayout
+    private lateinit var officerProofLayout: LinearLayout
     private var selectedImageUri: Uri? = null
     private var uploadedImageName: String? = null
+    private lateinit var infoButtonGeneralProof: ImageButton
+    private lateinit var infoButtonUploadOfficer: ImageButton
     private val PICK_IMAGE_REQUEST = 1
     private var generatedOtp: String? = null
     private var isOtpSent: Boolean = false
@@ -95,31 +104,50 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         termsConditionsCheckbox = view.findViewById(R.id.terms_conditions_checkbox)
         termsConditionsText = view.findViewById(R.id.terms_conditions_text)
         termsConditionsLabel = view.findViewById(R.id.terms_conditions_label)
-        uploadProofButton = view.findViewById(R.id.upload_proof_button)
+        // uploadProofButton = view.findViewById(R.id.upload_proof_button) // Commented out as specific buttons are used
         imageContainer = view.findViewById(R.id.image_container)
         selectedImageName = view.findViewById(R.id.selected_image_name)
         removeImageButton = view.findViewById(R.id.remove_image_button)
+        uploadGeneralProofButton = view.findViewById(R.id.upload_general_proof_button)
+        uploadProofOfficerButton = view.findViewById(R.id.upload_proof_officer_button)
+        generalProofLayout = view.findViewById(R.id.generalProofLayout)
+        officerProofLayout = view.findViewById(R.id.officerProofLayout)
+        infoButtonGeneralProof = view.findViewById(R.id.info_button_general_proof)
+        infoButtonUploadOfficer = view.findViewById(R.id.info_button_upload_officer)
 
-        uploadProofButton.setOnClickListener { view ->
-            onUploadProofButtonClick(view)
+        uploadGeneralProofButton.setOnClickListener {
+            onUploadProofButtonClick()
+        }
+        uploadProofOfficerButton.setOnClickListener {
+            onUploadProofButtonClick()
         }
 
         removeImageButton.setOnClickListener {
             selectedImageUri = null
             uploadedImageName = null
             imageContainer.visibility = View.GONE
-            uploadProofButton.visibility = View.VISIBLE
+            updateProofSectionVisibility()
         }
 
-        val infoButton = view.findViewById<ImageButton>(R.id.info_button_upload)
-        infoButton.setOnClickListener {
-            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
-            val dialog = AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .setPositiveButton("OK", null)
-                .create()
-            dialog.show()
+        infoButtonGeneralProof.setOnClickListener {
+            showInfoDialog("general")
         }
+
+        infoButtonUploadOfficer.setOnClickListener {
+            showInfoDialog("officer")
+        }
+
+        // Commenting out the infoButton for R.id.info_button_upload as it does not exist.
+        // Specific info buttons (info_button_upload_disability, info_button_upload_officer) are handled elsewhere if needed.
+        // val infoButton = view.findViewById<ImageButton>(R.id.info_button_upload)
+        // infoButton.setOnClickListener {
+        //     val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
+        //     val dialog = AlertDialog.Builder(requireContext())
+        //         .setView(dialogView)
+        //         .setPositiveButton("OK", null)
+        //         .create()
+        //     dialog.show()
+        // }
 
 
         // Set input filter for contact number to accept only 11 digits
@@ -138,6 +166,16 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             userTypeSpinner.adapter = adapter
+        }
+
+        userTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                updateProofSectionVisibility()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {
+                // Do nothing
+            }
         }
 
         sendOtpButton.setOnClickListener {
@@ -196,8 +234,17 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }.start()
     }
 
-    private fun onUploadProofButtonClick(view: View) {
-        openImagePicker()
+    private fun onUploadProofButtonClick() {
+        val options = arrayOf("Choose from Gallery", "Take Photo")
+        AlertDialog.Builder(requireContext())
+            .setTitle("Select Proof Image")
+            .setItems(options) { dialog, which ->
+                when (which) {
+                    0 -> openImagePicker() // Choose from Gallery
+                    1 -> dispatchTakePictureIntent() // Take Photo
+                }
+            }
+            .show()
     }
 
     private fun registerUser(view: View) {
@@ -260,11 +307,13 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
 
         if (selectedImageUri == null) {
-            Toast.makeText(
-                context,
-                "Please select an image for proof of disability",
-                Toast.LENGTH_SHORT
-            ).show()
+            val userType = userTypeSpinner.selectedItem.toString()
+            val proofMessage = when (userType) {
+                "Security Officer" -> "Please upload your officer proof."
+                "Student", "Personnel", "Visitor" -> "Please upload the required proof."
+                else -> "Please upload the required proof." // Default or for other types if any
+            }
+            Toast.makeText(context, proofMessage, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -279,7 +328,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             try {
                 if (selectedImageUri != null) {
                     uploadedImageName = withContext(Dispatchers.IO) {
-                        uploadImageToS3(context!!, selectedImageUri!!)
+                        uploadImageToS3(context!!, selectedImageUri!!, userType)
                     }
                 }
                 val userID: String? = withContext(Dispatchers.IO) {
@@ -298,15 +347,19 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 }
                 loadingDialog.dismiss()
                 if (isInserted) {
-                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT)
-                        .show()
+                    Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
+                    if (userType == "Security Officer" && selectedImageUri != null) {
+                        // Send verification email to admin for security officer
+                        sendOfficerVerificationEmail(email, fullName, userID ?: "", selectedImageUri!!)
+                    }
                     dismiss()
                 } else {
                     Toast.makeText(context, "Registration failed", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 loadingDialog.dismiss()
-                Toast.makeText(context, "Image upload failed. Try Again.", Toast.LENGTH_SHORT)
+                Log.e("RegisterUser", "Registration or S3/Email failed", e)
+                Toast.makeText(context, "Registration process failed. Error: ${e.localizedMessage}", Toast.LENGTH_LONG)
                     .show()
             }
         }
@@ -356,9 +409,119 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 Transport.send(message)
             } catch (e: Exception) {
                 e.printStackTrace()
+                // Optionally, inform the user that the verification email might have failed
+                CoroutineScope(Dispatchers.Main).launch {
+                     Toast.makeText(context, "User registered, but officer verification email failed to send.", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
+
+    private suspend fun sendOfficerVerificationEmail(
+        officerEmail: String,
+        officerFullName: String,
+        officerUserID: String,
+        imageUri: Uri // Added image URI for attachment
+    ) {
+        withContext(Dispatchers.IO) {
+            val adminEmail = "cristian013003@gmail.com"
+            val emailUsername = "navicamp.noreply@gmail.com"
+            val emailPassword = "tcwp hour hlzz tcag"
+
+            val props = Properties().apply {
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.starttls.enable", "true")
+                put("mail.smtp.host", "smtp.gmail.com")
+                put("mail.smtp.port", "587")
+            }
+
+            val session = Session.getInstance(props,
+                object : javax.mail.Authenticator() {
+                    override fun getPasswordAuthentication(): PasswordAuthentication {
+                        return PasswordAuthentication(emailUsername, emailPassword)
+                    }
+                })
+
+            try {
+                val message = MimeMessage(session)
+                message.setFrom(InternetAddress(emailUsername))
+                message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(adminEmail))
+                message.subject = "New Security Officer Registration - Verification Required"                // Create the email body part
+                val textBodyPart = MimeBodyPart()
+                // API Gateway endpoint URL
+                val baseUrl = "https://q345fygnt4.execute-api.ap-southeast-1.amazonaws.com/verify-action"
+
+                val verifyLink = "$baseUrl?userID=$officerUserID&action=verify"
+                val rejectLink = "$baseUrl?userID=$officerUserID&action=reject"
+
+                val emailBody = """
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <h2 style="color: #2c5aa0;">New Security Officer Registration - Verification Required</h2>
+                        
+                        <p>A new Security Officer has registered and requires verification:</p>
+                        
+                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <p><strong>Name:</strong> $officerFullName</p>
+                            <p><strong>Email:</strong> $officerEmail</p>
+                            <p><strong>User ID:</strong> $officerUserID</p>
+                        </div>
+                        
+                        <p><strong>The proof of identity is attached to this email.</strong></p>
+                        
+                        <p>Please review the attached proof and use the buttons below to verify or reject the user:</p>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="$verifyLink" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px; font-weight: bold;">✓ VERIFY USER</a>
+                            <a href="$rejectLink" style="display: inline-block; background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px; font-weight: bold;">✗ REJECT USER</a>
+                        </div>
+                        
+                        <p style="font-size: 12px; color: #666; margin-top: 30px;">
+                            <em>Note: If you choose to reject, the user's record will be deleted.</em>
+                        </p>
+                    </body>
+                    </html>
+                """.trimIndent()
+                textBodyPart.setText(emailBody, "utf-8", "html") // Set content type to HTML for clickable links
+
+                // Create the attachment part
+                val attachmentBodyPart = MimeBodyPart()
+                val localFilePath = getPathFromUri(imageUri) // Get the actual file path
+                if (localFilePath.isNotEmpty()) {
+                    val source = javax.activation.FileDataSource(localFilePath)
+                    attachmentBodyPart.dataHandler = javax.activation.DataHandler(source)
+                    attachmentBodyPart.fileName = File(localFilePath).name // Or a more descriptive name
+                    attachmentBodyPart.disposition = MimeBodyPart.ATTACHMENT
+                } else {
+                    Log.e("RegisterBottomSheet", "Could not get file path for attachment URI: $imageUri")
+                    // Optionally, send email without attachment or handle error
+                }
+
+
+                // Create a multipart message
+                val multipart = MimeMultipart()
+                multipart.addBodyPart(textBodyPart)
+                if (localFilePath.isNotEmpty()) {
+                    multipart.addBodyPart(attachmentBodyPart)
+                }
+                
+                // Set the complete message parts
+                message.setContent(multipart)
+
+                Transport.send(message)
+                Log.d("RegisterBottomSheet", "Officer verification email with attachment sent to $adminEmail for User ID: $officerUserID")
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e("RegisterBottomSheet", "Failed to send officer verification email: ${e.message}")
+                // Inform the main thread that email sending failed if needed, though registration itself succeeded.
+                 withContext(Dispatchers.Main) {
+                     Toast.makeText(context, "Officer verification email could not be sent. Please check logs.", Toast.LENGTH_LONG).show()
+                 }
+            }
+        }
+    }
+
 
     private fun openImagePicker() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
@@ -375,14 +538,21 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         return BasicAWSCredentials(accessKey, secretKey)
     }
 
-    suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
+    suspend fun uploadImageToS3(context: Context, imageUri: Uri, userType: String): String {
         AwsUtils.initialize(context)
         val s3Client = AwsUtils.s3Client
         val bucketName = "navicampbucket"
 
         val filePath = getPathFromUri(imageUri)
         val file = File(filePath)
-        val fileName = "proof_of_disability/${file.name}"
+
+        val folder = when (userType) {
+            "Security Officer" -> "proof_of_officer"
+            "Student", "Personnel", "Visitor" -> "proof_of_general"
+            else -> "proof_of_other" // Fallback or handle as an error
+        }
+        val fileName = "$folder/${System.currentTimeMillis()}_${file.name}"
+
 
         val putObjectRequest = PutObjectRequest(bucketName, fileName, file)
 
@@ -417,14 +587,6 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
         dialog.show()
         return dialog
-    }
-
-    private fun showInfoDialog() {
-        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_info, null)
-        AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setPositiveButton("OK", null)
-            .show()
     }
 
     @Throws(IOException::class)
@@ -468,14 +630,14 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             selectedImageUri?.let {
                 selectedImageName.text = File(getPathFromUri(it)).name
                 imageContainer.visibility = View.VISIBLE
-                uploadProofButton.visibility = View.GONE
+                updateProofSectionVisibility() // Update visibility after image selection
             }
         } else if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
             selectedImageUri = Uri.fromFile(File(currentPhotoPath))
             selectedImageUri?.let {
                 selectedImageName.text = File(currentPhotoPath).name
                 imageContainer.visibility = View.VISIBLE
-                uploadProofButton.visibility = View.GONE
+                updateProofSectionVisibility() // Update visibility after image capture
             }
         }
     }
@@ -490,5 +652,59 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 ContextCompat.getDrawable(requireContext(), R.drawable.rounded_bottom_sheet)
         }
         return dialog
+    }
+    private fun updateProofSectionVisibility() {
+        val selectedUserType = userTypeSpinner.selectedItem.toString()
+
+        if (selectedImageUri != null) {
+            generalProofLayout.visibility = View.GONE
+            officerProofLayout.visibility = View.GONE
+            uploadGeneralProofButton.visibility = View.GONE
+            uploadProofOfficerButton.visibility = View.GONE
+            imageContainer.visibility = View.VISIBLE
+            return
+        }
+
+        imageContainer.visibility = View.GONE
+        when (selectedUserType) {
+            "Student", "Personnel", "Visitor" -> {
+                generalProofLayout.visibility = View.VISIBLE
+                uploadGeneralProofButton.visibility = View.VISIBLE
+                officerProofLayout.visibility = View.GONE
+                uploadProofOfficerButton.visibility = View.GONE
+            }
+            "Security Officer" -> {
+                generalProofLayout.visibility = View.GONE
+                uploadGeneralProofButton.visibility = View.GONE
+                officerProofLayout.visibility = View.VISIBLE
+                uploadProofOfficerButton.visibility = View.VISIBLE
+            }
+            else -> { // "User Types" or any other default
+                generalProofLayout.visibility = View.GONE
+                uploadGeneralProofButton.visibility = View.GONE
+                officerProofLayout.visibility = View.GONE
+                uploadProofOfficerButton.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun showInfoDialog(proofType: String) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
+        val infoText = dialogView.findViewById<TextView>(R.id.info_text) // Assuming R.id.info_text exists in dialog_info.xml
+
+        val message = when (proofType) {
+            "general" -> "For Student, Personnel, or Visitor roles, please upload a valid ID or any document that can verify your role (e.g., School ID, Company ID, Event Pass)."
+            "officer" -> "For Security Officer role, please upload your Security Officer License or a Certificate of Employment as proof."
+            else -> "Please upload the required proof."
+        }
+        infoText.text = message
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setPositiveButton("OK", null)
+            .create()
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(ContextCompat.getColor(requireContext(), R.color.dialogBackgroundColor)))
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(requireContext(), R.color.primaryColor))
     }
 }

@@ -8,6 +8,6 @@ data class UserData(
     val contactNumber: String,
     val createdOn: String,
     val updatedOn: String,
-    val proofDisability: String,
+    val proofPicture: String,
     val verified: Int // Add this line
 )

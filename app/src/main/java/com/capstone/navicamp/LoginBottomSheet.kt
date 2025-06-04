@@ -200,7 +200,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
 
                             // Then update the database with the S3 path
                             val isUpdated = withContext(Dispatchers.IO) {
-                                MySQLHelper.updateProofDisability(userID.toInt(), uploadedImageName) &&
+                                MySQLHelper.updateProofPicture(userID.toInt(), uploadedImageName) &&
                                         MySQLHelper.updateUserVerificationStatus(userID, 0)
                             }
 
@@ -240,46 +240,6 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-
-    private fun uploadImageAndSaveUri(imageUri: Uri) {
-        val loadingDialog = showLoadingDialog()
-
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val uploadedImageName = withContext(Dispatchers.IO) {
-                    (activity as RegisterBottomSheet).uploadImageToS3(requireContext(), imageUri)
-                }
-
-                val email = emailEditText.text.toString()
-                val userData = withContext(Dispatchers.IO) {
-                    MySQLHelper.getUserDataByEmail(email)
-                }
-
-                val isUpdated = userData?.let {
-                    withContext(Dispatchers.IO) {
-                        MySQLHelper.updateUserWithUserID(
-                            newFullName = it.fullName,
-                            newEmail = it.email,
-                            newContactNumber = it.contactNumber,
-                            userID = it.userID,
-                            updatedOn = System.currentTimeMillis().toString()
-                        )
-                    }
-                } ?: false
-
-                if (isUpdated) {
-                    withContext(Dispatchers.IO) {
-                        MySQLHelper.updateUserVerificationStatus(userData!!.userID, 0)
-                    }
-                }
-
-                loadingDialog.dismiss()
-            } catch (e: Exception) {
-                loadingDialog.dismiss()
-                Toast.makeText(context, "Image upload failed. Try Again.", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 
     private fun openImagePicker() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
