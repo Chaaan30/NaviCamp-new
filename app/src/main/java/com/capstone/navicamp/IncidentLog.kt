@@ -81,6 +81,7 @@ class IncidentLog : AppCompatActivity() {
 
         // Observe incident data from ViewModel
         viewModel.incidentData.observe(this, Observer { data ->
+            android.util.Log.d("IncidentLog", "Fetched incident data: $data")
             loadingProgress.visibility = View.GONE
             val sortedData = data.sortedBy { it[0].toIntOrNull() ?: 0 }
             displayDataInTable(sortedData)
@@ -167,13 +168,13 @@ class IncidentLog : AppCompatActivity() {
     }
 
     private fun displayDataInTable(incidentData: List<List<String>>) {
-        // Clear existing rows before adding new ones
         tableLayout.removeAllViews()
 
-        // Add table header row
+        // Header for 11 columns
         val headerRow = TableRow(this)
         val headerText = arrayOf(
-            "Alert ID", "Name", "User Type", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On"
+            "Alert ID", "User ID", "Device ID", "Name", "Coordinates", "Floor Level",
+            "Status", "Time of Alert", "Resolved On", "Officer Name", "Incident Description"
         )
         headerText.forEach { text ->
             val textView = TextView(this).apply {
@@ -186,25 +187,14 @@ class IncidentLog : AppCompatActivity() {
         }
         tableLayout.addView(headerRow)
 
-        // Add rows for each incident
+        // Add rows for each incident (expecting 11 columns)
         incidentData.forEach { row ->
+            if (row.size < 11) {
+                android.util.Log.w("IncidentLog", "Skipping row with insufficient columns: $row")
+                return@forEach
+            }
             val tableRow = TableRow(this)
-
-            // Map each column correctly
-            val cellData = listOf(
-                row[0], // alertID
-                row[1], // fullName
-                row[2], // userType
-                row[3], // deviceID
-                "${row[4]}, ${row[5]}", // Combine latitude and longitude as "Coordinates"
-                row[6], // floorLevel
-                row[7], // alertType
-                row[8], // status
-                row[9], // alertDateTime
-                row[10] // resolvedOn
-            )
-
-            cellData.forEach { cell ->
+            row.forEach { cell ->
                 val textView = TextView(this).apply {
                     text = cell
                     setPadding(20, 20, 20, 20)
@@ -212,7 +202,6 @@ class IncidentLog : AppCompatActivity() {
                 }
                 tableRow.addView(textView)
             }
-
             tableLayout.addView(tableRow)
         }
     }
@@ -230,12 +219,22 @@ class IncidentLog : AppCompatActivity() {
         return when (filterType) {
             "Year" -> data.filter { it[9].startsWith("${calendar.get(Calendar.YEAR)}") }
             "Month" -> data.filter { it[9].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
-            "Week" -> data.filter {
-                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
-                val incidentCalendar = Calendar.getInstance()
-                incidentCalendar.time = incidentDate
-                calendar.get(Calendar.WEEK_OF_YEAR) == incidentCalendar.get(Calendar.WEEK_OF_YEAR) &&
-                        calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
+            "Week" -> {
+                val weekStart = calendar.clone() as Calendar
+                weekStart.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+
+                val weekEnd = calendar.clone() as Calendar
+                weekEnd.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                weekEnd.add(Calendar.DAY_OF_WEEK, 6)
+
+                data.filter {
+                    try {
+                        val incidentDate = dateFormat.parse(it[9])
+                        incidentDate.after(weekStart.time) && incidentDate.before(weekEnd.time)
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
             }
             "Day" -> data.filter {
                 val incidentDate = dateFormat.parse(it[9]) ?: return@filter false

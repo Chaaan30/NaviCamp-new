@@ -80,6 +80,7 @@ class AssistanceActivity : AppCompatActivity() {
         // Retrieve userID and fullName from SharedPreferences and set them in UserSingleton
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         UserSingleton.userID = sharedPreferences.getString("userID", null)
+        DeviceSingleton.deviceID = sharedPreferences.getString("deviceID", null)
         UserSingleton.fullName = sharedPreferences.getString("fullName", null)
 
         // Set up the Request Assistance button
@@ -89,17 +90,18 @@ class AssistanceActivity : AppCompatActivity() {
             Log.d("AssistanceActivity", "Request Assistance button clicked")
 
             val userID = UserSingleton.userID
+            val deviceID = DeviceSingleton.deviceID
             val fullName = UserSingleton.fullName
 
-            Log.d("AssistanceActivity", "User ID: $userID, Full Name: $fullName")
+            Log.d("AssistanceActivity", "User ID: $userID, Device ID: $deviceID, Full Name: $fullName")
 
-            if (userID != null && fullName != null) {
+            if (userID != null && deviceID != null && fullName != null) {
                 // Show loading dialog
                 showLoadingDialog()
 
                 CoroutineScope(Dispatchers.Main).launch {
                     val success = withContext(Dispatchers.IO) {
-                        MySQLHelper.insertLocationData(this@AssistanceActivity, userID, fullName)
+                        MySQLHelper.insertLocationData(this@AssistanceActivity, userID, deviceID, fullName)
                     }
                     if (success) {
                         Log.d("AssistanceActivity", "Location data inserted successfully")

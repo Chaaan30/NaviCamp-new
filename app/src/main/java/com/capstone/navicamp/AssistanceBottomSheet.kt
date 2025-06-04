@@ -35,6 +35,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
     private lateinit var officerOnTheWayTextView: TextView
     private var locationID: String? = null
     private var loadingDialog: AlertDialog? = null
+    private var alertID: String? = null
 
     private fun showLoadingDialog(): AlertDialog {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_loading, null)
@@ -70,6 +71,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
 
         // Get locationID from arguments first
         locationID = arguments?.getString("LOCATION_ID")
+        alertID = arguments?.getString("ALERT_ID")
 
         // Use lifecycleScope to launch a coroutine
         lifecycleScope.launch {
@@ -137,16 +139,16 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                 updateStatus(locationID, "resolved")
             }
             Toast.makeText(requireContext(), "Assistance has been resolved", Toast.LENGTH_SHORT).show()
-            activity?.finish() // Close MapActivity
+            activity?.finish()
         }
     }
 
-    private fun updateStatus(locationID: String?, newStatus: String, falseDescription: String? = null) {
+    private fun updateStatus(locationID: String?, newStatus: String, alertDescription: String? = null) {
         if (locationID != null) {
             val officerName = UserSingleton.fullName ?: "Unknown Officer"
 
             CoroutineScope(Dispatchers.IO).launch {
-                val success = MySQLHelper.updateStatusAndOfficer(locationID, newStatus, officerName, falseDescription)
+                val success = MySQLHelper.resolveIncident(locationID, newStatus, officerName, alertDescription)
                 withContext(Dispatchers.Main) {
                     respondProgress.visibility = View.GONE
                     if (success) {
@@ -161,9 +163,10 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                         officerTextView?.visibility = View.VISIBLE
                         falseAlarmButton.visibility = View.VISIBLE
                         resolveButton.visibility = View.VISIBLE                        // Send broadcast to notify data change
-                        val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
+                        val intent = Intent(requireContext(), DataChangeReceiver::class.java)
+                        intent.action = "com.capstone.navicamp.DATA_CHANGED"
                         requireContext().sendBroadcast(intent)
-                        
+
                         // Trigger fast polling for immediate updates
                         SmartPollingManager.getInstance().triggerFastUpdate()
                     } else {
@@ -234,7 +237,8 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
             userID: String,
             fullName: String,
             dateTime: String,
-            status: String
+            status: String,
+            alertID: String
         ): AssistanceBottomSheet {
             val args = Bundle()
             args.putString("FLOOR_LEVEL", floorLevel)
@@ -243,6 +247,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
             args.putString("FULL_NAME", fullName)
             args.putString("DATE_TIME", dateTime)
             args.putString("STATUS", status)
+            args.putString("ALERT_ID", alertID)
             val fragment = AssistanceBottomSheet()
             fragment.arguments = args
             return fragment

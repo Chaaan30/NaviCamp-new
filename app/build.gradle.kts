@@ -71,6 +71,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:19.0.0")
 
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 
     implementation("com.sun.mail:android-mail:1.6.2") {
         exclude(group = "javax.activation", module = "activation")

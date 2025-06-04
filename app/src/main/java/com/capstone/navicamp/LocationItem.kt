@@ -9,5 +9,6 @@ data class LocationItem(
     val latitude: Double,
     val longitude: Double,
     val dateTime: String,
-    val officerName: String? = null
+    val officerName: String? = null,
+    val deviceID: String
 )
