@@ -61,6 +61,18 @@
                 android:textColor="#000000"
                 android:textSize="18sp" />
 
+            <TextView
+                android:id="@+id/connection_status_textview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Not connected to a wheelchair"
+                android:textSize="16sp"
+                android:textColor="#000000"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"/>
+
             <!-- Container for images and buttons -->
             <LinearLayout
                 android:layout_width="match_parent"

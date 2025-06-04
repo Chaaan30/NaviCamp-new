@@ -41,6 +41,11 @@
         <activity android:name=".AccountSettingsActivity" />
         <activity android:name=".OfficerAccountSettingsActivity" />
         <activity android:name=".MapActivity" />
+        <!-- Declare the library's CaptureActivity and force portrait mode -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            tools:replace="android:screenOrientation" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"

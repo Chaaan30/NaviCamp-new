@@ -18,6 +18,7 @@
         <item>Student</item>
         <item>Personnel</item>
         <item>Visitor</item>
+        <item>Security Officer</item>
     </string-array>
 
     <string-array name="filter_types">

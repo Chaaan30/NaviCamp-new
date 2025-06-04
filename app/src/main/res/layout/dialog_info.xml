@@ -6,9 +6,10 @@
     android:padding="16dp">
 
     <TextView
+        android:id="@+id/info_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Acceptable Proof of Disabilities:"
+        android:text="Proof Information"
         android:textColor="@color/primaryColor"
         android:layout_gravity="center"
         android:textSize="18sp"
@@ -17,37 +18,11 @@
         android:gravity="center" />
 
     <TextView
-        android:layout_width="wrap_content"
+        android:id="@+id/info_text"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="• Picture"
         android:fontFamily="@font/inter"
         android:textColor="#000000"
         android:textSize="14sp"
         android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="• PWD ID"
-        android:fontFamily="@font/inter"
-        android:textColor="#000000"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="• Medical Certificate"
-        android:fontFamily="@font/inter"
-        android:textColor="#000000"
-        android:textSize="14sp"
-        android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="• Other relevant documents"
-        android:fontFamily="@font/inter"
-        android:textColor="#000000"
-        android:textSize="14sp" />
 </LinearLayout>
