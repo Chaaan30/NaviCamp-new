@@ -122,7 +122,11 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                             }
                         }
                         0 -> {
-                            Toast.makeText(context, "Your proof of disability is not verified yet.", Toast.LENGTH_SHORT).show()
+                            if (userData.userType == "Security Officer") {
+                                Toast.makeText(context, "Your account has not yet been verified by the admin.", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "Your account is not verified yet.", Toast.LENGTH_LONG).show()
+                            }
                         }
                         2 -> {
                             showReuploadProofDialog()
