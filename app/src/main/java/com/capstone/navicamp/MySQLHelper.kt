@@ -867,16 +867,16 @@ object MySQLHelper {
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
                 LocationItem(
-                    locationID = resultSet.getString("locationID"),
-                    userID = resultSet.getString("userID"),
-                    deviceID = resultSet.getString("deviceID"),
-                    fullName = resultSet.getString("fullName"),
-                    floorLevel = resultSet.getString("floorLevel"),
-                    status = resultSet.getString("status"),
+                    locationID = resultSet.getString("locationID") ?: "",
+                    userID = resultSet.getString("userID") ?: "",
+                    deviceID = resultSet.getString("deviceID") ?: "",
+                    fullName = resultSet.getString("fullName") ?: "",
+                    floorLevel = resultSet.getString("floorLevel") ?: "",
+                    status = resultSet.getString("status") ?: "",
                     latitude = resultSet.getDouble("latitude"),
                     longitude = resultSet.getDouble("longitude"),
-                    dateTime = resultSet.getString("dateTime"),
-                    officerName = resultSet.getString("officerResponded")
+                    dateTime = resultSet.getString("dateTime") ?: "",
+                    officerName = resultSet.getString("officerResponded") ?: ""
                 )
             } else {
                 throw SQLException("Location item not found.")

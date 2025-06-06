@@ -24,6 +24,13 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
+import exportIncidentDataToCSV
+import exportIncidentDataToCSVWithUri
+import java.io.File
+import java.io.FileWriter
 
 class IncidentLog : AppCompatActivity() {
 
@@ -34,6 +41,7 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var filterTypeSpinner: Spinner
     private lateinit var selectDateButton: Button
     private lateinit var loadingProgress: ProgressBar
+    private lateinit var exportButton: Button
 
     private val viewModel: IncidentLogViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
@@ -44,6 +52,10 @@ class IncidentLog : AppCompatActivity() {
             viewModel.fetchIncidentData()
             handler.postDelayed(this, refreshInterval)
         }
+    }
+
+    companion object {
+        private const val CREATE_FILE_REQUEST_CODE = 1001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,6 +105,7 @@ class IncidentLog : AppCompatActivity() {
 
         filterTypeSpinner = findViewById(R.id.filter_type_spinner)
         selectDateButton = findViewById(R.id.select_date_button)
+        exportButton = findViewById(R.id.export_button)
 
         selectDateButton.setOnClickListener { showFilterPicker() }
 
@@ -106,6 +119,27 @@ class IncidentLog : AppCompatActivity() {
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        exportButton.setOnClickListener {
+            val data = viewModel.incidentData.value ?: emptyList()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+): Use SAF
+                val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_TITLE, "incident_logs.csv")
+                }
+                startActivityForResult(createFileIntent, CREATE_FILE_REQUEST_CODE)
+            } else {
+                // Android 10 and below
+                val file = exportIncidentDataToCSV(this, data)
+                if (file != null) {
+                    Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -217,8 +251,8 @@ class IncidentLog : AppCompatActivity() {
         calendar.time = selectedDate
 
         return when (filterType) {
-            "Year" -> data.filter { it[9].startsWith("${calendar.get(Calendar.YEAR)}") }
-            "Month" -> data.filter { it[9].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
+            "Year" -> data.filter { it[7].startsWith("${calendar.get(Calendar.YEAR)}") }
+            "Month" -> data.filter { it[7].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
             "Week" -> {
                 val weekStart = calendar.clone() as Calendar
                 weekStart.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
@@ -229,7 +263,7 @@ class IncidentLog : AppCompatActivity() {
 
                 data.filter {
                     try {
-                        val incidentDate = dateFormat.parse(it[9])
+                        val incidentDate = dateFormat.parse(it[7])
                         incidentDate.after(weekStart.time) && incidentDate.before(weekEnd.time)
                     } catch (e: Exception) {
                         false
@@ -237,13 +271,27 @@ class IncidentLog : AppCompatActivity() {
                 }
             }
             "Day" -> data.filter {
-                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
+                val incidentDate = dateFormat.parse(it[7]) ?: return@filter false
                 val incidentCalendar = Calendar.getInstance()
                 incidentCalendar.time = incidentDate
                 calendar.get(Calendar.DAY_OF_YEAR) == incidentCalendar.get(Calendar.DAY_OF_YEAR) &&
                         calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
             }
             else -> data
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+            val uri = data?.data
+            val incidentData = viewModel.incidentData.value ?: emptyList()
+            if (uri != null) {
+                exportIncidentDataToCSVWithUri(this, uri, incidentData)
+                Toast.makeText(this, "Exported successfully", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
