@@ -50,6 +50,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.io.InputStream
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
 
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
@@ -323,9 +326,18 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         // Hash the password
         val hashedPassword = hashPassword(password)
 
-        // Upload image and register user
         CoroutineScope(Dispatchers.Main).launch {
             try {
+                // Check if email already exists BEFORE uploading image or inserting user
+                val emailExists = withContext(Dispatchers.IO) {
+                    MySQLHelper.fetchUserEmailByEmail(email) != null
+                }
+                if (emailExists) {
+                    loadingDialog.dismiss()
+                    Toast.makeText(context, "Email already exists", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                // Only upload image and insert user if email does not exist
                 if (selectedImageUri != null) {
                     uploadedImageName = withContext(Dispatchers.IO) {
                         uploadImageToS3(context!!, selectedImageUri!!, userType)
@@ -359,8 +371,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 loadingDialog.dismiss()
                 Log.e("RegisterUser", "Registration or S3/Email failed", e)
-                Toast.makeText(context, "Registration process failed. Error: ${e.localizedMessage}", Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(context, "Registration process failed. Error: "+e.localizedMessage, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -417,6 +428,22 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    // Compress image to JPEG, max 1024px, 70% quality
+    private fun compressImage(context: Context, imageUri: Uri): File {
+        val inputStream = context.contentResolver.openInputStream(imageUri)
+        val originalBitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream?.close()
+        val maxDim = 1024
+        val (width, height) = originalBitmap.width to originalBitmap.height
+        val scale = minOf(maxDim / width.toFloat(), maxDim / height.toFloat(), 1f)
+        val resizedBitmap = if (scale < 1f) Bitmap.createScaledBitmap(originalBitmap, (width * scale).toInt(), (height * scale).toInt(), true) else originalBitmap
+        val outFile = File.createTempFile("compressed_", ".jpg", context.cacheDir)
+        val outStream = ByteArrayOutputStream()
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outStream)
+        outFile.outputStream().use { it.write(outStream.toByteArray()) }
+        return outFile
+    }
+
     private suspend fun sendOfficerVerificationEmail(
         officerEmail: String,
         officerFullName: String,
@@ -446,7 +473,8 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 val message = MimeMessage(session)
                 message.setFrom(InternetAddress(emailUsername))
                 message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(adminEmail))
-                message.subject = "New Security Officer Registration - Verification Required"                // Create the email body part
+                message.subject = "New Security Officer Registration - Verification Required"
+                // Create the email body part
                 val textBodyPart = MimeBodyPart()
                 // API Gateway endpoint URL
                 val baseUrl = "https://q345fygnt4.execute-api.ap-southeast-1.amazonaws.com/verify-action"
@@ -486,25 +514,17 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
                 // Create the attachment part
                 val attachmentBodyPart = MimeBodyPart()
-                val localFilePath = getPathFromUri(imageUri) // Get the actual file path
-                if (localFilePath.isNotEmpty()) {
-                    val source = javax.activation.FileDataSource(localFilePath)
-                    attachmentBodyPart.dataHandler = javax.activation.DataHandler(source)
-                    attachmentBodyPart.fileName = File(localFilePath).name // Or a more descriptive name
-                    attachmentBodyPart.disposition = MimeBodyPart.ATTACHMENT
-                } else {
-                    Log.e("RegisterBottomSheet", "Could not get file path for attachment URI: $imageUri")
-                    // Optionally, send email without attachment or handle error
-                }
-
+                val compressedFile = compressImage(requireContext(), imageUri)
+                val source = javax.activation.FileDataSource(compressedFile)
+                attachmentBodyPart.dataHandler = javax.activation.DataHandler(source)
+                attachmentBodyPart.fileName = compressedFile.name
+                attachmentBodyPart.disposition = MimeBodyPart.ATTACHMENT
 
                 // Create a multipart message
                 val multipart = MimeMultipart()
                 multipart.addBodyPart(textBodyPart)
-                if (localFilePath.isNotEmpty()) {
-                    multipart.addBodyPart(attachmentBodyPart)
-                }
-                
+                multipart.addBodyPart(attachmentBodyPart)
+
                 // Set the complete message parts
                 message.setContent(multipart)
 
@@ -513,7 +533,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.e("RegisterBottomSheet", "Failed to send officer verification email: ${e.message}")
+                Log.e("RegisterBottomSheet", "Failed to send officer verification email: "+e.message)
                 // Inform the main thread that email sending failed if needed, though registration itself succeeded.
                  withContext(Dispatchers.Main) {
                      Toast.makeText(context, "Officer verification email could not be sent. Please check logs.", Toast.LENGTH_LONG).show()
@@ -542,20 +562,14 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         AwsUtils.initialize(context)
         val s3Client = AwsUtils.s3Client
         val bucketName = "navicampbucket"
-
-        val filePath = getPathFromUri(imageUri)
-        val file = File(filePath)
-
+        val compressedFile = compressImage(context, imageUri)
         val folder = when (userType) {
             "Security Officer" -> "proof_of_officer"
             "Student", "Personnel", "Visitor" -> "proof_of_general"
-            else -> "proof_of_other" // Fallback or handle as an error
+            else -> "proof_of_other"
         }
-        val fileName = "$folder/${System.currentTimeMillis()}_${file.name}"
-
-
-        val putObjectRequest = PutObjectRequest(bucketName, fileName, file)
-
+        val fileName = "$folder/${System.currentTimeMillis()}_${compressedFile.name}"
+        val putObjectRequest = PutObjectRequest(bucketName, fileName, compressedFile)
         return withContext(Dispatchers.IO) {
             try {
                 s3Client.putObject(putObjectRequest)
