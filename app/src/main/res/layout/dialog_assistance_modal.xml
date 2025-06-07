@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="16dp"
+    android:backgroundTint="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="0dp">
+
+        <!-- Header Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="24dp"
+            android:paddingBottom="16dp"
+            android:background="@drawable/modal_header_gradient">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Assistance Request"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/inter_bold" />
+
+                <TextView
+                    android:id="@+id/date_time_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Dec 15, 2024 • 02:30 PM"
+                    android:textSize="14sp"
+                    android:textColor="@color/white"
+                    android:alpha="0.9"
+                    android:fontFamily="@font/inter" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/status_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="PENDING"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:background="@drawable/badge_pending"
+                android:textColor="@color/orange"
+                android:fontFamily="@font/inter_bold" />
+
+        </LinearLayout>
+
+        <!-- Content Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:paddingTop="0dp">
+
+            <!-- User Information Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/lightGray">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_person"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginEnd="12dp"
+                            app:tint="@color/primaryColor" />
+
+                        <TextView
+                            android:id="@+id/full_name_text"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="John Doe"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter_bold" />
+
+                        <TextView
+                            android:id="@+id/user_id_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ID: 12345"
+                            android:textSize="14sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_location"
+                            android:layout_gravity="center_vertical"
+                            android:layout_marginEnd="12dp"
+                            app:tint="@color/primaryColor" />
+
+                        <TextView
+                            android:id="@+id/floor_level_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ground Floor"
+                            android:textSize="16sp"
+                                                    android:textColor="@color/darkGray"
+                        android:fontFamily="@font/inter_bold" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Officer Status Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/officer_status_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/lightBlue">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_officer"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="12dp"
+                        app:tint="@color/blue" />
+
+                    <TextView
+                        android:id="@+id/officer_status_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="You are responding to this assistance request"
+                        android:textSize="14sp"
+                        android:textColor="@color/blue"
+                        android:fontFamily="@font/inter_bold" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- False Alarm Reason Input -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/false_alarm_reason_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxStrokeColor="@color/primaryColor"
+                app:hintTextColor="@color/primaryColor">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/false_alarm_reason"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Reason for false alarm (required)"
+                    android:minLines="3"
+                    android:maxLines="5"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:scrollbars="vertical"
+                    android:fontFamily="@font/inter" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Submit False Alarm Button -->
+            <Button
+                android:id="@+id/submit_false_alarm_button"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="16dp"
+                android:text="Submit False Alarm"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:background="@drawable/button_warning_filled"
+                android:visibility="gone"
+                android:fontFamily="@font/inter_bold"
+                app:icon="@drawable/ic_warning"
+                app:iconGravity="textStart"
+                app:iconTint="@color/white" />
+
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+
+                <!-- Primary Action Button -->
+                <Button
+                    android:id="@+id/respond_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Respond to Assistance"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:background="@drawable/button_primary_gradient"
+                    android:fontFamily="@font/inter_bold"
+                    app:icon="@drawable/ic_response"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/white" />
+
+                <!-- Secondary Action Buttons Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp"
+                    android:baselineAligned="false">
+
+                    <Button
+                        android:id="@+id/resolve_button"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:text="Resolve"
+                        android:textSize="11sp"
+                        android:textColor="@color/green"
+                        android:background="@drawable/button_success_outline"
+                        android:visibility="gone"
+                        android:fontFamily="@font/inter_bold"
+                        android:gravity="center"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="12dp"
+                        android:minHeight="56dp"
+                        android:includeFontPadding="false"
+                        app:icon="@drawable/ic_check"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/green" />
+
+                    <Button
+                        android:id="@+id/false_alarm_button"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:text="False Alarm"
+                        android:textSize="11sp"
+                        android:textColor="@color/orange"
+                        android:background="@drawable/button_warning_outline"
+                        android:visibility="gone"
+                        android:fontFamily="@font/inter_bold"
+                        android:gravity="center"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="12dp"
+                        android:minHeight="56dp"
+                        android:includeFontPadding="false"
+                        app:icon="@drawable/ic_warning"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/orange" />
+
+                </LinearLayout>
+
+                <!-- Close Button -->
+                <Button
+                    android:id="@+id/close_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Close"
+                    android:textSize="14sp"
+                    android:textColor="@color/gray"
+                    android:background="@drawable/button_gray_outline"
+                    android:fontFamily="@font/inter_bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Success Indicator -->
+        <View
+            android:id="@+id/success_indicator"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:background="@color/green"
+            android:visibility="gone" />
+
+        <!-- Loading Progress -->
+        <ProgressBar
+            android:id="@+id/respond_progress"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:layout_margin="16dp"
+            android:visibility="gone"
+            android:indeterminateTint="@color/primaryColor" />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView> 

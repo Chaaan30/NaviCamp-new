@@ -106,7 +106,7 @@ object MySQLHelper {
                     l.locationID,
                     l.userID,
                     l.deviceID,
-                    l.fullName,
+                    u.fullName,
                     l.floorLevel,
                     i.status,
                     l.latitude,
@@ -115,7 +115,9 @@ object MySQLHelper {
                     i.officerResponded
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
-                WHERE i.status = 'pending' OR i.status LIKE '%ongoing%'
+                JOIN user_table u ON l.userID = u.userID
+                WHERE i.status = 'pending' OR i.status = 'ongoing'
+                ORDER BY i.alertDateTime DESC
             """.trimIndent()
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
@@ -139,6 +141,7 @@ object MySQLHelper {
 
         } catch (e: SQLException) {
             e.printStackTrace()
+            Log.e("MySQLHelper", "Error fetching pending items: ${e.message}")
             return pendingItems
 
         } finally {
@@ -411,6 +414,49 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    fun getUserFullNameByUserID(userID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            // First, let's try a simple query like the working loginUser method
+            val query = "SELECT fullName FROM user_table WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            
+            // Convert userID string to integer like the database expects
+            try {
+                statement.setInt(1, userID.toInt())
+            } catch (e: NumberFormatException) {
+                Log.e("MySQLHelper", "Invalid userID format: $userID")
+                return null
+            }
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                val fullName = resultSet.getString("fullName")
+                Log.d("MySQLHelper", "Found fullName: '$fullName' for userID: $userID")
+                fullName
+            } else {
+                Log.w("MySQLHelper", "No user found with userID: $userID")
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            Log.e("MySQLHelper", "SQL Error getting fullName for userID $userID: ${e.message}")
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
     
     suspend fun resolveIncident(locationID: String, status: String, officerName: String, alertDescription: String? = null): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
@@ -499,7 +545,8 @@ object MySQLHelper {
         floorLevel: String
     ): Boolean {
         var connection: Connection? = null
-        var statement: PreparedStatement? = null
+        var locationStmt: PreparedStatement? = null
+        var incidentStmt: PreparedStatement? = null
         return try {
             connection = getConnection()
             if (connection == null) {
@@ -507,29 +554,47 @@ object MySQLHelper {
                 return false
             }
 
+            // Generate a random locationID
             val locationID =
                 UUID.randomUUID().toString().replace("-", "").substring(0, 8).uppercase()
+            
+            // Get current datetime in Philippine time (UTC+8)
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
-            // Assuming location_table also stores deviceID for assistance requests tied to a device
-            val query =
-                "INSERT INTO location_table (locationID, userID, fullName, deviceID, dateTime, status, latitude, longitude, floorLevel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, locationID)
-            statement.setString(2, userID)
-            statement.setString(3, fullName)
-            statement.setString(4, deviceID) // Store the deviceID
-            statement.setString(5, currentDateTime)
-            statement.setString(6, "pending") // Default status
-            statement.setDouble(7, latitude)
-            statement.setDouble(8, longitude)
-            statement.setString(9, floorLevel)
+            // Insert into location_table (fullName removed - will be referenced via userID)
+            val locationQuery = """
+                INSERT INTO location_table (locationID, userID, deviceID, latitude, longitude, floorLevel, dateTime)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent()
+            locationStmt = connection.prepareStatement(locationQuery)
+            locationStmt.setString(1, locationID)
+            locationStmt.setString(2, userID)
+            locationStmt.setString(3, deviceID)
+            locationStmt.setDouble(4, latitude)
+            locationStmt.setDouble(5, longitude)
+            locationStmt.setString(6, floorLevel)
+            locationStmt.setString(7, currentDateTime)
 
-            val rowsAffected = statement.executeUpdate()
-            Log.d("MySQLHelper", "Assistance request inserted: $rowsAffected rows affected.")
+            val locationRows = locationStmt.executeUpdate()
+            Log.d("MySQLHelper", "Location data inserted: $locationRows rows affected.")
 
-            if (rowsAffected > 0) {
+            // Insert into incident_logs_table to create the assistance request
+            val incidentQuery = """
+                INSERT INTO incident_logs_table (userID, deviceID, locationID, status, alertDateTime)
+                VALUES (?, ?, ?, ?, ?)
+            """.trimIndent()
+            incidentStmt = connection.prepareStatement(incidentQuery)
+            incidentStmt.setString(1, userID)
+            incidentStmt.setString(2, deviceID)
+            incidentStmt.setString(3, locationID)
+            incidentStmt.setString(4, "pending")
+            incidentStmt.setString(5, currentDateTime)
+
+            val incidentRows = incidentStmt.executeUpdate()
+            Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
+
+            if (locationRows > 0 && incidentRows > 0) {
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                 intent.setClassName(
                     "com.capstone.navicamp",
@@ -538,12 +603,14 @@ object MySQLHelper {
                 context.sendBroadcast(intent)
                 SmartPollingManager.getInstance().triggerFastUpdate()
             }
-            rowsAffected > 0
+            locationRows > 0 && incidentRows > 0
         } catch (e: SQLException) {
             e.printStackTrace()
+            Log.e("MySQLHelper", "SQL Error in insertAssistanceRequestFromDevice: ${e.message}")
             false
         } finally {
-            statement?.close()
+            locationStmt?.close()
+            incidentStmt?.close()
             connection?.close()
         }
     }
@@ -1012,7 +1079,7 @@ object MySQLHelper {
                     l.locationID,
                     l.userID,
                     l.deviceID,
-                    l.fullName,
+                    u.fullName,
                     l.floorLevel,
                     i.status,
                     l.latitude,
@@ -1021,6 +1088,7 @@ object MySQLHelper {
                     i.officerResponded
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
+                JOIN user_table u ON l.userID = u.userID
                 WHERE l.locationID = ?
                 ORDER BY i.alertDateTime DESC
                 LIMIT 1
@@ -1053,7 +1121,9 @@ object MySQLHelper {
             statement?.close()
             connection?.close()
         }
-    }    fun loginUser(email: String, password: String): UserData? {
+    }
+
+    fun loginUser(email: String, password: String): UserData? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
@@ -1157,6 +1227,37 @@ object MySQLHelper {
         }
     }
 
+    fun updateIncidentResponse(locationID: String, status: String, officerName: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE incident_logs_table SET status = ?, officerResponded = ? WHERE locationID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, status)
+            statement.setString(2, officerName)
+            statement.setString(3, locationID)
+
+            val rowsAffected = statement.executeUpdate()
+            Log.d("MySQLHelper", "Updated incident response: $rowsAffected rows affected")
+            if (rowsAffected > 0) {
+                SmartPollingManager.getInstance().triggerFastUpdate()
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            Log.e("MySQLHelper", "Error updating incident response: ${e.message}")
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
 
     fun insertEmergencyAlerts() {
         var connection: Connection? = null
@@ -1474,7 +1575,7 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT officerResponded FROM location_table WHERE locationID = ?
+            SELECT officerResponded FROM incident_logs_table WHERE locationID = ? ORDER BY alertID DESC LIMIT 1
         """
             statement = connection.prepareStatement(query)
             statement.setString(1, locationID)

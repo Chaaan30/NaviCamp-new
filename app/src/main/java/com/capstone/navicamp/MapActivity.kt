@@ -120,47 +120,25 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showBottomSheet() {
-        val floorLevel = intent.getStringExtra("FLOOR_LEVEL")
         val locationID = intent.getStringExtra("LOCATION_ID")
-        val userID = intent.getStringExtra("USER_ID")
-        val fullName = intent.getStringExtra("FULL_NAME")
-        val dateTime = intent.getStringExtra("DATE_TIME")
-        val status = intent.getStringExtra("STATUS")
-        val alertIDString = intent.getStringExtra("ALERT_ID")
-        val alertID = alertIDString?.toIntOrNull()
-
-        if (alertIDString != null) {
-            CoroutineScope(Dispatchers.IO).launch {
-                val officerName = UserSingleton.fullName ?: "Unknown Officer"
-                val success = MySQLHelper.resolveIncident(
-                    locationID = locationID ?: "",
-                    status = "resolved",
-                    officerName = officerName
+        
+        // Fetch the latest data from database to ensure accuracy
+        CoroutineScope(Dispatchers.IO).launch {
+            val latestLocationItem = MySQLHelper.getLocationItemById(locationID ?: "")
+            
+            withContext(Dispatchers.Main) {
+                val modalDialog = AssistanceModalDialog.newInstance(
+                    latestLocationItem.floorLevel,
+                    latestLocationItem.locationID,
+                    latestLocationItem.userID,
+                    latestLocationItem.fullName,
+                    formatDateTime(latestLocationItem.dateTime),
+                    latestLocationItem.status,
+                    "" // alertID - keeping empty as before
                 )
-                withContext(Dispatchers.Main) {
-                    if (success) {
-                        // Success: show a toast or update UI
-                        Toast.makeText(this@MapActivity, "Incident resolved successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // Failure: show an error message
-                        Toast.makeText(this@MapActivity, "Failed to resolve incident", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                modalDialog.show(supportFragmentManager, "AssistanceModal")
             }
-        } else {
-            android.util.Log.e("YourTag", "Invalid alertID: $alertIDString")
         }
-
-        val bottomSheet = AssistanceBottomSheet.newInstance(
-            floorLevel ?: "",
-            locationID ?: "",
-            userID ?: "",
-            fullName ?: "",
-            formatDateTime(dateTime ?: ""),
-            status ?: "",
-            (alertID ?: "").toString()
-        )
-        bottomSheet.show(supportFragmentManager, bottomSheet.tag)
     }
 
     private fun formatDateTime(dateTime: String): String {

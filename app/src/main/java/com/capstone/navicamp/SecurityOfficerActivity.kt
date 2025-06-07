@@ -616,26 +616,39 @@ class SecurityOfficerActivity : AppCompatActivity() {
         floorLevelTextView.text = item.floorLevel
 
         val officerName = item.officerName
-        if (!officerName.isNullOrEmpty()) {
-            officerRespondedTextView.text = if (officerName == UserSingleton.fullName) {
-                "Officer: $officerName (You)"
-            } else {
-                "Officer: $officerName"
+        val currentOfficerName = UserSingleton.fullName
+        
+        // Handle officer response display and button state
+        when {
+            !officerName.isNullOrEmpty() && officerName == currentOfficerName -> {
+                // Current officer has responded
+                officerRespondedTextView.text = "Officer: $officerName (You)"
+                officerRespondedTextView.visibility = View.VISIBLE
             }
-            officerRespondedTextView.visibility = View.VISIBLE
-        } else {
-            officerRespondedTextView.text = "No officer responded yet"
+            !officerName.isNullOrEmpty() && officerName != currentOfficerName -> {
+                // Another officer has responded
+                officerRespondedTextView.text = "Officer: $officerName"
+                officerRespondedTextView.visibility = View.VISIBLE
+            }
+            else -> {
+                // No officer has responded yet
+                officerRespondedTextView.text = "No officer responded yet"
+                officerRespondedTextView.visibility = View.VISIBLE
+            }
         }
+        
+        // Button always shows "View on Map"
+        respondButton.text = "View on Map"
 
         respondButton.setOnClickListener {
             val locationID = item.locationID
-            val officerName = UserSingleton.fullName
-
+            
             lifecycleScope.launch(Dispatchers.IO) {
+                // Get the latest location item data
                 val locationItem = MySQLHelper.getLocationItemById(locationID)
                 withContext(Dispatchers.Main) {
                     val intent = Intent(cardView.context, MapActivity::class.java).apply {
-                        putExtra("OFFICER_NAME", officerName)
+                        putExtra("OFFICER_NAME", currentOfficerName)
                         putExtra("LATITUDE", locationItem.latitude)
                         putExtra("LONGITUDE", locationItem.longitude)
                         putExtra("FLOOR_LEVEL", locationItem.floorLevel)

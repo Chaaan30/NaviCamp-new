@@ -52,7 +52,7 @@ CREATE TABLE `devices_table` (
 
 LOCK TABLES `devices_table` WRITE;
 /*!40000 ALTER TABLE `devices_table` DISABLE KEYS */;
-INSERT INTO `devices_table` VALUES ('123',456,'test',0.00000000,0.00000000,'Test',NULL,NULL,NULL),('202501',20250006,'in_use',NULL,NULL,NULL,'2025-06-06 12:41:30',NULL,NULL),('202502',20250004,'active',NULL,NULL,NULL,NULL,NULL,NULL),('202504',2025009,'active',14.65780000,121.04450000,'4',NULL,NULL,NULL),('202599',0,'active',0.00000000,0.00000000,'Unknown',NULL,-46,0);
+INSERT INTO `devices_table` VALUES ('202501',NULL,'available',14.24379863,121.11138234,'First Floor',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `devices_table` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -80,7 +80,7 @@ CREATE TABLE `incident_logs_table` (
   CONSTRAINT `fk_incident_logs_deviceID` FOREIGN KEY (`deviceID`) REFERENCES `devices_table` (`deviceID`),
   CONSTRAINT `locationID` FOREIGN KEY (`locationID`) REFERENCES `location_table` (`locationID`),
   CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `user_table` (`userID`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -89,7 +89,7 @@ CREATE TABLE `incident_logs_table` (
 
 LOCK TABLES `incident_logs_table` WRITE;
 /*!40000 ALTER TABLE `incident_logs_table` DISABLE KEYS */;
-INSERT INTO `incident_logs_table` VALUES (1,20250006,'202501','47BC44F3','pending','2025-06-03 08:58:41',NULL,NULL,NULL),(2,20250006,'202501','72EF0A74','pending','2025-06-03 08:58:42',NULL,NULL,NULL),(6,20250006,'202501','1CDBA86D','resolved','2025-06-03 14:31:32',NULL,'Jay Delos Santos','2025-06-06 11:47:38'),(7,20250006,'202501','896E1F32','pending','2025-06-03 08:58:43',NULL,NULL,NULL),(8,20250006,'202501','A1F59609','false alarm','2025-06-03 08:58:44','gumanon','Jay Delos Santos','2025-06-06 12:03:56'),(9,20250006,'202501','B81C057D','pending','2025-06-03 03:35:31',NULL,NULL,NULL);
+INSERT INTO `incident_logs_table` VALUES (1,20250006,'202501','47BC44F3','pending','2025-06-03 08:58:41',NULL,NULL,NULL),(2,20250006,'202501','72EF0A74','pending','2025-06-03 08:58:42',NULL,NULL,NULL),(6,20250006,'202501','1CDBA86D','resolved','2025-06-03 14:31:32',NULL,'Jay Delos Santos','2025-06-06 11:47:38'),(7,20250006,'202501','896E1F32','pending','2025-06-03 08:58:43',NULL,NULL,NULL),(8,20250006,'202501','A1F59609','false alarm','2025-06-03 08:58:44','gumanon','Jay Delos Santos','2025-06-06 12:03:56'),(9,20250006,'202501','B81C057D','pending','2025-06-03 03:35:31',NULL,NULL,NULL),(10,20250008,'202501','BB487FB9','pending','2025-06-08 02:22:41',NULL,NULL,NULL),(11,20250008,'202501','D0662E7C','pending','2025-06-08 02:39:17',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `incident_logs_table` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -104,7 +104,6 @@ CREATE TABLE `location_table` (
   `locationID` varchar(8) NOT NULL,
   `userID` int DEFAULT NULL,
   `deviceID` varchar(255) DEFAULT NULL,
-  `fullName` varchar(255) DEFAULT NULL,
   `latitude` varchar(45) NOT NULL,
   `longitude` varchar(45) NOT NULL,
   `floorLevel` varchar(45) DEFAULT NULL,
@@ -121,7 +120,7 @@ CREATE TABLE `location_table` (
 
 LOCK TABLES `location_table` WRITE;
 /*!40000 ALTER TABLE `location_table` DISABLE KEYS */;
-INSERT INTO `location_table` VALUES ('15EAFC9C',20250004,NULL,'Cristian Jay Delos Santos','14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 18:35:48'),('1CDBA86D',20250006,'202501','Nicca Quintillan','0.0','0.0','Unknown','2025-06-03 14:31:32'),('293328B8',20250004,NULL,'Cristian Jay Delos Santos','14.243667','121.111429','Einstein Building Ground Floor','2025-02-10 06:44:12'),('2A319B23',20250004,NULL,'Cristian Jay Delos Santos','14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 14:19:54'),('47BC44F3',20250006,NULL,'Nicca Quintillan','14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:41'),('72EF0A74',20250006,NULL,'Nicca Quintillan','14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:42'),('896E1F32',20250006,NULL,'Nicca Quintillan','14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:43'),('A1F59609',20250006,NULL,'Nicca Quintillan','14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:44'),('B81C057D',20250006,NULL,'Nicca Quintillan','14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 03:35:31'),('BAF94D1F',20250005,NULL,'Delo Chaaan','14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 14:20:25'),('C7122AF6',20250004,NULL,'Cristian Jay Delos Santos','14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 18:35:48');
+INSERT INTO `location_table` VALUES ('15EAFC9C',20250004,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 18:35:48'),('1CDBA86D',20250006,'202501','0.0','0.0','Unknown','2025-06-03 14:31:32'),('293328B8',20250004,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-02-10 06:44:12'),('2A319B23',20250004,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 14:19:54'),('47BC44F3',20250006,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:41'),('72EF0A74',20250006,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:42'),('896E1F32',20250006,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:43'),('A1F59609',20250006,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 08:58:44'),('B81C057D',20250006,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-06-03 03:35:31'),('BAF94D1F',20250005,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 14:20:25'),('BB487FB9',20250008,'202501','14.24379863','121.11138234','First Floor','2025-06-08 02:22:41'),('C7122AF6',20250004,NULL,'14.243667','121.111429','Einstein Building Ground Floor','2025-02-11 18:35:48'),('D0662E7C',20250008,'202501','14.24379863','121.11138234','First Floor','2025-06-08 02:39:17');
 /*!40000 ALTER TABLE `location_table` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -153,7 +152,7 @@ CREATE TABLE `user_table` (
 
 LOCK TABLES `user_table` WRITE;
 /*!40000 ALTER TABLE `user_table` DISABLE KEYS */;
-INSERT INTO `user_table` VALUES (20250003,'Jay Delos Santos','jay013003@gmail.com','09273878096','03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4','Security Officer','2025-01-21 21:02:04','2025-02-04 08:33:47',NULL,1),(20250006,'Nicca Quintillan','niccagnesq@gmail.com','09083356963','7003d16ad2fc576a1d563d8a2e76933389f8ca8a969374a22a31faeeca1f0cff','Student','2025-02-07 08:16:48',NULL,'proof_of_disability/20250527_181925.jpg',1),(20250008,'dcristian','dcristianjay@gmail.com','12345678999','8bb0cf6eb9b17d0f7d22b456f121257dc1254e1f01665370476383ea776df414','Student','2025-05-29 20:32:53',NULL,'proof_of_disability/IMG20250511125025.jpg',0);
+INSERT INTO `user_table` VALUES (20250001,'Jay Delos Santos','jay013003@gmail.com','98646192665','8bb0cf6eb9b17d0f7d22b456f121257dc1254e1f01665370476383ea776df414','Security Officer','2025-06-08 01:12:49',NULL,'proof_of_officer/1749316368254_compressed_7307252648281483666.jpg',1),(20250006,'Nicca Quintillan','niccagnesq@gmail.com','09083356963','7003d16ad2fc576a1d563d8a2e76933389f8ca8a969374a22a31faeeca1f0cff','Student','2025-02-07 08:16:48',NULL,'proof_of_disability/20250527_181925.jpg',1),(20250008,'dcristian','dcristianjay@gmail.com','12345678999','8bb0cf6eb9b17d0f7d22b456f121257dc1254e1f01665370476383ea776df414','Student','2025-05-29 20:32:53',NULL,'proof_of_disability/IMG20250511125025.jpg',1);
 /*!40000 ALTER TABLE `user_table` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
@@ -167,4 +166,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-06-07 21:28:20
+-- Dump completed on 2025-06-08  2:42:10

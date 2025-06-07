@@ -267,7 +267,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                Toast.makeText(this@LocomotorDisabilityActivity, "Connection timed out.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LocomotorDisabilityActivity, "You have been disconnected from the wheelchair due to time limit.", Toast.LENGTH_LONG).show()
                 disconnectFromDevice(showToast = false) // Disconnect without redundant toast
             }
         }.start()
@@ -288,6 +288,20 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     private fun requestAssistanceWithDevice(deviceID: String, userID: String, fullName: String) {
         lifecycleScope.launch {
+            // Get user's full name from user_table based on userID
+            // If it fails, we'll use the fullName parameter as fallback
+            val userFullName = withContext(Dispatchers.IO) {
+                try {
+                    MySQLHelper.getUserFullNameByUserID(userID)
+                } catch (e: Exception) {
+                    Log.e("LocomotorDisability", "Failed to get fullName from database: ${e.message}")
+                    null
+                }
+            } ?: fullName // Fallback to current fullName if DB query fails
+
+            Log.d("LocomotorDisability", "Using fullName: '$userFullName' for userID: $userID")
+
+            // Get device location data from devices_table based on deviceID
             val deviceLocation = withContext(Dispatchers.IO) {
                 MySQLHelper.getDeviceLastLocation(deviceID)
             }
@@ -300,15 +314,17 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 // Provide a default if floorLevelFromDb is null
                 val floorLevelToInsert = floorLevelFromDb ?: "Unknown"
 
+                Log.d("LocomotorDisability", "Device location: lat=$latitude, lng=$longitude, floor=$floorLevelToInsert")
+
                 val success = withContext(Dispatchers.IO) {
                     MySQLHelper.insertAssistanceRequestFromDevice(
                         this@LocomotorDisabilityActivity,
                         userID,
-                        fullName,
+                        userFullName, // Use fullName from user_table or fallback
                         deviceID,
                         latitude,
                         longitude,
-                        floorLevelToInsert // Use the non-null version
+                        floorLevelToInsert
                     )
                 }
                 if (success) {
