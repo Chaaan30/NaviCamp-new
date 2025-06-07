@@ -87,6 +87,43 @@ class IncidentLog : AppCompatActivity() {
         val navNameHeader: TextView = headerView.findViewById(R.id.nav_name_header)
         navNameHeader.text = UserSingleton.fullName
 
+        // Set up navigation menu item listener
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_logout -> {
+                    // Clear SharedPreferences
+                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.clear()
+                    editor.apply()
+
+                    // Navigate to MainActivity
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+
+                R.id.nav_item1 -> {
+                    // Navigate to OfficerAccountSettingsActivity
+                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+
+                R.id.nav_item2 -> {
+                    // Navigate to SecurityOfficerActivity and clear the activity stack
+                    val intent = Intent(this, SecurityOfficerActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    true
+                }
+
+                else -> false
+            }
+        }
+
         // Initialize the TableLayout and ProgressBar
         tableLayout = findViewById(R.id.tableLayout)
         loadingProgress = findViewById(R.id.loading_progress)
@@ -238,6 +275,29 @@ class IncidentLog : AppCompatActivity() {
             }
             tableLayout.addView(tableRow)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Retrieve the full name from SharedPreferences
+        val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val currentUserFullName = userPrefs.getString("fullName", "User")
+
+        // Update the nav_name_header in NavigationView
+        val navView = findViewById<NavigationView>(R.id.navigation_view)
+        navView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = currentUserFullName
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Store this as the last activity
+        val lastActivityPreferences = getSharedPreferences("LastActivity", MODE_PRIVATE)
+        val editor = lastActivityPreferences.edit()
+        editor.putString("lastActivity", "IncidentLog")
+        editor.apply()
     }
 
     override fun onDestroy() {
