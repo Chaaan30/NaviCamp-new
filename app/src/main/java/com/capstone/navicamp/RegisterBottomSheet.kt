@@ -346,9 +346,17 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 val userID: String? = withContext(Dispatchers.IO) {
                     MySQLHelper.generateUserID()
                 }
+                Log.d("RegisterBottomSheet", "Generated userID: $userID")
+                
+                if (userID == null) {
+                    loadingDialog.dismiss()
+                    Toast.makeText(context, "Failed to generate User ID. Please try again.", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                
                 val isInserted = withContext(Dispatchers.IO) {
                     MySQLHelper.insertUser(
-                        userID ?: "",
+                        userID,
                         fullName,
                         userType,
                         email,
@@ -362,7 +370,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                     Toast.makeText(context, "User registered successfully", Toast.LENGTH_SHORT).show()
                     if (userType == "Security Officer" && selectedImageUri != null) {
                         // Send verification email to admin for security officer
-                        sendOfficerVerificationEmail(email, fullName, userID ?: "", selectedImageUri!!)
+                        sendOfficerVerificationEmail(email, fullName, userID, selectedImageUri!!)
                     }
                     dismiss()
                 } else {
@@ -497,7 +505,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                         
                         <p><strong>The proof of identity is attached to this email.</strong></p>
                         
-                        <p>Please review the attached proof and use the buttons below to verify or reject the user:</p>
+                        <p>Please review the attached proof and use the buttons below to verify or reject the Security Officer:</p>
                         
                         <div style="text-align: center; margin: 30px 0;">
                             <a href="$verifyLink" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px; font-weight: bold;">✓ VERIFY USER</a>
@@ -565,7 +573,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val compressedFile = compressImage(context, imageUri)
         val folder = when (userType) {
             "Security Officer" -> "proof_of_officer"
-            "Student", "Personnel", "Visitor" -> "proof_of_general"
+            "Student", "Personnel", "Visitor" -> "proof_of_disability"
             else -> "proof_of_other"
         }
         val fileName = "$folder/${System.currentTimeMillis()}_${compressedFile.name}"
