@@ -66,6 +66,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security_officer)
 
+        val registeredUsersCard = findViewById<LinearLayout>(R.id.registered_users_card)
+        registeredUsersCard.setOnClickListener {
+            val intent = Intent(this, DisplayRegisteredUsersActivity::class.java)
+            startActivity(intent)
+        }
+
         // Initialize Smart Polling Manager
         smartPollingManager = SmartPollingManager.getInstance()
         setupSmartPollingListeners()

@@ -1341,46 +1341,55 @@ object MySQLHelper {
         }
     }
 
-//    fun getAssistanceDetails(locationId: String): LocationItem? {
-//        var connection: Connection? = null
-//        var statement: PreparedStatement? = null
-//        var resultSet: ResultSet? = null
-//        return try {
-//            connection = getConnection()
-//            if (connection == null) {
-//                println("Database connection failed.")
-//                return null
-//            }
-//
-//            val query = """
-//            SELECT locationID, userID, deviceID, fullName, floorLevel, latitude, longitude, dateTime
-//            FROM location_table WHERE locationID = ?
-//        """
-//            statement = connection.prepareStatement(query)
-//            statement.setString(1, locationId)
-//
-//            resultSet = statement.executeQuery()
-//            if (resultSet.next()) {
-//                LocationItem(
-//                    locationID = resultSet.getString("locationID"),
-//                    userID = resultSet.getString("userID"),
-//                    deviceID = resultSet.getString("deviceID"),
-//                    fullName = resultSet.getString("fullName"),
-//                    floorLevel = resultSet.getString("floorLevel"),
-//                    latitude = resultSet.getDouble("latitude"),
-//                    longitude = resultSet.getDouble("longitude"),
-//                    dateTime = resultSet.getString("dateTime")
-//                )
-//            } else {
-//                null
-//            }
-//        } catch (e: SQLException) {
-//            e.printStackTrace()
-//            null
-//        } finally {
-//            resultSet?.close()
-//            statement?.close()
-//            connection?.close()
-//        }
-//    }
+    fun getVerifiedLocomotorUsersFiltered(userType: String?, creationDateType: String?, selectedDate: Date?): List<UserData> {
+        val users = mutableListOf<UserData>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        try {
+            connection = getConnection()
+            if (connection == null) return users
+
+            val query = StringBuilder("""
+            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
+            FROM user_table
+            WHERE verified = 1
+        """)
+            if (userType != null && userType != "All") {
+                query.append(" AND userType = ?")
+            } else {
+                query.append(" AND userType IN ('Student', 'Personnel', 'Visitor')")
+            }
+
+            statement = connection.prepareStatement(query.toString())
+            var paramIndex = 1
+            if (userType != null && userType != "All") {
+                statement.setString(paramIndex++, userType)
+            }
+
+            resultSet = statement.executeQuery()
+            while (resultSet.next()) {
+                users.add(
+                    UserData(
+                        resultSet.getString("userID") ?: "",
+                        resultSet.getString("fullName") ?: "",
+                        resultSet.getString("userType") ?: "",
+                        resultSet.getString("email") ?: "",
+                        resultSet.getString("contactNumber") ?: "",
+                        resultSet.getString("createdOn") ?: "",
+                        resultSet.getString("updatedOn") ?: "",
+                        resultSet.getString("proofPicture") ?: "",
+                        resultSet.getInt("verified")
+                    )
+                )
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+        return users
+    }
 }
