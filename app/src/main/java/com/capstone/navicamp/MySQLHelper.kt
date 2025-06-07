@@ -15,6 +15,8 @@ import android.content.Intent
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.TimeZone
 
 // Data class to hold active connection information
 data class ActiveConnectionInfo(
@@ -618,7 +620,7 @@ object MySQLHelper {
         }
     }
 
-    // Generate a new userID
+    // Generate a new userID starting from 20250001 and auto-incrementing
     fun generateUserID(): String? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -630,26 +632,49 @@ object MySQLHelper {
                 return null
             }
 
-            val year = Calendar.getInstance().get(Calendar.YEAR).toString()
-            val query = "SELECT MAX(userID) AS maxUserID FROM user_table WHERE userID LIKE ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, "$year%")
-
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                val maxUserID = resultSet.getString("maxUserID")
-                val nextID = if (maxUserID != null) {
-                    val currentNumber = maxUserID.substring(4).toInt()
-                    currentNumber + 1
-                } else {
-                    1
+            // Find the first available userID starting from 20250001
+            var currentID = 20250001L
+            val checkQuery = "SELECT COUNT(*) AS count FROM user_table WHERE userID = ?"
+            
+            while (currentID <= 20259999) {
+                statement = connection.prepareStatement(checkQuery)
+                statement.setString(1, currentID.toString())
+                resultSet = statement.executeQuery()
+                
+                if (resultSet.next()) {
+                    val count = resultSet.getInt("count")
+                    if (count == 0) {
+                        // Found an available ID
+                        Log.d("MySQLHelper", "Found available userID: $currentID")
+                        break
+                    }
                 }
-                String.format("%s%04d", year, nextID)
-            } else {
-                String.format("%s0001", year)
+                
+                // Close resources before next iteration
+                resultSet?.close()
+                statement?.close()
+                
+                // Try next ID
+                currentID++
             }
+            
+            val nextID = if (currentID <= 20259999) {
+                currentID
+            } else {
+                Log.e("MySQLHelper", "All userIDs from 20250001 to 20259999 are taken")
+                null
+            }
+            
+            if (nextID != null) {
+                Log.d("MySQLHelper", "Generated unique userID: $nextID")
+                nextID.toString()
+            } else {
+                null
+            }
+            
         } catch (e: SQLException) {
             e.printStackTrace()
+            Log.e("MySQLHelper", "Error generating userID: ${e.message}")
             null
         } finally {
             resultSet?.close()
@@ -1548,7 +1573,8 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT * FROM location_table WHERE locationID = ?
+            SELECT locationID, userID, deviceID, fullName, floorLevel, status, latitude, longitude, dateTime, officerResponded 
+            FROM location_table WHERE locationID = ?
         """
             statement = connection.prepareStatement(query)
             statement.setString(1, locationId)
@@ -1558,13 +1584,14 @@ object MySQLHelper {
                 LocationItem(
                     locationID = resultSet.getString("locationID"),
                     userID = resultSet.getString("userID"),
+                    deviceID = resultSet.getString("deviceID") ?: "",
                     fullName = resultSet.getString("fullName"),
                     floorLevel = resultSet.getString("floorLevel"),
-                    status = resultSet.getString("status"),
+                    status = resultSet.getString("status") ?: "",
                     latitude = resultSet.getDouble("latitude"),
                     longitude = resultSet.getDouble("longitude"),
                     dateTime = resultSet.getString("dateTime"),
-                    officerName = resultSet.getString("officerResponded")  // Changed parameter name
+                    officerName = resultSet.getString("officerResponded") ?: ""
                 )
             } else {
                 null
@@ -1578,47 +1605,4 @@ object MySQLHelper {
             connection?.close()
         }
     }
-}
-//    fun getAssistanceDetails(locationId: String): LocationItem? {
-//        var connection: Connection? = null
-//        var statement: PreparedStatement? = null
-//        var resultSet: ResultSet? = null
-//        return try {
-//            connection = getConnection()
-//            if (connection == null) {
-//                println("Database connection failed.")
-//                return null
-//            }
-//
-//            val query = """
-//            SELECT locationID, userID, deviceID, fullName, floorLevel, latitude, longitude, dateTime
-//            FROM location_table WHERE locationID = ?
-//        """
-//            statement = connection.prepareStatement(query)
-//            statement.setString(1, locationId)
-//
-//            resultSet = statement.executeQuery()
-//            if (resultSet.next()) {
-//                LocationItem(
-//                    locationID = resultSet.getString("locationID"),
-//                    userID = resultSet.getString("userID"),
-//                    deviceID = resultSet.getString("deviceID"),
-//                    fullName = resultSet.getString("fullName"),
-//                    floorLevel = resultSet.getString("floorLevel"),
-//                    latitude = resultSet.getDouble("latitude"),
-//                    longitude = resultSet.getDouble("longitude"),
-//                    dateTime = resultSet.getString("dateTime")
-//                )
-//            } else {
-//                null
-//            }
-//        } catch (e: SQLException) {
-//            e.printStackTrace()
-//            null
-//        } finally {
-//            resultSet?.close()
-//            statement?.close()
-//            connection?.close()
-//        }
-//    }
 }
