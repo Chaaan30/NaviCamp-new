@@ -24,6 +24,13 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
+import exportIncidentDataToCSV
+import exportIncidentDataToCSVWithUri
+import java.io.File
+import java.io.FileWriter
 
 class IncidentLog : AppCompatActivity() {
 
@@ -34,6 +41,7 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var filterTypeSpinner: Spinner
     private lateinit var selectDateButton: Button
     private lateinit var loadingProgress: ProgressBar
+    private lateinit var exportButton: Button
 
     private val viewModel: IncidentLogViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
@@ -44,6 +52,10 @@ class IncidentLog : AppCompatActivity() {
             viewModel.fetchIncidentData()
             handler.postDelayed(this, refreshInterval)
         }
+    }
+
+    companion object {
+        private const val CREATE_FILE_REQUEST_CODE = 1001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,6 +93,7 @@ class IncidentLog : AppCompatActivity() {
 
         // Observe incident data from ViewModel
         viewModel.incidentData.observe(this, Observer { data ->
+            android.util.Log.d("IncidentLog", "Fetched incident data: $data")
             loadingProgress.visibility = View.GONE
             val sortedData = data.sortedBy { it[0].toIntOrNull() ?: 0 }
             displayDataInTable(sortedData)
@@ -92,6 +105,7 @@ class IncidentLog : AppCompatActivity() {
 
         filterTypeSpinner = findViewById(R.id.filter_type_spinner)
         selectDateButton = findViewById(R.id.select_date_button)
+        exportButton = findViewById(R.id.export_button)
 
         selectDateButton.setOnClickListener { showFilterPicker() }
 
@@ -105,6 +119,27 @@ class IncidentLog : AppCompatActivity() {
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        exportButton.setOnClickListener {
+            val data = viewModel.incidentData.value ?: emptyList()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+): Use SAF
+                val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_TITLE, "incident_logs.csv")
+                }
+                startActivityForResult(createFileIntent, CREATE_FILE_REQUEST_CODE)
+            } else {
+                // Android 10 and below
+                val file = exportIncidentDataToCSV(this, data)
+                if (file != null) {
+                    Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -167,13 +202,13 @@ class IncidentLog : AppCompatActivity() {
     }
 
     private fun displayDataInTable(incidentData: List<List<String>>) {
-        // Clear existing rows before adding new ones
         tableLayout.removeAllViews()
 
-        // Add table header row
+        // Header for 11 columns
         val headerRow = TableRow(this)
         val headerText = arrayOf(
-            "Alert ID", "Name", "User Type", "Device ID", "Coordinates", "Floor Level", "Reported Incident Type", "Status", "Time of Alert", "Resolved On"
+            "Alert ID", "User ID", "Device ID", "Name", "Coordinates", "Floor Level",
+            "Status", "Time of Alert", "Resolved On", "Officer Name", "Incident Description"
         )
         headerText.forEach { text ->
             val textView = TextView(this).apply {
@@ -186,25 +221,14 @@ class IncidentLog : AppCompatActivity() {
         }
         tableLayout.addView(headerRow)
 
-        // Add rows for each incident
+        // Add rows for each incident (expecting 11 columns)
         incidentData.forEach { row ->
+            if (row.size < 11) {
+                android.util.Log.w("IncidentLog", "Skipping row with insufficient columns: $row")
+                return@forEach
+            }
             val tableRow = TableRow(this)
-
-            // Map each column correctly
-            val cellData = listOf(
-                row[0], // alertID
-                row[1], // fullName
-                row[2], // userType
-                row[3], // deviceID
-                "${row[4]}, ${row[5]}", // Combine latitude and longitude as "Coordinates"
-                row[6], // floorLevel
-                row[7], // alertType
-                row[8], // status
-                row[9], // alertDateTime
-                row[10] // resolvedOn
-            )
-
-            cellData.forEach { cell ->
+            row.forEach { cell ->
                 val textView = TextView(this).apply {
                     text = cell
                     setPadding(20, 20, 20, 20)
@@ -212,7 +236,6 @@ class IncidentLog : AppCompatActivity() {
                 }
                 tableRow.addView(textView)
             }
-
             tableLayout.addView(tableRow)
         }
     }
@@ -228,23 +251,47 @@ class IncidentLog : AppCompatActivity() {
         calendar.time = selectedDate
 
         return when (filterType) {
-            "Year" -> data.filter { it[9].startsWith("${calendar.get(Calendar.YEAR)}") }
-            "Month" -> data.filter { it[9].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
-            "Week" -> data.filter {
-                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
-                val incidentCalendar = Calendar.getInstance()
-                incidentCalendar.time = incidentDate
-                calendar.get(Calendar.WEEK_OF_YEAR) == incidentCalendar.get(Calendar.WEEK_OF_YEAR) &&
-                        calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
+            "Year" -> data.filter { it[7].startsWith("${calendar.get(Calendar.YEAR)}") }
+            "Month" -> data.filter { it[7].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
+            "Week" -> {
+                val weekStart = calendar.clone() as Calendar
+                weekStart.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+
+                val weekEnd = calendar.clone() as Calendar
+                weekEnd.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                weekEnd.add(Calendar.DAY_OF_WEEK, 6)
+
+                data.filter {
+                    try {
+                        val incidentDate = dateFormat.parse(it[7])
+                        incidentDate.after(weekStart.time) && incidentDate.before(weekEnd.time)
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
             }
             "Day" -> data.filter {
-                val incidentDate = dateFormat.parse(it[9]) ?: return@filter false
+                val incidentDate = dateFormat.parse(it[7]) ?: return@filter false
                 val incidentCalendar = Calendar.getInstance()
                 incidentCalendar.time = incidentDate
                 calendar.get(Calendar.DAY_OF_YEAR) == incidentCalendar.get(Calendar.DAY_OF_YEAR) &&
                         calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
             }
             else -> data
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+            val uri = data?.data
+            val incidentData = viewModel.incidentData.value ?: emptyList()
+            if (uri != null) {
+                exportIncidentDataToCSVWithUri(this, uri, incidentData)
+                Toast.makeText(this, "Exported successfully", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

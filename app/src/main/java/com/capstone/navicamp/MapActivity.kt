@@ -14,7 +14,12 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import android.widget.TextView
+import android.widget.Toast
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -121,6 +126,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         val fullName = intent.getStringExtra("FULL_NAME")
         val dateTime = intent.getStringExtra("DATE_TIME")
         val status = intent.getStringExtra("STATUS")
+        val alertIDString = intent.getStringExtra("ALERT_ID")
+        val alertID = alertIDString?.toIntOrNull()
+
+        if (alertIDString != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val officerName = UserSingleton.fullName ?: "Unknown Officer"
+                val success = MySQLHelper.resolveIncident(
+                    locationID = locationID ?: "",
+                    status = "resolved",
+                    officerName = officerName
+                )
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        // Success: show a toast or update UI
+                        Toast.makeText(this@MapActivity, "Incident resolved successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // Failure: show an error message
+                        Toast.makeText(this@MapActivity, "Failed to resolve incident", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else {
+            android.util.Log.e("YourTag", "Invalid alertID: $alertIDString")
+        }
 
         val bottomSheet = AssistanceBottomSheet.newInstance(
             floorLevel ?: "",
@@ -128,15 +157,21 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             userID ?: "",
             fullName ?: "",
             formatDateTime(dateTime ?: ""),
-            status ?: ""
+            status ?: "",
+            (alertID ?: "").toString()
         )
         bottomSheet.show(supportFragmentManager, bottomSheet.tag)
     }
 
     private fun formatDateTime(dateTime: String): String {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
-        val date = inputFormat.parse(dateTime)
-        return outputFormat.format(date)
+        if (dateTime.isBlank()) return ""
+        return try {
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
+            val date = inputFormat.parse(dateTime)
+            outputFormat.format(date)
+        } catch (e: Exception) {
+            ""
+        }
     }
 }
