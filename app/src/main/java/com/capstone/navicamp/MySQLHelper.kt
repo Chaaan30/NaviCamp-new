@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.TimeZone
+import kotlin.random.Random
 
 // Data class to hold active connection information
 data class ActiveConnectionInfo(
@@ -33,6 +34,14 @@ object MySQLHelper {
         "jdbc:mariadb://campusnavigator.c10aiyo64bnv.ap-southeast-1.rds.amazonaws.com:3306/campusnavigator"
     private const val USERNAME = "navicamp"
     private const val PASSWORD = "navicamp"
+    
+    // Generate random 8-character alphanumeric alert ID
+    private fun generateAlertID(): String {
+        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return (1..8)
+            .map { chars[Random.nextInt(chars.length)] }
+            .joinToString("")
+    }
 
     init {
         try {
@@ -326,16 +335,18 @@ object MySQLHelper {
             val locationRows = locationStmt.executeUpdate()
             Log.d("MySQLHelper", "Location data inserted: $locationRows rows affected.")
 
+            val alertID = generateAlertID()
             val incidentQuery = """
-                INSERT INTO incident_logs_table (userID, deviceID, locationID, status, alertDateTime)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO incident_logs_table (alertID, userID, deviceID, locationID, status, alertDateTime)
+                VALUES (?, ?, ?, ?, ?, ?)
             """.trimIndent()
             incidentStmt = connection.prepareStatement(incidentQuery)
-            incidentStmt.setString(1, userID)
-            incidentStmt.setString(2, deviceID)
-            incidentStmt.setString(3, locationID)
-            incidentStmt.setString(4, "pending")
-            incidentStmt.setString(5, currentDateTime)
+            incidentStmt.setString(1, alertID)
+            incidentStmt.setString(2, userID)
+            incidentStmt.setString(3, deviceID)
+            incidentStmt.setString(4, locationID)
+            incidentStmt.setString(5, "pending")
+            incidentStmt.setString(6, currentDateTime)
 
             val incidentRows = incidentStmt.executeUpdate()
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
@@ -593,16 +604,18 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Location data inserted: $locationRows rows affected.")
 
             // Insert into incident_logs_table to create the assistance request
+            val alertID = generateAlertID()
             val incidentQuery = """
-                INSERT INTO incident_logs_table (userID, deviceID, locationID, status, alertDateTime)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO incident_logs_table (alertID, userID, deviceID, locationID, status, alertDateTime)
+                VALUES (?, ?, ?, ?, ?, ?)
             """.trimIndent()
             incidentStmt = connection.prepareStatement(incidentQuery)
-            incidentStmt.setString(1, userID)
-            incidentStmt.setString(2, deviceID)
-            incidentStmt.setString(3, locationID)
-            incidentStmt.setString(4, "pending")
-            incidentStmt.setString(5, currentDateTime)
+            incidentStmt.setString(1, alertID)
+            incidentStmt.setString(2, userID)
+            incidentStmt.setString(3, deviceID)
+            incidentStmt.setString(4, locationID)
+            incidentStmt.setString(5, "pending")
+            incidentStmt.setString(6, currentDateTime)
 
             val incidentRows = incidentStmt.executeUpdate()
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
@@ -1311,8 +1324,8 @@ object MySQLHelper {
 
             val insertQuery = """
                 INSERT INTO incident_logs_table
-                (userID, deviceID, locationID, alertDateTime, status, alertDescription, officerResponded, resolvedOn)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (alertID, userID, deviceID, locationID, alertDateTime, status, alertDescription, officerResponded, resolvedOn)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
 
             insertStmt = connection.prepareStatement(insertQuery)
@@ -1322,15 +1335,17 @@ object MySQLHelper {
                 val deviceID = resultSet.getString("deviceID")
                 val locationID = resultSet.getString("locationID")
                 val alertDateTime = resultSet.getTimestamp("dateTime")
+                val alertID = generateAlertID()
 
-                insertStmt.setString(1, userID)
-                insertStmt.setString(2, deviceID)
-                insertStmt.setString(3, locationID)
-                insertStmt.setTimestamp(4, alertDateTime)
-                insertStmt.setString(5, "pending") // default status
-                insertStmt.setNull(6, java.sql.Types.VARCHAR) // alertDescription NULL
-                insertStmt.setNull(7, java.sql.Types.VARCHAR) // officerResponded NULL
-                insertStmt.setNull(8, java.sql.Types.TIMESTAMP) // resolvedOn NULL
+                insertStmt.setString(1, alertID)
+                insertStmt.setString(2, userID)
+                insertStmt.setString(3, deviceID)
+                insertStmt.setString(4, locationID)
+                insertStmt.setTimestamp(5, alertDateTime)
+                insertStmt.setString(6, "pending") // default status
+                insertStmt.setNull(7, java.sql.Types.VARCHAR) // alertDescription NULL
+                insertStmt.setNull(8, java.sql.Types.VARCHAR) // officerResponded NULL
+                insertStmt.setNull(9, java.sql.Types.TIMESTAMP) // resolvedOn NULL
 
                 insertStmt.addBatch()
             }
@@ -1861,6 +1876,50 @@ object MySQLHelper {
             resultSet?.close()
             statement?.close()
             connection?.close()        }
+        return users
+    }
+
+    fun getAllVerifiedUsers(): List<UserData> {
+        val users = mutableListOf<UserData>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        try {
+            connection = getConnection()
+            if (connection == null) return users
+
+            val query = """
+                SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
+                FROM user_table
+                WHERE verified = 1 AND userType != 'Security Officer'
+                ORDER BY createdOn DESC
+            """
+            
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            
+            while (resultSet.next()) {
+                users.add(
+                    UserData(
+                        resultSet.getString("userID") ?: "",
+                        resultSet.getString("fullName") ?: "",
+                        resultSet.getString("userType") ?: "",
+                        resultSet.getString("email") ?: "",
+                        resultSet.getString("contactNumber") ?: "",
+                        resultSet.getString("createdOn") ?: "",
+                        resultSet.getString("updatedOn") ?: "",
+                        resultSet.getString("proofPicture") ?: "",
+                        resultSet.getInt("verified")
+                    )
+                )
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
         return users
     }
 }

@@ -1,3 +1,5 @@
+package com.capstone.navicamp
+
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -37,6 +39,41 @@ fun exportIncidentDataToCSVWithUri(context: Context, uri: Uri, data: List<List<S
     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
         OutputStreamWriter(outputStream).use { writer ->
             writeIncidentDataToWriter(writer, data)
+        }
+    }
+}
+
+object CsvExportUtils {
+
+    fun exportIncidentDataToCsv(context: Context, uri: Uri, data: List<List<String>>, officerName: String) {
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            val writer = OutputStreamWriter(outputStream)
+
+            // Add the "Exported by" line
+            writer.write("Exported by: $officerName\n")
+            writer.write("\n") // Add a blank line for spacing
+
+            // Write headers
+            val headers = listOf(
+                "Alert ID", "User ID", "Device ID", "Name", "Coordinates",
+                "Floor Level", "Status", "Time of Alert", "Resolved On",
+                "Officer Name", "Incident Description"
+            )
+            writer.write(headers.joinToString(",") + "\n")
+
+            // Write data
+            data.forEach { row ->
+                writer.write(row.joinToString(",") { escapeCsvField(it) } + "\n")
+            }
+            writer.flush()
+        }
+    }
+
+    private fun escapeCsvField(field: String): String {
+        return if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+            "\"${field.replace("\"", "\"\"")}\""
+        } else {
+            field
         }
     }
 }

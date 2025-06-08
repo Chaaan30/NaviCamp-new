@@ -1,309 +1,240 @@
 package com.capstone.navicamp
 
-import android.app.DatePickerDialog
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.Spinner
-import android.widget.TableLayout
-import android.widget.TableRow
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.navigation.NavigationView
-import java.text.SimpleDateFormat
-import java.util.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var userTypeSpinner: Spinner
-    private lateinit var creationDateSpinner: Spinner
+    private lateinit var searchEditText: EditText
+    private lateinit var refreshButton: Button
     private lateinit var loadingProgress: ProgressBar
-    private lateinit var tableLayout: TableLayout
-    private var selectedUserType: String = "All"
-    private var selectedCreationDateType: String = "All"
-    private var selectedDate: Date = Date()
+    private lateinit var usersLayout: LinearLayout
     private val viewModel: DisplayRegisteredUsersViewModel by viewModels()
-
-    private val handler = Handler(Looper.getMainLooper())
-    private val refreshInterval = 1000L // 1 second
-
-    private val refreshRunnable = object : Runnable {
-        override fun run() {
-            viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
-            handler.postDelayed(this, refreshInterval)
-        }
-    }
+    
+    private var allUsers = listOf<UserData>()
+    private var filteredUsers = listOf<UserData>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_display_registered_users)
 
+        setupViews()
+        setupSidebar()
+        setupFilters()
+        loadUsers()
+    }
+
+    private fun setupViews() {
+        usersLayout = findViewById(R.id.users_layout)
+        userTypeSpinner = findViewById(R.id.user_type_spinner)
+        searchEditText = findViewById(R.id.search_edit_text)
+        refreshButton = findViewById(R.id.refresh_button)
+        loadingProgress = findViewById(R.id.loading_progress)
+        
+        refreshButton.setOnClickListener {
+            loadUsers()
+        }
+    }
+
+    private fun setupSidebar() {
+        navigationView = findViewById(R.id.navigation_view)
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.title = "Registered Users"
 
         drawerLayout = findViewById(R.id.drawer_layout)
         toggle = ActionBarDrawerToggle(
-            this,
-            drawerLayout,
-            toolbar,
+            this, drawerLayout, toolbar,
             R.string.navigation_drawer_open,
             R.string.navigation_drawer_close
         )
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
-        navigationView = findViewById(R.id.navigation_view)
-
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
-                    // Clear SharedPreferences
                     val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
                     editor.clear()
                     editor.apply()
 
-                    // Navigate to MainActivity
                     val intent = Intent(this, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
                     true
                 }
-
                 R.id.nav_item1 -> {
-                    // Navigate to OfficerAccountSettingsActivity
                     val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
                     startActivity(intent)
                     true
                 }
-
                 R.id.nav_item2 -> {
-                    // Navigate to SecurityOfficerActivity and clear the activity stack
                     val intent = Intent(this, SecurityOfficerActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     true
                 }
-
                 else -> false
             }
         }
+    }
 
-        val headerView = navigationView.getHeaderView(0)
-        val navNameHeader: TextView = headerView.findViewById(R.id.nav_name_header)
-        navNameHeader.text = UserSingleton.fullName
-
-        tableLayout = findViewById(R.id.tableLayout)
-        loadingProgress = findViewById(R.id.loading_progress)
-
-        // Observe user data and update table with filtered data
-        viewModel.userData.observe(this) { data ->
-            android.util.Log.d("DisplayRegisteredUsers", "Fetched Registered Users data: $data")
-            loadingProgress.visibility = View.GONE
-            val filteredData = filterDataByDate(data, selectedCreationDateType, selectedDate)
-            displayDataInTable(filteredData)
-        }
-
-        loadingProgress.visibility = View.VISIBLE
-        handler.postDelayed(refreshRunnable, refreshInterval)
-
-        userTypeSpinner = findViewById(R.id.user_type_spinner)
-        creationDateSpinner = findViewById(R.id.creation_date_spinner)
+    private fun setupFilters() {
+        val filterOptions = arrayOf("All", "Student", "Personnel", "Visitor")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, filterOptions)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        userTypeSpinner.adapter = adapter
 
         userTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                selectedUserType = parent.getItemAtPosition(position).toString()
-                (view as? TextView)?.text = "User Type: $selectedUserType"
-                viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
+                filterUsers()
             }
             override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
-        creationDateSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                selectedCreationDateType = parent.getItemAtPosition(position).toString()
-                (view as? TextView)?.text = "Date: $selectedCreationDateType"
-
-                if (selectedCreationDateType == "All") {
-                    selectedDate = Date()
-                    viewModel.userData.value?.let {
-                        displayDataInTable(filterDataByDate(it, selectedCreationDateType, selectedDate))
-                    }
-                } else {
-                    showFilterPicker()
-                }
-                viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
+        searchEditText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                filterUsers()
             }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
+        })
+    }
 
-        ArrayAdapter.createFromResource(
-            this,
-            R.array.registered_user_types,
-            R.layout.spinner_selected_item // for selected item
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            userTypeSpinner.adapter = adapter
-        }
-
-        ArrayAdapter.createFromResource(
-            this,
-            R.array.date_types,
-            R.layout.spinner_selected_item
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            creationDateSpinner.adapter = adapter
+    private fun loadUsers() {
+        findViewById<ProgressBar>(R.id.loading_progress).visibility = View.VISIBLE
+        findViewById<TextView>(R.id.no_users_text).visibility = View.GONE
+        
+        lifecycleScope.launch {
+            allUsers = withContext(Dispatchers.IO) {
+                MySQLHelper.getAllVerifiedUsers()
+            }
+            filteredUsers = allUsers
+            updateUserCards()
+            findViewById<ProgressBar>(R.id.loading_progress).visibility = View.GONE
         }
     }
 
-    private fun displayDataInTable(users: List<UserData>) {
-        // Remove all rows except header
-        while (tableLayout.childCount > 1) {
-            tableLayout.removeViewAt(1)
-        }
-        for (user in users) {
-            val row = TableRow(this)
-            row.addView(createCell(user.userID))
-            row.addView(createCell(user.fullName))
-            row.addView(createCell(user.email))
-            row.addView(createCell(user.contactNumber))
-            row.addView(createCell(user.userType))
-            row.addView(createCell(user.createdOn))
-            tableLayout.addView(row)
-        }
-    }
+    private fun filterUsers() {
+        val selectedFilter = userTypeSpinner.selectedItem.toString()
+        val searchQuery = searchEditText.text.toString().lowercase().trim()
 
-    private fun createCell(text: String): TextView {
-        val tv = TextView(this)
-        tv.text = text
-        tv.setPadding(20, 20, 20, 20)
-        return tv
-    }
-
-    private fun showFilterPicker() {
-        when (selectedCreationDateType) {
-            "Year" -> showYearPicker()
-            "Month" -> showMonthPicker()
-            "Week" -> showWeekPicker()
-            "Day" -> showDayPicker()
-        }
-    }
-
-    private fun showYearPicker() {
-        val calendar = Calendar.getInstance()
-        DatePickerDialog(this, { _, year, _, _ ->
-            val selected = Calendar.getInstance()
-            selected.set(year, 0, 1)
-            selectedDate = selected.time
-            viewModel.userData.value?.let {
-                displayDataInTable(filterDataByDate(it, "Year", selectedDate))
+        filteredUsers = allUsers.filter { user ->
+            val matchesFilter = when (selectedFilter) {
+                "All" -> true
+                else -> user.userType.equals(selectedFilter, ignoreCase = true)
             }
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
 
-    private fun showMonthPicker() {
-        val calendar = Calendar.getInstance()
-        DatePickerDialog(this, { _, year, month, _ ->
-            val selected = Calendar.getInstance()
-            selected.set(year, month, 1)
-            selectedDate = selected.time
-            viewModel.userData.value?.let {
-                displayDataInTable(filterDataByDate(it, "Month", selectedDate))
+            val matchesSearch = if (searchQuery.isEmpty()) {
+                true
+            } else {
+                user.fullName.lowercase().contains(searchQuery) ||
+                user.userID.lowercase().contains(searchQuery) ||
+                user.email.lowercase().contains(searchQuery) ||
+                user.contactNumber.lowercase().contains(searchQuery)
             }
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
 
-    private fun showWeekPicker() {
-        val calendar = Calendar.getInstance()
-        DatePickerDialog(this, { _, year, month, dayOfMonth ->
-            val selected = Calendar.getInstance()
-            selected.set(year, month, dayOfMonth)
-            selectedDate = selected.time
-            viewModel.userData.value?.let {
-                displayDataInTable(filterDataByDate(it, "Week", selectedDate))
-            }
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
-
-    private fun showDayPicker() {
-        val calendar = Calendar.getInstance()
-        DatePickerDialog(this, { _, year, month, dayOfMonth ->
-            val selected = Calendar.getInstance()
-            selected.set(year, month, dayOfMonth)
-            selectedDate = selected.time
-            viewModel.userData.value?.let {
-                displayDataInTable(filterDataByDate(it, "Day", selectedDate))
-            }
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
-
-    private fun filterDataByDate(
-        data: List<UserData>,
-        filterType: String,
-        selectedDate: Date = Date()
-    ): List<UserData> {
-        // Try both formats
-        val dateFormats = listOf(
-            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        )
-        val calendar = Calendar.getInstance()
-        calendar.time = selectedDate
-
-        fun parseDate(dateStr: String): Date? {
-            for (format in dateFormats) {
-                try {
-                    return format.parse(dateStr)
-                } catch (_: Exception) {}
-            }
-            return null
+            matchesFilter && matchesSearch
         }
 
-        return when (filterType) {
-            "Year" -> data.filter {
-                val date = parseDate(it.createdOn)
-                date != null && calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR)
+        updateUserCards()
+    }
+
+    private fun updateUserCards() {
+        usersLayout.removeAllViews()
+        
+        val noUsersText = findViewById<TextView>(R.id.no_users_text)
+        val userCount = findViewById<TextView>(R.id.user_count)
+        
+        userCount.text = "Total Users: ${filteredUsers.size}"
+
+        if (filteredUsers.isEmpty()) {
+            noUsersText.visibility = View.VISIBLE
+            noUsersText.text = if (allUsers.isEmpty()) {
+                "No registered users found"
+            } else {
+                "No users match the current filter"
             }
-            "Month" -> data.filter {
-                val date = parseDate(it.createdOn)
-                date != null &&
-                        calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR) &&
-                        calendar.get(Calendar.MONTH) == Calendar.getInstance().apply { time = date }.get(Calendar.MONTH)
+        } else {
+            noUsersText.visibility = View.GONE
+
+            for (user in filteredUsers) {
+                val cardView = layoutInflater.inflate(R.layout.user_card, usersLayout, false)
+                setupUserCard(cardView, user)
+                usersLayout.addView(cardView)
             }
-            "Week" -> data.filter {
-                val date = parseDate(it.createdOn)
-                if (date == null) return@filter false
-                val userCal = Calendar.getInstance().apply { time = date }
-                calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
-                        calendar.get(Calendar.WEEK_OF_YEAR) == userCal.get(Calendar.WEEK_OF_YEAR)
-            }
-            "Day" -> data.filter {
-                val date = parseDate(it.createdOn)
-                if (date == null) return@filter false
-                val userCal = Calendar.getInstance().apply { time = date }
-                calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
-                        calendar.get(Calendar.DAY_OF_YEAR) == userCal.get(Calendar.DAY_OF_YEAR)
-            }
-            else -> data
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        handler.removeCallbacks(refreshRunnable)
+    private fun setupUserCard(cardView: View, user: UserData) {
+        val userIdText = cardView.findViewById<TextView>(R.id.user_id_text)
+        val userNameText = cardView.findViewById<TextView>(R.id.user_name_text)
+        val userTypeBadge = cardView.findViewById<TextView>(R.id.user_type_badge)
+        val emailText = cardView.findViewById<TextView>(R.id.email_text)
+        val contactText = cardView.findViewById<TextView>(R.id.contact_text)
+        val createdDateText = cardView.findViewById<TextView>(R.id.created_date_text)
+        val userTypeIndicator = cardView.findViewById<View>(R.id.user_type_indicator)
+
+        userIdText.text = "ID: ${user.userID}"
+        userNameText.text = user.fullName
+        userTypeBadge.text = user.userType
+        emailText.text = "Email: ${user.email}"
+        contactText.text = "Contact: ${user.contactNumber}"
+        createdDateText.text = "Registered: ${user.createdOn}"
+
+        // Set user type badge and indicator colors based on type
+        when (user.userType.lowercase()) {
+            "student" -> {
+                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_blue_dark))
+                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_blue_dark))
+            }
+            "personnel" -> {
+                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_green_dark))
+                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_green_dark))
+            }
+            "visitor" -> {
+                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_orange_dark))
+                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_orange_dark))
+            }
+            else -> {
+                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.darker_gray))
+                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Update navigation header
+        val navigationView = findViewById<NavigationView>(R.id.navigation_view)
+        navigationView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+        }
     }
 }

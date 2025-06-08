@@ -23,11 +23,15 @@
         <activity
             android:name=".DisplayRegisteredUsersActivity"
             android:exported="false"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="portrait" />
         <activity
             android:name=".IncidentLog"
             android:exported="false"
             android:screenOrientation="landscape" />
+        <activity
+            android:name=".IncidentLogNew"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

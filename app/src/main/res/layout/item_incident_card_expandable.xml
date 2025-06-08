@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="6dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:cardUseCompatPadding="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Status Indicator -->
+        <View
+            android:id="@+id/status_indicator"
+            android:layout_width="6dp"
+            android:layout_height="match_parent"
+            android:background="@color/primaryColor" />
+
+        <!-- Main Content -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- COLLAPSED VIEW - Always Visible -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Header Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Alert ID -->
+                    <TextView
+                        android:id="@+id/alert_id"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ALT001"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primaryColor"
+                        android:fontFamily="@font/inter_bold" />
+
+                    <!-- Status Badge -->
+                    <TextView
+                        android:id="@+id/status_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ACTIVE"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/status_badge_background"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@android:color/white"
+                        android:fontFamily="@font/inter_bold"
+                        android:layout_marginStart="8dp" />
+
+                    <!-- Expand/Collapse Icon - Improved Vector -->
+                    <ImageView
+                        android:id="@+id/expand_icon"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_expand_more"
+                        android:layout_marginStart="8dp"
+                        android:contentDescription="Expand details"
+                        android:tint="@color/gray"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp" />
+
+                </LinearLayout>
+
+                <!-- User & Time Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="6dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/user_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="John Doe"
+                        android:textSize="14sp"
+                        android:textColor="@color/darkGray"
+                        android:fontFamily="@font/inter"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/time_ago"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2m ago"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray"
+                        android:fontFamily="@font/inter" />
+
+                </LinearLayout>
+
+                <!-- Location Summary -->
+                <TextView
+                    android:id="@+id/location_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📍 Floor 3 • Emergency Assistance"
+                    android:textSize="12sp"
+                    android:textColor="@color/darkGray"
+                    android:fontFamily="@font/inter"
+                    android:layout_marginTop="4dp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+            </LinearLayout>
+
+            <!-- EXPANDED VIEW - Toggleable -->
+            <LinearLayout
+                android:id="@+id/expanded_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/lightGray"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Detailed Info in 2-Column Grid -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Row 1: User ID & Device ID -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="User ID"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/user_id"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="20250006"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Device ID"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/device_id"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ESP001"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Row 2: Detailed Location -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Location Details"
+                            android:textSize="10sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/detailed_location"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="3rd Floor, Room 301, Near the elevator"
+                            android:textSize="12sp"
+                            android:textColor="@color/darkGray"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
+                    <!-- Row 3: Coordinates -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Latitude"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/latitude"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="14.5995"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Longitude"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/longitude"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="120.9842"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Row 4: Timestamps -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Created At"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/created_at"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="2025-06-08 16:45"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/resolved_time_layout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Resolved At"
+                                android:textSize="10sp"
+                                android:textColor="@color/gray"
+                                android:fontFamily="@font/inter"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/resolved_at"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="2025-06-08 17:30"
+                                android:textSize="12sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView> 

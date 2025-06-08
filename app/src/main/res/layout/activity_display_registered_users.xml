@@ -8,152 +8,135 @@
     android:background="#F0F3FD">
 
     <!-- Main Content -->
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <!-- App Bar with Toolbar -->
-        <com.google.android.material.appbar.AppBarLayout
+        <!-- Toolbar -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primaryColor"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+        <!-- Filter Section -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@color/lightGray">
 
-            <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="?attr/colorPrimary"
-                android:title="Registered Users"
-                android:titleTextColor="@android:color/white" />
-        </com.google.android.material.appbar.AppBarLayout>
+            <TextView
+                android:id="@+id/user_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total Users: 0"
+                android:textSize="14sp"
+                android:textColor="@color/darkGray"
+                android:fontFamily="@font/inter"
+                android:layout_marginBottom="12dp" />
 
-        <!-- Main Screen Content -->
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
+            <!-- Filter Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <!-- Filter Section -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                <Spinner
+                    android:id="@+id/user_type_spinner"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/spinner_background_with_arrow"
+                    android:padding="8dp"
+                    android:paddingEnd="40dp"
+                    android:layout_marginEnd="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/inter_bold"
-                        android:text="Filter by"
-                        android:textColor="#000000"
-                        android:textSize="16sp"
-                        android:layout_marginEnd="8dp"
-                        />
+                <EditText
+                    android:id="@+id/search_edit_text"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1.5"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="@drawable/edit_text_background_bordered"
+                    android:hint="Search users..."
+                    android:padding="12dp"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/inter"
+                    android:textColorHint="@color/gray" />
 
-                    <Spinner
-                        android:id="@+id/user_type_spinner"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:entries="@array/registered_user_types"
-                        android:fontFamily="@font/inter"
-                        android:layout_marginEnd="8dp"
-                        android:textColor="@android:color/white"
-                        android:background="@drawable/active_outlined_box"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/refresh_button"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:text="↻"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:backgroundTint="@color/primaryColor"
+                    app:cornerRadius="8dp"
+                    app:rippleColor="@color/white"
+                    android:elevation="2dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:insetLeft="0dp"
+                    android:insetRight="0dp" />
 
-                    <Spinner
-                        android:id="@+id/creation_date_spinner"
-                        android:layout_width="0dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:entries="@array/date_types"
-                        android:fontFamily="@font/inter"
-                        android:textColor="@android:color/white"
-                        android:background="@drawable/active_outlined_box"/>
-                </LinearLayout>
-
-                <!-- Table Layout for Incident Data -->
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fillViewport="true"
-                    app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-                    <TableLayout
-                        android:id="@+id/tableLayout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@android:color/white">
-
-                        <!-- Table Header -->
-                        <TableRow android:background="@color/custom_blue">
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="User ID"
-                                android:textColor="@android:color/white" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="Name"
-                                android:textColor="@android:color/white" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="Email"
-                                android:textColor="@android:color/white" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="Contact Number"
-                                android:textColor="@android:color/white" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="User Type"
-                                android:textColor="@android:color/white" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:padding="20dp"
-                                android:text="Created On"
-                                android:textColor="@android:color/white" />
-
-                        </TableRow>
-
-                        <!-- Table Data -->
-                        <TableRow android:background="#FDFDFD"></TableRow>
-                    </TableLayout>
-                </HorizontalScrollView>
-
-                <!-- Circular Progress Bar -->
-                <ProgressBar
-                    android:id="@+id/loading_progress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:visibility="gone"
-                    style="?android:attr/progressBarStyleLarge" />
             </LinearLayout>
-        </ScrollView>
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+        </LinearLayout>
+
+        <!-- Content Area -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/lightGray">
+
+            <!-- Loading Progress -->
+            <ProgressBar
+                android:id="@+id/loading_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                style="?android:attr/progressBarStyleLarge" />
+
+            <!-- No Users Text -->
+            <TextView
+                android:id="@+id/no_users_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="No registered users found"
+                android:textSize="16sp"
+                android:textColor="@color/darkGray"
+                android:fontFamily="@font/inter"
+                android:visibility="gone" />
+
+            <!-- Users List -->
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/users_scroll_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="16dp"
+                android:background="@color/lightGray">
+
+                <LinearLayout
+                    android:id="@+id/users_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </androidx.core.widget.NestedScrollView>
+
+        </FrameLayout>
+
+    </LinearLayout>
 
     <!-- Navigation Drawer -->
     <com.google.android.material.navigation.NavigationView
@@ -163,8 +146,8 @@
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         android:background="@color/primaryColor"
+        android:fontFamily="@font/inter"
         app:headerLayout="@layout/nav_header_officer"
         app:itemTextColor="@color/onPrimaryColor"
-        app:menu="@menu/drawer_menu_officer"
-        android:fontFamily="@font/inter"/>
+        app:menu="@menu/drawer_menu_officer" />
 </androidx.drawerlayout.widget.DrawerLayout>

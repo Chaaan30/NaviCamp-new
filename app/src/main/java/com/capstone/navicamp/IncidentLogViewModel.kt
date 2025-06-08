@@ -16,8 +16,8 @@ class IncidentLogViewModel : ViewModel() {
     // Method to fetch data from the database
     fun fetchIncidentData() {
         viewModelScope.launch {
-            MySQLHelper.insertEmergencyAlerts()
             val data = withContext(Dispatchers.IO) {
+                MySQLHelper.insertEmergencyAlerts() // Move to IO thread
                 MySQLHelper.getIncidentData() // Fetch data from MySQLHelper
             }
             _incidentData.postValue(data) // Update LiveData with fetched data

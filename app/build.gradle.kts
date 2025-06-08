@@ -137,6 +137,8 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:3.0.3")    //amazon s3 bucket
     implementation ("com.github.bumptech.glide:glide:4.12.0")
     kapt ("com.github.bumptech.glide:compiler:4.12.0")
+    
+    // Excel export is now handled with CSV format for Android compatibility
 
 
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
@@ -179,4 +181,10 @@ dependencies {
     implementation("androidx.compose.runtime:runtime-livedata")
     // Optional - Integration with RxJava
     implementation("androidx.compose.runtime:runtime-rxjava2")
+
+    // For creating Excel files - lightweight and Android compatible
+    implementation("com.github.ozlerhakan:poiji:4.1.2")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
 }
