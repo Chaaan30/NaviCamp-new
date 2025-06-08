@@ -47,7 +47,12 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    packagingOptions {
+    
+    kapt {
+        correctErrorTypes = true
+        useBuildCache = true
+    }
+    packaging {
         resources {
             pickFirsts += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/mimetypes.default")
         }
@@ -85,9 +90,9 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")
     
     // Dependency Injection with Hilt
-    implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-android-compiler:2.48")
-    implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     
     // Network & API
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

@@ -63,7 +63,7 @@ object MySQLHelper {
                 return 0
             }
 
-            val query ="""
+            val query = """
                 SELECT COUNT(*) AS count
                 FROM location_table l
                 JOIN incident_logs_table i ON l.locationID = i.locationID
@@ -282,7 +282,12 @@ object MySQLHelper {
         }
     }
 
-    fun insertLocationData(context: Context, userID: String, deviceID: String, fullName: String): Boolean {
+    fun insertLocationData(
+        context: Context,
+        userID: String,
+        deviceID: String,
+        fullName: String
+    ): Boolean {
         var connection: Connection? = null
         var locationStmt: PreparedStatement? = null
         var incidentStmt: PreparedStatement? = null
@@ -337,7 +342,10 @@ object MySQLHelper {
 
             if (locationRows > 0 && incidentRows > 0) {
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
-                intent.setClassName("com.capstone.navicamp", "com.capstone.navicamp.DataChangeReceiver")
+                intent.setClassName(
+                    "com.capstone.navicamp",
+                    "com.capstone.navicamp.DataChangeReceiver"
+                )
                 context.sendBroadcast(intent)
                 SmartPollingManager.getInstance().triggerFastUpdate()
             }
@@ -429,7 +437,7 @@ object MySQLHelper {
             // First, let's try a simple query like the working loginUser method
             val query = "SELECT fullName FROM user_table WHERE userID = ?"
             statement = connection.prepareStatement(query)
-            
+
             // Convert userID string to integer like the database expects
             try {
                 statement.setInt(1, userID.toInt())
@@ -457,8 +465,13 @@ object MySQLHelper {
             connection?.close()
         }
     }
-    
-    suspend fun resolveIncident(locationID: String, status: String, officerName: String, alertDescription: String? = null): Boolean = withContext(Dispatchers.IO) {
+
+    suspend fun resolveIncident(
+        locationID: String,
+        status: String,
+        officerName: String,
+        alertDescription: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         try {
@@ -557,7 +570,7 @@ object MySQLHelper {
             // Generate a random locationID
             val locationID =
                 UUID.randomUUID().toString().replace("-", "").substring(0, 8).uppercase()
-            
+
             // Get current datetime in Philippine time (UTC+8)
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
@@ -656,7 +669,8 @@ object MySQLHelper {
                 statement.setString(4, deviceID)
             } else {
                 // Disconnecting a user (newUserID is null)
-                query = "UPDATE devices_table SET userID = NULL, connectedUntil = NULL, status = ? WHERE deviceID = ?"
+                query =
+                    "UPDATE devices_table SET userID = NULL, connectedUntil = NULL, status = ? WHERE deviceID = ?"
                 statement = connection.prepareStatement(query)
                 statement.setString(1, newDeviceStatus) // "available"
                 statement.setString(2, deviceID)
@@ -667,18 +681,25 @@ object MySQLHelper {
                 "MySQLHelper",
                 "Device $deviceID connection status update attempt. Rows affected: $rowsAffected. User: $newUserID, Until: $newConnectedUntil, Status: $newDeviceStatus."
             )
-            
+
             // If we were trying to connect a user (newUserID != null) and no rows were affected,
             // it means the device was busy with a still-valid connection or deviceID didn't exist.
             if (newUserID != null && rowsAffected == 0) {
-                Log.w("MySQLHelper", "Failed to connect device $deviceID. It might be in use with a valid session or deviceID is invalid.")
+                Log.w(
+                    "MySQLHelper",
+                    "Failed to connect device $deviceID. It might be in use with a valid session or deviceID is invalid."
+                )
                 return false // Explicitly return false as connection was not established
             }
             // If disconnecting, 0 rows affected is fine if already disconnected.
             // If connecting, rowsAffected > 0 means success.
             return rowsAffected > 0 || (newUserID == null)
         } catch (e: SQLException) {
-            Log.e("MySQLHelper", "Error updating device connection status for $deviceID: ${e.message}", e)
+            Log.e(
+                "MySQLHelper",
+                "Error updating device connection status for $deviceID: ${e.message}",
+                e
+            )
             e.printStackTrace()
             false
         } finally {
@@ -702,12 +723,12 @@ object MySQLHelper {
             // Find the first available userID starting from 20250001
             var currentID = 20250001L
             val checkQuery = "SELECT COUNT(*) AS count FROM user_table WHERE userID = ?"
-            
+
             while (currentID <= 20259999) {
                 statement = connection.prepareStatement(checkQuery)
                 statement.setString(1, currentID.toString())
                 resultSet = statement.executeQuery()
-                
+
                 if (resultSet.next()) {
                     val count = resultSet.getInt("count")
                     if (count == 0) {
@@ -716,29 +737,29 @@ object MySQLHelper {
                         break
                     }
                 }
-                
+
                 // Close resources before next iteration
                 resultSet?.close()
                 statement?.close()
-                
+
                 // Try next ID
                 currentID++
             }
-            
+
             val nextID = if (currentID <= 20259999) {
                 currentID
             } else {
                 Log.e("MySQLHelper", "All userIDs from 20250001 to 20259999 are taken")
                 null
             }
-            
+
             if (nextID != null) {
                 Log.d("MySQLHelper", "Generated unique userID: $nextID")
                 nextID.toString()
             } else {
                 null
             }
-            
+
         } catch (e: SQLException) {
             e.printStackTrace()
             Log.e("MySQLHelper", "Error generating userID: ${e.message}")
@@ -749,6 +770,7 @@ object MySQLHelper {
             connection?.close()
         }
     }    // Insert user data into the database
+
     fun insertUser(
         userID: String,
         fullName: String,
@@ -779,7 +801,7 @@ object MySQLHelper {
             }            // Get current datetime in UTC+8 and format it to 24-hour format
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-            
+
             val query =
                 "INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofPicture, createdOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             statement = connection.prepareStatement(query)
@@ -1127,7 +1149,7 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        
+
         return try {
             connection = getConnection()
             if (connection == null) {
@@ -1143,7 +1165,8 @@ object MySQLHelper {
             statement.setString(1, email)
 
             resultSet = statement.executeQuery()
-            if (resultSet.next()) {                val storedPassword = resultSet.getString("password")
+            if (resultSet.next()) {
+                val storedPassword = resultSet.getString("password")
                 val hashedPassword = hashPassword(password)
                 if (storedPassword == hashedPassword) {
                     UserData(
@@ -1237,7 +1260,8 @@ object MySQLHelper {
                 return false
             }
 
-            val query = "UPDATE incident_logs_table SET status = ?, officerResponded = ? WHERE locationID = ?"
+            val query =
+                "UPDATE incident_logs_table SET status = ?, officerResponded = ? WHERE locationID = ?"
             statement = connection.prepareStatement(query)
             statement.setString(1, status)
             statement.setString(2, officerName)
@@ -1272,7 +1296,7 @@ object MySQLHelper {
                 return
             }
 
-            val selectQuery =  """
+            val selectQuery = """
                 SELECT u.userID, d.deviceID, l.locationID, l.dateTime
                 FROM location_table l
                 JOIN user_table u ON u.userID = l.userID
@@ -1423,7 +1447,8 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        return try {            connection = getConnection()
+        return try {
+            connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return null
@@ -1467,7 +1492,8 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         var resultSet: ResultSet? = null
-        return try {            connection = getConnection()
+        return try {
+            connection = getConnection()
             if (connection == null) {
                 println("Database connection failed.")
                 return unverifiedUsers
@@ -1486,7 +1512,8 @@ object MySQLHelper {
                         resultSet.getString("fullName") ?: "",
                         resultSet.getString("userType") ?: "",
                         resultSet.getString("email") ?: "",
-                        resultSet.getString("contactNumber") ?: "",                        resultSet.getString("createdOn") ?: "",
+                        resultSet.getString("contactNumber") ?: "",
+                        resultSet.getString("createdOn") ?: "",
                         resultSet.getString("updatedOn") ?: "",
                         resultSet.getString("proofPicture") ?: "",
                         resultSet.getInt("verified") // Add this line
@@ -1733,7 +1760,7 @@ object MySQLHelper {
             connection?.close()
         }
     }
-    
+
     // In MySQLHelper.kt, update the getAssistanceDetails function
     fun getAssistanceDetails(locationId: String): LocationItem? {
         var connection: Connection? = null
@@ -1773,7 +1800,18 @@ object MySQLHelper {
         } catch (e: SQLException) {
             e.printStackTrace()
             null
-    fun getVerifiedLocomotorUsersFiltered(userType: String?, creationDateType: String?, selectedDate: Date?): List<UserData> {
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getVerifiedLocomotorUsersFiltered(
+        userType: String?,
+        creationDateType: String?,
+        selectedDate: Date?
+    ): List<UserData> {
         val users = mutableListOf<UserData>()
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -1782,11 +1820,13 @@ object MySQLHelper {
             connection = getConnection()
             if (connection == null) return users
 
-            val query = StringBuilder("""
-            SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
-            FROM user_table
-            WHERE verified = 1
-        """)
+            val query = StringBuilder(
+                """
+                SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
+                FROM user_table
+                WHERE verified = 1
+            """
+            )
             if (userType != null && userType != "All") {
                 query.append(" AND userType = ?")
             } else {
@@ -1820,8 +1860,7 @@ object MySQLHelper {
         } finally {
             resultSet?.close()
             statement?.close()
-            connection?.close()
-        }
+            connection?.close()        }
         return users
     }
 }
