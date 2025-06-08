@@ -40,7 +40,7 @@
         <item>Visitor</item>
     </string-array>
 
-    <string-array name="creation_date_types">
+    <string-array name="date_types">
         <item>All</item>
         <item>Year</item>
         <item>Month</item>

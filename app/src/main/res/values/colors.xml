@@ -9,5 +9,5 @@
 
     <color name="custom_blue">#678AE7</color>
 
-    <color name="spinner_stroke">#9E9E9E</color>
+    <color name="inactive_stroke">#d6d6d6</color>
 </resources>

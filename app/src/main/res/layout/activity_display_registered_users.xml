@@ -60,21 +60,29 @@
                     <Spinner
                         android:id="@+id/user_type_spinner"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="40dp"
                         android:layout_weight="1"
                         android:entries="@array/registered_user_types"
                         android:fontFamily="@font/inter"
-                        android:layout_marginEnd="8dp"/>
-                    <TextView
+                        android:layout_marginEnd="8dp"
+                        android:textColor="@android:color/white"
+                        android:background="@drawable/active_outlined_box"/>
+
+                    <Button
                         android:id="@+id/creation_date_filter_view"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All"
-                        android:padding="16dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:textAppearance="?attr/textAppearanceListItem"
+                        android:layout_width="100dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/active_outlined_box"
                         android:clickable="true"
-                        android:focusable="true"/>
+                        android:focusable="true"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="All"
+                        android:gravity="center_vertical|start"
+                        android:textAppearance="?attr/textAppearanceListItem"
+                        android:textColor="@android:color/white"
+                        android:drawableEnd="@drawable/ic_arrow_drop_down"
+                        android:drawablePadding="8dp"/>
                 </LinearLayout>
 
                 <!-- Table Layout for Incident Data -->
@@ -135,6 +143,9 @@
                                 android:textColor="@android:color/white" />
 
                         </TableRow>
+
+                        <!-- Table Data -->
+                        <TableRow android:background="#FDFDFD"></TableRow>
                     </TableLayout>
                 </HorizontalScrollView>
 

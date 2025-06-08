@@ -44,7 +44,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -55,36 +56,33 @@
                         android:textSize="16sp"
                         android:layout_marginRight="10dp"/>
 
-                    <Spinner
-                        android:id="@+id/filter_type_spinner"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="@font/inter"
-                        android:entries="@array/filter_types"
-                        android:backgroundTint="@color/primaryColor"
-                        android:layout_marginEnd="8dp" />
-
                     <Button
-                        android:id="@+id/select_date_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:backgroundTint="@color/primaryColor"
-                        android:elevation="4dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Select Date"
+                        android:id="@+id/date_filter_view"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/active_outlined_box"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingStart="10dp"
+                        android:paddingEnd="10dp"
+                        android:text="All"
+                        android:gravity="center_vertical|start"
+                        android:textAppearance="?attr/textAppearanceListItem"
                         android:textColor="@android:color/white"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="8dp"/>
+                        android:drawableEnd="@drawable/ic_arrow_drop_down"
+                        android:drawablePadding="8dp"
+                        android:layout_marginRight="10dp"/>
                     <Button
                         android:id="@+id/export_button"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="40dp"
                         android:backgroundTint="@color/primaryColor"
                         android:elevation="4dp"
                         android:fontFamily="@font/inter"
                         android:text="Export to CSV"
                         android:textColor="@android:color/white"
+                        android:background="@drawable/active_outlined_box"
                         android:textStyle="bold" />
                 </LinearLayout>
 

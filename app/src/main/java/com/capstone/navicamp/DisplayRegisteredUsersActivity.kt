@@ -1,11 +1,14 @@
 package com.capstone.navicamp
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Spinner
 import android.widget.TableLayout
@@ -25,11 +28,9 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var userTypeSpinner: Spinner
-    //private lateinit var creationDateSpinner: Spinner
-    private lateinit var creationDateFilterView: TextView
+    private lateinit var creationDateFilterView: Button
     private lateinit var loadingProgress: ProgressBar
     private lateinit var tableLayout: TableLayout
-    //private var lastSelectedCreationDateType: String? = null
     private var selectedUserType: String = "All"
     private var selectedCreationDateType: String = "All"
     private var selectedDate: Date = Date()
@@ -65,6 +66,43 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         toggle.syncState()
 
         navigationView = findViewById(R.id.navigation_view)
+
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_logout -> {
+                    // Clear SharedPreferences
+                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.clear()
+                    editor.apply()
+
+                    // Navigate to MainActivity
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+
+                R.id.nav_item1 -> {
+                    // Navigate to OfficerAccountSettingsActivity
+                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+
+                R.id.nav_item2 -> {
+                    // Navigate to SecurityOfficerActivity and clear the activity stack
+                    val intent = Intent(this, SecurityOfficerActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    true
+                }
+
+                else -> false
+            }
+        }
+
         val headerView = navigationView.getHeaderView(0)
         val navNameHeader: TextView = headerView.findViewById(R.id.nav_name_header)
         navNameHeader.text = UserSingleton.fullName
@@ -92,6 +130,15 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
                 viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
             }
             override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.registered_user_types,
+            R.layout.spinner_selected_item // for selected item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            userTypeSpinner.adapter = adapter
         }
 
         creationDateFilterView = findViewById(R.id.creation_date_filter_view)
