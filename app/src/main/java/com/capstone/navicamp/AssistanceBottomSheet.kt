@@ -76,7 +76,7 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         // Use lifecycleScope to launch a coroutine
         lifecycleScope.launch {
             // Fetch officer name in background thread
-            val officerName = withContext(Dispatchers.IO) {
+            val officerName: String? = withContext(Dispatchers.IO) {
                 MySQLHelper.getOfficerNameByLocationID(locationID)
             }
 
@@ -162,7 +162,9 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
                         officerTextView?.text = "Officer: $officerName (You)"
                         officerTextView?.visibility = View.VISIBLE
                         falseAlarmButton.visibility = View.VISIBLE
-                        resolveButton.visibility = View.VISIBLE                        // Send broadcast to notify data change
+                        resolveButton.visibility = View.VISIBLE
+                        
+                        // Send broadcast to notify data change
                         val intent = Intent(requireContext(), DataChangeReceiver::class.java)
                         intent.action = "com.capstone.navicamp.DATA_CHANGED"
                         requireContext().sendBroadcast(intent)

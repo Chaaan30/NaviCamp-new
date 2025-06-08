@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Device Information Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Device Information"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginBottom="12dp"
+            android:background="@color/lightGray"
+            android:padding="8dp" />
+
+        <!-- Device ID -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Device ID:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_device_id"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Status -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Status:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- User Information Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="User Information"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/lightGray"
+            android:padding="8dp" />
+
+        <!-- User ID -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="User ID:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_user_id"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="None"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- User Name -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="User Name:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_user_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="No user assigned"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Location Information Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Location Information"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/lightGray"
+            android:padding="8dp" />
+
+        <!-- Floor Level -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Floor Level:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_floor_level"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="Unknown"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Latitude -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Latitude:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_latitude"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Longitude -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Longitude:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_longitude"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Connection Information Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Connection Information"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="12dp"
+            android:background="@color/lightGray"
+            android:padding="8dp" />
+
+        <!-- RSSI -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Signal (RSSI):"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_rssi"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Distance -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Distance (m):"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_distance"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="N/A"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+        <!-- Connected Until -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Connected Until:"
+                android:textStyle="bold"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/detail_connected_until"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="Not connected"
+                android:textColor="@color/darkGray" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView> 

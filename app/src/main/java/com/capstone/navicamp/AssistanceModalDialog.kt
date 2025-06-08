@@ -126,7 +126,7 @@ class AssistanceModalDialog : DialogFragment() {
 
     private fun checkOfficerStatus(view: View) {
         lifecycleScope.launch {
-            val officerName = withContext(Dispatchers.IO) {
+            val officerName: String? = withContext(Dispatchers.IO) {
                 // Always fetch the latest officer status from database
                 MySQLHelper.getOfficerNameByLocationID(locationID)
             }

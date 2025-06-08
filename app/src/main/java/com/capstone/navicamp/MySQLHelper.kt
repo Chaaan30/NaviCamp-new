@@ -1535,7 +1535,58 @@ object MySQLHelper {
                 connection?.close()
             }
         }
-    }    fun updateProofPicture(userID: Int, proofPicture: String): Boolean {
+    }
+
+    fun getAllWheelchairs(): List<WheelchairDevice> {
+        val wheelchairs = mutableListOf<WheelchairDevice>()
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return wheelchairs
+            }
+
+            val query = """
+            SELECT d.deviceID, d.userID, d.status, d.latitude, d.longitude, 
+                   d.floorLevel, d.connectedUntil, d.rssi, d.distance, u.fullName
+            FROM devices_table d
+            LEFT JOIN user_table u ON d.userID = u.userID
+            ORDER BY d.deviceID
+        """
+            statement = connection?.prepareStatement(query)
+            resultSet = statement?.executeQuery()
+
+            while (resultSet?.next() == true) {
+                wheelchairs.add(
+                    WheelchairDevice(
+                        deviceID = resultSet.getString("deviceID") ?: "",
+                        userID = resultSet.getObject("userID") as? Int,
+                        status = resultSet.getString("status") ?: "unknown",
+                        latitude = resultSet.getObject("latitude") as? Double,
+                        longitude = resultSet.getObject("longitude") as? Double,
+                        floorLevel = resultSet.getString("floorLevel"),
+                        connectedUntil = resultSet.getString("connectedUntil"),
+                        rssi = resultSet.getObject("rssi") as? Int,
+                        distance = resultSet.getObject("distance") as? Float,
+                        userName = resultSet.getString("fullName")
+                    )
+                )
+            }
+            wheelchairs
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            wheelchairs
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun updateProofPicture(userID: Int, proofPicture: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         return try {
@@ -1546,11 +1597,11 @@ object MySQLHelper {
             }
 
             val query = "UPDATE user_table SET proofPicture = ? WHERE userID = ?"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, proofPicture)
-            statement.setInt(2, userID) // Ensure userID is set as an integer
+            statement = connection?.prepareStatement(query)
+            statement?.setString(1, proofPicture)
+            statement?.setInt(2, userID) // Ensure userID is set as an integer
 
-            val rowsAffected = statement.executeUpdate()
+            val rowsAffected = statement?.executeUpdate() ?: 0
             rowsAffected > 0
         } catch (e: SQLException) {
             e.printStackTrace()
@@ -1577,11 +1628,11 @@ object MySQLHelper {
             val query = """
             SELECT officerResponded FROM incident_logs_table WHERE locationID = ? ORDER BY alertID DESC LIMIT 1
         """
-            statement = connection.prepareStatement(query)
-            statement.setString(1, locationID)
+            statement = connection?.prepareStatement(query)
+            statement?.setString(1, locationID)
 
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
+            resultSet = statement?.executeQuery()
+            if (resultSet?.next() == true) {
                 val officerName = resultSet.getString("officerResponded")
                 if (officerName.isNullOrBlank()) null else officerName
             } else {
@@ -1610,12 +1661,13 @@ object MySQLHelper {
 
             // Query devices_table for an active connection for this user
             // Assumes 'connectedUntil' is a DATETIME/TIMESTAMP and 'status' is 'in_use'
-            val query = "SELECT deviceID, connectedUntil FROM devices_table WHERE userID = ? AND status = 'in_use'"
-            statement = connection.prepareStatement(query)
-            statement.setString(1, userID)
+            val query =
+                "SELECT deviceID, connectedUntil FROM devices_table WHERE userID = ? AND status = 'in_use'"
+            statement = connection?.prepareStatement(query)
+            statement?.setString(1, userID)
 
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
+            resultSet = statement?.executeQuery()
+            if (resultSet?.next() == true) {
                 val deviceID = resultSet.getString("deviceID")
                 val connectedUntilStr = resultSet.getString("connectedUntil")
 
@@ -1624,7 +1676,8 @@ object MySQLHelper {
                         // Parse the datetime string to milliseconds
                         // Ensure this format matches how it's stored by updateDeviceConnectionStatus
                         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
-                        dateFormat.timeZone = TimeZone.getTimeZone("Asia/Manila") // Consistent timezone
+                        dateFormat.timeZone =
+                            TimeZone.getTimeZone("Asia/Manila") // Consistent timezone
                         val date = dateFormat.parse(connectedUntilStr)
                         if (date != null) {
                             val connectedUntilMillis = date.time
@@ -1633,26 +1686,46 @@ object MySQLHelper {
                             // Log.d("MySQLHelper", "Found expired connection for user $userID, device $deviceID in DB.")
                             // return null // Or trigger a cleanup
                             // }
-                            Log.d("MySQLHelper", "Found active connection for user $userID: device $deviceID, until $connectedUntilStr ($connectedUntilMillis ms)")
+                            Log.d(
+                                "MySQLHelper",
+                                "Found active connection for user $userID: device $deviceID, until $connectedUntilStr ($connectedUntilMillis ms)"
+                            )
                             ActiveConnectionInfo(deviceID, connectedUntilMillis)
                         } else {
-                            Log.e("MySQLHelper", "Failed to parse connectedUntil date string: $connectedUntilStr for user $userID")
+                            Log.e(
+                                "MySQLHelper",
+                                "Failed to parse connectedUntil date string: $connectedUntilStr for user $userID"
+                            )
                             null
                         }
                     } catch (e: Exception) {
-                        Log.e("MySQLHelper", "Error parsing date for getActiveConnectionForUser: ${e.message}", e)
+                        Log.e(
+                            "MySQLHelper",
+                            "Error parsing date for getActiveConnectionForUser: ${e.message}",
+                            e
+                        )
                         null
                     }
                 } else {
-                    Log.d("MySQLHelper", "No valid deviceID or connectedUntil found for user $userID with status 'in_use'.")
+                    Log.d(
+                        "MySQLHelper",
+                        "No valid deviceID or connectedUntil found for user $userID with status 'in_use'."
+                    )
                     null
                 }
             } else {
-                Log.d("MySQLHelper", "No active connection found for user $userID in devices_table.")
+                Log.d(
+                    "MySQLHelper",
+                    "No active connection found for user $userID in devices_table."
+                )
                 null
             }
         } catch (e: SQLException) {
-            Log.e("MySQLHelper", "SQLException in getActiveConnectionForUser for $userID: ${e.message}", e)
+            Log.e(
+                "MySQLHelper",
+                "SQLException in getActiveConnectionForUser for $userID: ${e.message}",
+                e
+            )
             null
         } finally {
             resultSet?.close()
@@ -1660,7 +1733,7 @@ object MySQLHelper {
             connection?.close()
         }
     }
-
+    
     // In MySQLHelper.kt, update the getAssistanceDetails function
     fun getAssistanceDetails(locationId: String): LocationItem? {
         var connection: Connection? = null
@@ -1677,11 +1750,11 @@ object MySQLHelper {
             SELECT locationID, userID, deviceID, fullName, floorLevel, status, latitude, longitude, dateTime, officerResponded 
             FROM location_table WHERE locationID = ?
         """
-            statement = connection.prepareStatement(query)
-            statement.setString(1, locationId)
+            statement = connection?.prepareStatement(query)
+            statement?.setString(1, locationId)
 
-            resultSet = statement.executeQuery()
-            if (resultSet.next()) {
+            resultSet = statement?.executeQuery()
+            if (resultSet?.next() == true) {
                 LocationItem(
                     locationID = resultSet.getString("locationID"),
                     userID = resultSet.getString("userID"),
@@ -1707,3 +1780,4 @@ object MySQLHelper {
         }
     }
 }
+
