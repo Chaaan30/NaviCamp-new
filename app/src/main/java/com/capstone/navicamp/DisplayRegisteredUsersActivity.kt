@@ -28,14 +28,14 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var userTypeSpinner: Spinner
-    private lateinit var creationDateFilterView: Button
+    private lateinit var creationDateSpinner: Spinner
     private lateinit var loadingProgress: ProgressBar
     private lateinit var tableLayout: TableLayout
     private var selectedUserType: String = "All"
     private var selectedCreationDateType: String = "All"
     private var selectedDate: Date = Date()
-
     private val viewModel: DisplayRegisteredUsersViewModel by viewModels()
+
     private val handler = Handler(Looper.getMainLooper())
     private val refreshInterval = 1000L // 1 second
 
@@ -122,11 +122,30 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         handler.postDelayed(refreshRunnable, refreshInterval)
 
         userTypeSpinner = findViewById(R.id.user_type_spinner)
-        //creationDateSpinner = findViewById(R.id.creation_date_spinner)
+        creationDateSpinner = findViewById(R.id.creation_date_spinner)
 
         userTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 selectedUserType = parent.getItemAtPosition(position).toString()
+                (view as? TextView)?.text = "User Type: $selectedUserType"
+                viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        creationDateSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                selectedCreationDateType = parent.getItemAtPosition(position).toString()
+                (view as? TextView)?.text = "Date: $selectedCreationDateType"
+
+                if (selectedCreationDateType == "All") {
+                    selectedDate = Date()
+                    viewModel.userData.value?.let {
+                        displayDataInTable(filterDataByDate(it, selectedCreationDateType, selectedDate))
+                    }
+                } else {
+                    showFilterPicker()
+                }
                 viewModel.fetchUsers(selectedUserType, selectedCreationDateType, selectedDate)
             }
             override fun onNothingSelected(parent: AdapterView<*>) {}
@@ -141,29 +160,13 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
             userTypeSpinner.adapter = adapter
         }
 
-        creationDateFilterView = findViewById(R.id.creation_date_filter_view)
-        creationDateFilterView.text = selectedCreationDateType
-
-        creationDateFilterView.setOnClickListener {
-            val filterTypes = arrayOf("All", "Year", "Month", "Week", "Day")
-            val currentIndex = filterTypes.indexOf(selectedCreationDateType)
-            android.app.AlertDialog.Builder(this)
-                .setTitle("Select Date Filter")
-                .setSingleChoiceItems(filterTypes, currentIndex) { dialog, which ->
-                    val selectedType = filterTypes[which]
-                    selectedCreationDateType = selectedType
-                    creationDateFilterView.text = selectedType
-                    if (selectedType == "All") {
-                        selectedDate = Date()
-                        viewModel.userData.value?.let {
-                            displayDataInTable(filterDataByDate(it, selectedCreationDateType, selectedDate))
-                        }
-                    } else {
-                        showFilterPicker()
-                    }
-                    dialog.dismiss()
-                }
-                .show()
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.date_types,
+            R.layout.spinner_selected_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            creationDateSpinner.adapter = adapter
         }
     }
 

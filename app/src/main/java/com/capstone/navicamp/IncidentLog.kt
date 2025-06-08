@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Spinner
@@ -26,7 +27,6 @@ import java.util.Date
 import java.util.Locale
 import android.content.Context
 import android.os.Build
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import exportIncidentDataToCSV
 import exportIncidentDataToCSVWithUri
@@ -39,10 +39,9 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var tableLayout: TableLayout
-    //private lateinit var filterTypeSpinner: Spinner
     private lateinit var loadingProgress: ProgressBar
     private lateinit var exportButton: Button
-    private lateinit var dateFilterView: Button
+    private lateinit var dateFilterSpinner: Spinner
     private var selectedFilterType: String = "All"
     private var selectedDate: Date = Date()
 
@@ -134,29 +133,33 @@ class IncidentLog : AppCompatActivity() {
         loadingProgress.visibility = View.VISIBLE
         handler.postDelayed(refreshRunnable, refreshInterval)
 
-        dateFilterView = findViewById(R.id.date_filter_view)
-        dateFilterView.text = selectedFilterType
+        dateFilterSpinner = findViewById(R.id.date_filter_spinner)
 
-        dateFilterView.setOnClickListener {
-            val filterTypes = arrayOf("All", "Year", "Month", "Week", "Day")
-            val currentIndex = filterTypes.indexOf(selectedFilterType)
-            android.app.AlertDialog.Builder(this)
-                .setTitle("Select Date Filter")
-                .setSingleChoiceItems(filterTypes, currentIndex) { dialog, which ->
-                    val selectedType = filterTypes[which]
-                    selectedFilterType = selectedType
-                    dateFilterView.text = selectedType
-                    if (selectedType == "All") {
-                        selectedDate = Date()
-                        viewModel.incidentData.value?.let {
-                            displayDataInTable(filterDataByDate(it, selectedFilterType, selectedDate))
-                        }
-                    } else {
-                        showFilterPicker()
+        dateFilterSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                selectedFilterType = parent.getItemAtPosition(position).toString()
+                (view as? TextView)?.text = "Date: $selectedFilterType"
+
+                if (selectedFilterType == "All") {
+                    selectedDate = Date()
+                    viewModel.incidentData.value?.let {
+                        displayDataInTable(filterDataByDate(it, selectedFilterType, selectedDate))
                     }
-                    dialog.dismiss()
+                } else {
+                    showFilterPicker()
                 }
-                .show()
+                viewModel.fetchIncidentData()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.date_types,
+            R.layout.spinner_selected_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            dateFilterSpinner.adapter = adapter
         }
 
         // Observe incident data and filter
@@ -174,14 +177,14 @@ class IncidentLog : AppCompatActivity() {
                 val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "text/csv"
-                    putExtra(Intent.EXTRA_TITLE, "incident_logs.csv")
+                    putExtra(Intent.EXTRA_TITLE, "incident_data.csv")
                 }
                 startActivityForResult(createFileIntent, CREATE_FILE_REQUEST_CODE)
             } else {
                 // Android 10 and below
                 val file = exportIncidentDataToCSV(this, data)
                 if (file != null) {
-                    Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Exported successfully to ${file.absolutePath}", Toast.LENGTH_LONG).show()
                 } else {
                     Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
                 }
@@ -269,24 +272,24 @@ class IncidentLog : AppCompatActivity() {
 
         return when (filterType) {
             "Year" -> data.filter {
-                val date = parseDate(it[7])
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
                 date != null && calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR)
             }
             "Month" -> data.filter {
-                val date = parseDate(it[7])
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
                 date != null &&
                         calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR) &&
                         calendar.get(Calendar.MONTH) == Calendar.getInstance().apply { time = date }.get(Calendar.MONTH)
             }
             "Week" -> data.filter {
-                val date = parseDate(it[7])
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
                 if (date == null) return@filter false
                 val userCal = Calendar.getInstance().apply { time = date }
                 calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
                         calendar.get(Calendar.WEEK_OF_YEAR) == userCal.get(Calendar.WEEK_OF_YEAR)
             }
             "Day" -> data.filter {
-                val date = parseDate(it[7])
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
                 if (date == null) return@filter false
                 val userCal = Calendar.getInstance().apply { time = date }
                 calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
