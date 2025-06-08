@@ -35,6 +35,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".SecurityOfficerActivity" />
+        <activity android:name=".WheelchairManagementActivity" />
         <activity android:name=".LocomotorDisabilityActivity" />
         <activity android:name=".UserFeedbackActivity" />
         <activity android:name=".AssistanceActivity" />

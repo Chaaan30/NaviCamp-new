@@ -145,11 +145,17 @@
 
                     <!-- Card 1 -->
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/registered_users_card"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_margin="8dp"
-                        app:cardElevation="4dp">
+                        app:cardElevation="4dp"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:rippleColor="@color/white"
+                        android:stateListAnimator="@animator/card_elevation">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -190,11 +196,17 @@
                     </com.google.android.material.card.MaterialCardView>
 
                     <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/iot_devices_card"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_margin="8dp"
-                        app:cardElevation="4dp">
+                        app:cardElevation="4dp"
+                        android:foreground="?android:attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:rippleColor="@color/white"
+                        android:stateListAnimator="@animator/card_elevation">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -288,13 +300,28 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:paddingTop="8dp">
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/incidentLogBtn"
+                        style="@style/Widget.MaterialComponents.Button"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="View log" />
+                        android:layout_height="56dp"
+                        android:text="VIEW INCIDENT LOG"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/inter_bold"
+                        android:backgroundTint="@color/primaryColor"
+                        android:textColor="@color/white"
+                        app:cornerRadius="8dp"
+                        app:rippleColor="@color/white"
+                        android:letterSpacing="0.05"
+                        app:icon="@drawable/ic_document_check"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconTint="@color/white"
+                        android:elevation="2dp" />
 
                 </LinearLayout>
             </LinearLayout>

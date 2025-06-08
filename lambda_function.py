@@ -4,9 +4,6 @@ import pymysql
 import boto3
 from botocore.exceptions import ClientError
 import base64
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
 import traceback
 import re
@@ -14,9 +11,6 @@ import time
 
 # Configuration
 CONFIG = {
-    'EMAIL_RETRY_ATTEMPTS': 2,  # Reduced to prevent timeouts
-    'EMAIL_RETRY_DELAY': 1,     # Reduced delay
-    'SMTP_TIMEOUT': 8,          # SMTP connection timeout in seconds
     'MAX_USER_ID_LENGTH': 20,
     'VALID_ACTIONS': ['verify', 'reject'],
     'AUTO_CLOSE_DELAY': 10,     # seconds for HTML auto-close
@@ -63,7 +57,7 @@ def get_secret():
             secret_data = json.loads(base64.b64decode(get_secret_value_response['SecretBinary']))
         
         # Validate required keys
-        required_keys = ['username', 'password', 'gmail_app_password']
+        required_keys = ['username', 'password']  # Removed gmail_app_password requirement
         missing_keys = [key for key in required_keys if key not in secret_data]
         if missing_keys:
             raise ValueError(f"Secret missing required keys: {', '.join(missing_keys)}")
@@ -89,259 +83,91 @@ def get_secret():
         print(f"ERROR: Unexpected error retrieving secret: {e}")
         raise e
 
-def send_notification_email(full_name, user_id, action_type, sender_password, recipient_email):
-    """Send email notification with retry logic, timeout controls, and enhanced error handling."""
-    email_start_time = time.time()
-    max_email_time = 10  # Maximum 10 seconds for all email attempts
-    
-    for attempt in range(1, CONFIG['EMAIL_RETRY_ATTEMPTS'] + 1):
-        # Check if we've exceeded the maximum email time
-        if time.time() - email_start_time > max_email_time:
-            print(f"ERROR: Email operation exceeded maximum time limit of {max_email_time} seconds")
-            return False
-        try:
-            print(f"INFO: Email attempt {attempt}/{CONFIG['EMAIL_RETRY_ATTEMPTS']} - Sending {action_type} notification to {recipient_email}")
-            
-            smtp_server = "smtp.gmail.com"
-            smtp_port = 587
-            sender_email = "navicamp.noreply@gmail.com"
-            
-            # Validate email format
-            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', recipient_email):
-                print(f"ERROR: Invalid email format: {recipient_email}")
-                return False
-            
-            # Force IPv4 resolution for SMTP to avoid VPC IPv6 issues
-            import socket
-            try:
-                # Resolve Gmail SMTP to IPv4 address
-                smtp_ip = socket.getaddrinfo(smtp_server, smtp_port, socket.AF_INET)[0][4][0]
-                print(f"INFO: Resolved {smtp_server} to IPv4: {smtp_ip}")
-                smtp_host = smtp_ip
-            except Exception as e:
-                print(f"WARNING: Could not resolve IPv4 for {smtp_server}, using hostname: {e}")
-                smtp_host = smtp_server
-            
-            message = MIMEMultipart("alternative")
-            
-            # Create unique timestamp to prevent Gmail clipping (Philippines time: UTC+8)
-            manila_tz = timezone(timedelta(hours=8))
-            manila_now = datetime.now(manila_tz)
-            unique_id = manila_now.strftime("%Y%m%d%H%M%S%f")
-            timestamp = manila_now.strftime("%B %d, %Y at %I:%M %p PHT")
-            hidden_timestamp = f'<span style="display:none;font-size:0;color:transparent;">{unique_id}</span>'
-
-            if action_type == "verified":
-                subject = "✅ NaviCamp Security Officer Verification Approved"
-                status_color = "#28a745"
-                status_bg = "#d4edda"
-                status_border = "#c3e6cb"
-                status_text = "#155724"
-                icon = "✅"
-                action_text = "verified and authorized as a Security Officer"
-                next_steps = "You can now log in and access the NaviCamp Security Officer dashboard. Your credentials have been approved for Mapua Malayan Colleges Laguna (MMCL)."
-            else:  # rejected
-                subject = "❌ NaviCamp Security Officer Verification Rejected"
-                status_color = "#dc3545"
-                status_bg = "#f8d7da"
-                status_border = "#f5c6cb"
-                status_text = "#721c24"
-                icon = "❌"
-                action_text = "rejected"
-                next_steps = "Your application to become a NaviCamp Security Officer for MMCL has been rejected. Please contact our support team for more information or to resubmit your verification documents."
-
-            html_body = f"""
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>{subject}</title>
-            </head>
-            <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-                <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center;">
-                        <div style="font-size: 32px; margin-bottom: 10px;">🧭</div>
-                        <h1 style="margin: 0; font-size: 24px; font-weight: 600;">NaviCamp</h1>
-                        <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">MMCL Security Officer Verification System</p>
-                    </div>
-                    
-                    <!-- Status Banner -->
-                    <div style="background: {status_bg}; border: 2px solid {status_border}; color: {status_text}; padding: 25px; text-align: center; margin: 0;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">{icon}</div>
-                        <h2 style="margin: 0; font-size: 22px; font-weight: 600;">Officer {action_text.title()}</h2>
-                    </div>
-                    
-                    <!-- Content -->
-                    <div style="padding: 40px 30px;">
-                        <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">
-                            <strong>Dear {full_name},</strong>
-                        </p>
-                        
-                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 0 0 25px 0;">
-                            Your NaviCamp Security Officer application has been <strong>{action_text}</strong>.
-                        </p>
-                        
-                        <!-- User Info Card -->
-                        <div style="background: #f8f9fa; border-left: 4px solid {status_color}; padding: 20px; border-radius: 5px; margin: 25px 0;">
-                            <p style="margin: 0; font-weight: 600; color: #333;">Officer Details:</p>
-                            <p style="margin: 5px 0 0 0; color: #666;">Officer ID: <strong>{user_id}</strong></p>
-                            <p style="margin: 5px 0 0 0; color: #666;">Institution: <strong>MMCL</strong></p>
-                            <p style="margin: 5px 0 0 0; color: #666;">Processed: {timestamp}</p>
-                        </div>
-                        
-                        <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 25px 0;">
-                            {next_steps}
-                        </p>
-                        
-                        <div style="text-align: center; margin: 35px 0;">
-                            <a href="mailto:support@navicamp.edu" style="background: {status_color}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; display: inline-block;">Contact Support</a>
-                        </div>
-                        
-                        <p style="font-size: 16px; color: #333; margin: 30px 0 0 0;">
-                            Best regards,<br>
-                            <strong>NaviCamp Security Administration Team</strong><br>
-                            <em>Mapua Malayan Colleges Laguna (MMCL)</em>
-                        </p>
-                    </div>
-                    
-                    <!-- Footer -->
-                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #dee2e6;">
-                        <p style="margin: 0; font-size: 12px; color: #666;">
-                            This is an automated message from the NaviCamp Security Officer Verification System.<br>
-                            Mapua Malayan Colleges Laguna (MMCL) - Please do not reply to this email.
-                        </p>
-                    </div>
-                </div>
-                {hidden_timestamp}
-            </body>
-            </html>
-            """
-            
-            message["Subject"] = subject
-            message["From"] = f"NaviCamp Security Admin <{sender_email}>"
-            message["To"] = recipient_email
-            html_part = MIMEText(html_body, "html")
-            message.attach(html_part)
-            
-            # Send email with timeout controls
-            print(f"INFO: Connecting to Gmail SMTP server at {smtp_host}...")
-            server = None
-            try:
-                # Create SMTP connection with timeout using IPv4 address
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=CONFIG['SMTP_TIMEOUT'])
-                print(f"INFO: Starting TLS encryption...")
-                server.starttls()
-                print(f"INFO: Authenticating with Gmail...")
-                server.login(sender_email, sender_password)
-                print(f"INFO: Sending email to {recipient_email}...")
-                server.sendmail(sender_email, recipient_email, message.as_string())
-                print(f"SUCCESS: Email sent successfully to {recipient_email}")
-                return True
-            finally:
-                # Always close the connection
-                if server:
-                    try:
-                        server.quit()
-                    except:
-                        pass  # Ignore errors when closing
-            
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"ERROR: SMTP authentication failed: {e}")
-            return False  # Don't retry auth errors
-        except smtplib.SMTPRecipientsRefused as e:
-            print(f"ERROR: Invalid recipient email: {e}")
-            return False  # Don't retry invalid emails
-        except OSError as e:
-            if e.errno == 97:  # Address family not supported
-                print(f"WARNING: IPv6/IPv4 connectivity issue on attempt {attempt}: {e}")
-                print(f"INFO: This is likely a VPC networking issue. Check NAT Gateway routes and DNS resolution.")
-                if attempt < CONFIG['EMAIL_RETRY_ATTEMPTS']:
-                    print(f"INFO: Retrying in {CONFIG['EMAIL_RETRY_DELAY']} seconds...")
-                    time.sleep(CONFIG['EMAIL_RETRY_DELAY'])
-                else:
-                    print(f"ERROR: Email failed after {CONFIG['EMAIL_RETRY_ATTEMPTS']} attempts - VPC networking issue")
-                    print(f"ERROR: Consider checking: 1) NAT Gateway routes 2) Security Group rules 3) DNS resolution")
-                    return False
-            else:
-                print(f"WARNING: Email attempt {attempt} failed: {e}")
-                if attempt < CONFIG['EMAIL_RETRY_ATTEMPTS']:
-                    print(f"INFO: Retrying in {CONFIG['EMAIL_RETRY_DELAY']} seconds...")
-                    time.sleep(CONFIG['EMAIL_RETRY_DELAY'])
-                else:
-                    print(f"ERROR: Email failed after {CONFIG['EMAIL_RETRY_ATTEMPTS']} attempts")
-                    return False
-        except (smtplib.SMTPException, ConnectionError, TimeoutError) as e:
-            print(f"WARNING: Email attempt {attempt} failed: {e}")
-            if attempt < CONFIG['EMAIL_RETRY_ATTEMPTS']:
-                print(f"INFO: Retrying in {CONFIG['EMAIL_RETRY_DELAY']} seconds...")
-                time.sleep(CONFIG['EMAIL_RETRY_DELAY'])
-            else:
-                print(f"ERROR: Email failed after {CONFIG['EMAIL_RETRY_ATTEMPTS']} attempts")
-                return False
-        except Exception as e:
-            print(f"ERROR: Unexpected email error: {e}")
-            return False
-    
-    return False
+def send_email_via_sqs(full_name, user_id, action_type, recipient_email):
+    """Send email request to SQS instead of sending directly via SMTP."""
+    try:
+        sqs_client = boto3.client('sqs', region_name='ap-southeast-1')
+        queue_url = 'https://ap-southeast-1.queue.amazonaws.com/043309335171/navicamp-email-queue'
+        
+        # Create message for SQS
+        email_message = {
+            'full_name': full_name,
+            'user_id': user_id,
+            'action_type': action_type,
+            'recipient_email': recipient_email
+        }
+        
+        print(f"INFO: Sending email request to SQS for {user_id} ({action_type}) to {recipient_email}")
+        
+        # Send message to SQS
+        response = sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(email_message)
+        )
+        
+        print(f"SUCCESS: Email request sent to SQS with MessageId: {response.get('MessageId')}")
+        return True
+        
+    except Exception as e:
+        print(f"ERROR: Failed to send email request to SQS: {e}")
+        return False
 
 def create_response_page(message, success, email_sent, user_details=None):
-    """Create enhanced HTML response page with better styling and information."""
+    """Create HTML response page for the Lambda function."""
     if success:
-        bg_color, border_color, text_color, icon, title = "#d4edda", "#c3e6cb", "#155724", "✅", "Action Completed Successfully"
+        title = "✅ Action Completed Successfully"
+        icon = "✅"
+        color = "#28a745"
         gradient = "linear-gradient(135deg, #28a745 0%, #20c997 100%)"
     else:
-        bg_color, border_color, text_color, icon, title = "#f8d7da", "#f5c6cb", "#721c24", "❌", "Action Failed"
+        title = "❌ Action Failed"
+        icon = "❌"
+        color = "#dc3545"
         gradient = "linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)"
     
-    # Email status indicator
+    # Email status section
     email_status = ""
     if email_sent:
-        email_status = '''
+        email_status = """
         <div class="email-status success">
             <div class="email-icon">📧</div>
             <div>
-                <strong>Email Notification Sent</strong>
-                <p>The security officer has been notified via email about this action.</p>
+                <strong>Email Notification Queued</strong>
+                <p>The email notification has been successfully queued for delivery.</p>
             </div>
-        </div>'''
-    elif not success:
-        email_status = '''
+        </div>
+        """
+    elif email_sent is False:  # Explicitly False, not None
+        email_status = """
         <div class="email-status warning">
             <div class="email-icon">⚠️</div>
             <div>
                 <strong>Email Notification Failed</strong>
-                <p>The action was processed but email notification could not be sent.</p>
+                <p>The action was completed but email notification could not be queued.</p>
             </div>
-        </div>'''
+        </div>
+        """
     
     # User details section
     user_info = ""
     if user_details:
-        manila_tz = timezone(timedelta(hours=8))  # Philippines time: UTC+8
-        manila_now = datetime.now(manila_tz)
-        timestamp = manila_now.strftime("%B %d, %Y at %I:%M %p PHT")
-        user_info = f'''
+        user_info = f"""
         <div class="user-details">
-            <h3>Action Details</h3>
+            <h3>📋 Action Details</h3>
             <div class="detail-row">
                 <span class="label">Officer ID:</span>
                 <span class="value">{user_details.get('user_id', 'N/A')}</span>
             </div>
             <div class="detail-row">
-                <span class="label">Full Name:</span>
+                <span class="label">Officer Name:</span>
                 <span class="value">{user_details.get('full_name', 'N/A')}</span>
             </div>
             <div class="detail-row">
-                <span class="label">Action:</span>
-                <span class="value">{user_details.get('action', 'N/A').title()}</span>
+                <span class="label">Action Taken:</span>
+                <span class="value">{user_details.get('action', 'N/A')}</span>
             </div>
-            <div class="detail-row">
-                <span class="label">Processed:</span>
-                <span class="value">{timestamp}</span>
-            </div>
-        </div>'''
+        </div>
+        """
     
     html = f"""
     <!DOCTYPE html>
@@ -396,39 +222,40 @@ def create_response_page(message, success, email_sent, user_details=None):
             }}
             
             .logo {{
-                font-size: 28px;
-                font-weight: bold;
-                color: #333;
-                margin-bottom: 30px;
+                font-size: 18px;
+                font-weight: 600;
+                color: #666;
+                margin-bottom: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 12px;
+                gap: 10px;
             }}
             
             .status-icon {{
                 font-size: 64px;
                 margin-bottom: 20px;
-                animation: bounce 1s ease-in-out;
+                animation: bounce 0.6s ease-out;
             }}
             
             @keyframes bounce {{
-                0%, 100% {{ transform: translateY(0); }}
-                50% {{ transform: translateY(-10px); }}
+                0%, 20%, 50%, 80%, 100% {{ transform: translateY(0); }}
+                40% {{ transform: translateY(-10px); }}
+                60% {{ transform: translateY(-5px); }}
             }}
             
             .title {{
-                font-size: 32px;
+                font-size: 28px;
                 font-weight: 700;
                 color: #333;
-                margin-bottom: 25px;
+                margin-bottom: 20px;
                 line-height: 1.2;
             }}
             
             .message {{
-                background-color: {bg_color};
-                border: 2px solid {border_color};
-                color: {text_color};
+                background: rgba({color.replace('#', '').replace(color.replace('#', ''), f"{int(color.replace('#', '')[:2], 16)}, {int(color.replace('#', '')[2:4], 16)}, {int(color.replace('#', '')[4:], 16)}")}, 0.1);
+                border: 2px solid {color};
+                color: {color};
                 padding: 25px;
                 border-radius: 12px;
                 margin-bottom: 25px;
@@ -612,97 +439,70 @@ def create_response_page(message, success, email_sent, user_details=None):
         
         <script>
             let timeLeft = {CONFIG['AUTO_CLOSE_DELAY']};
-            let countdownTimer = null;
             let isPaused = false;
+            let countdownTimer;
             const countdownElement = document.getElementById('countdown');
+            const containerElement = document.querySelector('.container');
             
             function updateCountdown() {{
-                if (isPaused) return; // Don't update if paused
-                
-                if (timeLeft <= 0) {{
-                    countdownElement.innerHTML = '🔄 Window closing...';
-                    clearInterval(countdownTimer);
-                    setTimeout(() => window.close(), 500);
-                }} else {{
-                    countdownElement.innerHTML = `⏱️ This window will automatically close in ${{timeLeft}} seconds...`;
+                if (!isPaused && timeLeft > 0) {{
+                    countdownElement.innerHTML = `🕒 This window will close automatically in ${{timeLeft}} seconds`;
                     timeLeft--;
+                }} else if (!isPaused && timeLeft <= 0) {{
+                    countdownElement.innerHTML = "🕒 Closing window...";
+                    setTimeout(() => window.close(), 1000);
+                    return;
+                }} else if (isPaused) {{
+                    countdownElement.innerHTML = "⏸️ Timer paused - Move cursor away from card to resume";
                 }}
+                
+                countdownTimer = setTimeout(updateCountdown, 1000);
             }}
             
-            function startCountdown() {{
-                if (countdownTimer) clearInterval(countdownTimer); // Clear any existing timer
-                countdownTimer = setInterval(updateCountdown, 1000);
-                isPaused = false;
-            }}
-            
-            function pauseCountdown() {{
-                if (countdownTimer) {{
-                    clearInterval(countdownTimer);
-                    countdownTimer = null;
-                }}
+            // Add hover event listeners to pause/resume timer
+            containerElement.addEventListener('mouseenter', function() {{
                 isPaused = true;
-                countdownElement.innerHTML = '⏸️ Auto-close paused (mouse over window)';
-            }}
-            
-            function resumeCountdown() {{
-                if (!isPaused) return; // Already running
-                isPaused = false;
-                timeLeft = {CONFIG['AUTO_CLOSE_DELAY']}; // Reset timer
-                updateCountdown(); // Update immediately
-                startCountdown(); // Start the interval
-            }}
-            
-            // Initialize countdown
-            updateCountdown();
-            startCountdown();
-            
-            // Pause/resume countdown on hover
-            document.querySelector('.container').addEventListener('mouseenter', pauseCountdown);
-            document.querySelector('.container').addEventListener('mouseleave', resumeCountdown);
-            
-            // Also pause when clicking anywhere in the container
-            document.querySelector('.container').addEventListener('click', () => {{
-                if (!isPaused) {{
-                    pauseCountdown();
-                    setTimeout(() => {{
-                        if (isPaused) {{ // Only resume if still paused after 3 seconds
-                            countdownElement.innerHTML = '⏱️ Click detected - countdown will resume in 3 seconds...';
-                            setTimeout(resumeCountdown, 3000);
-                        }}
-                    }}, 100);
-                }}
             }});
+            
+            containerElement.addEventListener('mouseleave', function() {{
+                isPaused = false;
+                timeLeft = {CONFIG['AUTO_CLOSE_DELAY']}; // Reset timer to 10 seconds
+                countdownElement.innerHTML = `🕒 Timer reset - Window will close in ${{timeLeft}} seconds`;
+            }});
+            
+            // Start the countdown
+            updateCountdown();
         </script>
     </body>
     </html>
     """
+    
     return html
 
 def check_user_status(cursor, user_id):
-    """Check current user status and return detailed information including proof picture."""
+    """Check if user exists and get their current status."""
     try:
-        query = "SELECT userID, fullName, email, verified, proofPicture FROM user_table WHERE userID = %s"
+        query = """
+        SELECT fullName, email, verified, proofPicture 
+        FROM user_table 
+        WHERE userID = %s
+        """
         cursor.execute(query, (user_id,))
         result = cursor.fetchone()
         
         if result:
             return {
                 'exists': True,
-                'user_id': result[0],
-                'full_name': result[1],
-                'email': result[2],
-                'verified': bool(result[3]),
-                'proof_picture': result[4] if result[4] else None,
-                'status': 'verified' if result[3] else 'unverified'
+                'full_name': result[0],
+                'email': result[1],
+                'verified': bool(result[2]),
+                'proof_picture': result[3]
             }
         else:
-            return {
-                'exists': False,
-                'status': 'not_found'
-            }
+            return {'exists': False}
     except Exception as e:
-        print(f"ERROR: Failed to check user status: {e}")
-        raise e
+        print(f"ERROR: Error checking user status: {e}")
+        return {'exists': False}
 
 def delete_s3_proof_image(proof_picture_filename):
     """Delete proof image from S3 bucket with timeout controls."""
@@ -744,7 +544,7 @@ def delete_s3_proof_image(proof_picture_filename):
         return False
 
 def lambda_handler(event, context):
-    """Enhanced Lambda handler with comprehensive error handling and duplicate prevention."""
+    """Enhanced Lambda handler that uses SQS for email notifications."""
     print(f"INFO: Lambda execution started - Request ID: {context.aws_request_id}")
     
     try:
@@ -780,9 +580,8 @@ def lambda_handler(event, context):
         secrets = get_secret()
         db_username = secrets.get('username')
         db_password = secrets.get('password')
-        gmail_app_password = secrets.get('gmail_app_password')
         
-        if not all([db_username, db_password, gmail_app_password]):
+        if not all([db_username, db_password]):
             print("ERROR: Incomplete credentials in secret")
             return {
                 'statusCode': 500,
@@ -848,12 +647,11 @@ def lambda_handler(event, context):
                         message = f"✅ Security Officer {user_status['full_name']} ({user_id}) has been successfully verified and authorized!"
                         print(f"SUCCESS: User {user_id} verified")
                         
-                        # Send notification email
-                        email_sent = send_notification_email(
+                        # Send notification email via SQS
+                        email_sent = send_email_via_sqs(
                             user_status['full_name'], 
                             user_id, 
                             "verified", 
-                            gmail_app_password, 
                             user_status['email']
                         )
                         
@@ -928,12 +726,11 @@ def lambda_handler(event, context):
                         
                         print(f"SUCCESS: Unverified user {user_id} rejected and deleted")
                         
-                        # Send notification email
-                        email_sent = send_notification_email(
+                        # Send notification email via SQS
+                        email_sent = send_email_via_sqs(
                             user_status['full_name'], 
                             user_id, 
                             "rejected", 
-                            gmail_app_password, 
                             user_status['email']
                         )
                         
@@ -982,4 +779,4 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'headers': {'Content-Type': 'text/html'},
             'body': create_response_page("An unexpected server error occurred. Please try again later.", False, False)
-        }
+        } 

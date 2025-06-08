@@ -491,30 +491,81 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                 val rejectLink = "$baseUrl?userID=$officerUserID&action=reject"
 
                 val emailBody = """
-                    <html>
-                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                        <h2 style="color: #2c5aa0;">New Security Officer Registration - Verification Required</h2>
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>New Security Officer Registration - Verification Required</title>
+                    </head>
+                    <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; text-align: center;">
+                                <div style="font-size: 28px; margin-bottom: 10px;">⚠️</div>
+                                <h1 style="margin: 0; font-size: 24px; font-weight: 600;">NaviCamp Admin Portal</h1>
+                                <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">New Registration - Action Required</p>
+                            </div>
+                            
+                            <!-- Registration Card -->
+                            <div style="padding: 30px;">
+                                <div style="background: #fff3cd; border-radius: 12px; padding: 25px; border-left: 4px solid #ffc107; margin-bottom: 25px;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                                        <span style="font-size: 24px; margin-right: 10px;">👮</span>
+                                        <h2 style="margin: 0; color: #333; font-size: 20px;">New Security Officer Registration</h2>
+                                    </div>
+                                    
+                                    <p style="margin: 0 0 20px 0; color: #856404; font-size: 16px;">A new Security Officer has registered and requires verification:</p>
                         
-                        <p>A new Security Officer has registered and requires verification:</p>
-                        
-                        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                            <p><strong>Name:</strong> $officerFullName</p>
-                            <p><strong>Email:</strong> $officerEmail</p>
-                            <p><strong>User ID:</strong> $officerUserID</p>
+                                    <div style="background: white; border-radius: 8px; padding: 20px; margin: 15px 0;">
+                                        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Officer Information</h3>
+                                        <table style="width: 100%; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 8px 0; font-weight: 600; color: #666; width: 30%;">Name:</td>
+                                                <td style="padding: 8px 0; color: #333;">$officerFullName</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; font-weight: 600; color: #666;">Email:</td>
+                                                <td style="padding: 8px 0; color: #333;">$officerEmail</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0; font-weight: 600; color: #666;">User ID:</td>
+                                                <td style="padding: 8px 0; color: #333;">$officerUserID</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <!-- Proof Notice -->
+                                    <div style="background: #e8f5e8; border: 1px solid #c3e6cb; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                                        <div style="display: flex; align-items: center;">
+                                            <span style="font-size: 20px; margin-right: 10px;">📎</span>
+                                            <strong style="color: #2d5016;">The proof of identity is attached to this email.</strong>
+                                        </div>
                         </div>
                         
-                        <p><strong>The proof of identity is attached to this email.</strong></p>
+                                    <p style="color: #856404; margin: 20px 0; font-size: 14px;">Please review the attached proof and use the buttons below to verify or reject the Security Officer:</p>
                         
-                        <p>Please review the attached proof and use the buttons below to verify or reject the Security Officer:</p>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="$verifyLink" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px; font-weight: bold;">✓ VERIFY USER</a>
-                            <a href="$rejectLink" style="display: inline-block; background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 10px; font-weight: bold;">✗ REJECT USER</a>
+                                    <!-- Action Buttons -->
+                                    <div style="text-align: center; margin-top: 25px;">
+                                        <a href="$verifyLink" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; display: inline-block; margin: 0 10px; font-size: 16px;">✓ VERIFY USER</a>
+                                        <a href="$rejectLink" style="background: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; display: inline-block; margin: 0 10px; font-size: 16px;">✗ REJECT USER</a>
+                                    </div>
+                                </div>
+                                
+                                <!-- Important Notice -->
+                                <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; text-align: center;">
+                                    <p style="margin: 0; color: #721c24; font-size: 14px;">
+                                        <strong>⚠️ Important:</strong> If you choose to reject, the user's record will be permanently deleted from the system.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div style="background: #f8f9fa; padding: 20px; border-top: 1px solid #e9ecef; text-align: center; color: #666; font-size: 12px;">
+                                <p style="margin: 0;">NaviCamp Security Officer Management System</p>
+                                <p style="margin: 5px 0 0 0;">Mapua Malayan Colleges Laguna (MMCL) | Administrative Portal</p>
+                            </div>
                         </div>
-                        
-                        <p style="font-size: 12px; color: #666; margin-top: 30px;">
-                            <em>Note: If you choose to reject, the user's record will be deleted.</em>
-                        </p>
                     </body>
                     </html>
                 """.trimIndent()

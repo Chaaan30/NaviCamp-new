@@ -159,8 +159,15 @@ class SecurityOfficerActivity : AppCompatActivity() {
         }
 
         viewModel.deviceCount.observe(this) { count ->
-            findViewById<TextView>(R.id.iot_devices).text = count.toString()
+            val iotDevicesTextView = findViewById<TextView>(R.id.iot_devices)
+            iotDevicesTextView.text = count.toString()
             findViewById<ProgressBar>(R.id.iot_devices_progress).visibility = View.GONE
+        }
+        
+        // Make the entire IoT devices card clickable
+        findViewById<View>(R.id.iot_devices_card).setOnClickListener {
+            val intent = Intent(this, WheelchairManagementActivity::class.java)
+            startActivity(intent)
         }
         // Fetch the initial data
         viewModel.fetchPendingItems()
