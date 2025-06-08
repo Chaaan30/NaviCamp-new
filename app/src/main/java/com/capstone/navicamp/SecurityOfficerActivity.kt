@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.card.MaterialCardView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.activity.viewModels
 import androidx.lifecycle.Observer
@@ -66,7 +67,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security_officer)
 
-        val registeredUsersCard = findViewById<LinearLayout>(R.id.registered_users_card)
+        val registeredUsersCard = findViewById<MaterialCardView>(R.id.registered_users_card)
         registeredUsersCard.setOnClickListener {
             val intent = Intent(this, DisplayRegisteredUsersActivity::class.java)
             startActivity(intent)
@@ -689,6 +690,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
             // You can add a connection status indicator here if needed
             Log.d("SecurityOfficer", "Polling status: ${if (isConnected) "Active" else "Inactive"}")
         }
+    }
+
+    // Handle click from XML onClick attribute
+    fun onRegUsersCardClick(view: View) {
+        val intent = Intent(this, DisplayRegisteredUsersActivity::class.java)
+        startActivity(intent)
     }
 }
 
