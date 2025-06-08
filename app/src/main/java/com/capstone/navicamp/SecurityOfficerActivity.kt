@@ -101,7 +101,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
         val incidentLogBtn: Button = findViewById(R.id.incidentLogBtn)
         incidentLogBtn.setOnClickListener {
-            val intent = Intent(this, IncidentLog::class.java)
+            val intent = Intent(this, IncidentLogNew::class.java)
             startActivity(intent)
         }
 
@@ -192,12 +192,23 @@ class SecurityOfficerActivity : AppCompatActivity() {
     }    // Update onResume to start smart polling
     override fun onResume() {
         super.onResume()
-        findViewById<TextView>(R.id.secoff_fullname)?.text = UserSingleton.fullName
+        
+        // Update user name - use SharedPreferences as fallback if singleton is empty
+        val fullName = if (UserSingleton.fullName.isNullOrBlank()) {
+            val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+            val storedName = sharedPreferences.getString("fullName", "Officer")
+            UserSingleton.fullName = storedName // Update singleton
+            storedName
+        } else {
+            UserSingleton.fullName
+        }
+        
+        findViewById<TextView>(R.id.secoff_fullname)?.text = fullName
 
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
-            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
 
         // Start smart polling for real-time updates

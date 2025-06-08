@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Main Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Toolbar -->
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primaryColor"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
+        <!-- Summary Cards Section (Only Total and Resolved) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:background="@color/lightGray">
+
+            <!-- Total Assistance Card -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/dashboard_card_background"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/total_incidents_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primaryColor"
+                    android:fontFamily="@font/inter_bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total Assistance"
+                    android:textSize="11sp"
+                    android:textColor="@color/gray"
+                    android:fontFamily="@font/inter" />
+
+            </LinearLayout>
+
+            <!-- Resolved Incidents Card -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/dashboard_card_background"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/resolved_incidents_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_green_dark"
+                    android:fontFamily="@font/inter_bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Resolved"
+                    android:textSize="11sp"
+                    android:textColor="@color/gray"
+                    android:fontFamily="@font/inter" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Compact Filter Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:background="@color/lightGray">
+
+            <!-- Header Row with Export Button -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Filters"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/darkGray"
+                    android:fontFamily="@font/inter_bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/export_button"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="EXPORT"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/inter_bold"
+                    android:paddingHorizontal="16dp"
+                    android:backgroundTint="@color/primaryColor"
+                    app:cornerRadius="8dp"
+                    app:rippleColor="#33FFFFFF"
+                    android:elevation="2dp" />
+
+            </LinearLayout>
+
+            <!-- Horizontal Scrollable Filter Chips -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:fillViewport="false">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingEnd="16dp">
+
+                    <!-- Date Filter Chips -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_all_time"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All Time"
+                        android:checked="true"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_today"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Today"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_this_week"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="This Week"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_this_month"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="This Month"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_this_year"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="This Year"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_custom_date"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Custom Range"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="12dp" />
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="32dp"
+                        android:background="@color/gray"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginEnd="12dp" />
+
+                    <!-- Status Filter Chips -->
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_all_status"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All Status"
+                        android:checked="true"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_active"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Active"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_resolved"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Resolved"
+                        android:textColor="@color/primaryColor"
+                        app:chipBackgroundColor="@android:color/white"
+                        app:chipStrokeColor="@color/primaryColor"
+                        app:chipStrokeWidth="2dp"
+                        app:rippleColor="#22000000" />
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+        </LinearLayout>
+
+        <!-- Content Area -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/lightGray">
+
+            <!-- Loading Progress -->
+            <ProgressBar
+                android:id="@+id/loading_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+
+            <!-- No Incidents Text -->
+            <TextView
+                android:id="@+id/no_incidents_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="No incidents found for selected filters"
+                android:textSize="16sp"
+                android:textColor="@color/darkGray"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <!-- Incidents RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/incidents_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+    <!-- Navigation Drawer -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/navigation_view"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="true"
+        android:background="@color/primaryColor"
+        android:fontFamily="@font/inter"
+        app:headerLayout="@layout/nav_header_officer"
+        app:itemTextColor="@color/onPrimaryColor"
+        app:menu="@menu/drawer_menu_officer" />
+
+</androidx.drawerlayout.widget.DrawerLayout> 

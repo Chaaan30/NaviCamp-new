@@ -64,7 +64,7 @@ DROP TABLE IF EXISTS `incident_logs_table`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `incident_logs_table` (
-  `alertID` int NOT NULL AUTO_INCREMENT,
+  `alertID` varchar(8) NOT NULL,
   `userID` int NOT NULL,
   `deviceID` varchar(255) NOT NULL,
   `locationID` varchar(8) NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE `incident_logs_table` (
   CONSTRAINT `fk_incident_logs_deviceID` FOREIGN KEY (`deviceID`) REFERENCES `devices_table` (`deviceID`),
   CONSTRAINT `locationID` FOREIGN KEY (`locationID`) REFERENCES `location_table` (`locationID`),
   CONSTRAINT `userID` FOREIGN KEY (`userID`) REFERENCES `user_table` (`userID`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -89,7 +89,7 @@ CREATE TABLE `incident_logs_table` (
 
 LOCK TABLES `incident_logs_table` WRITE;
 /*!40000 ALTER TABLE `incident_logs_table` DISABLE KEYS */;
-INSERT INTO `incident_logs_table` VALUES (1,20250006,'202501','47BC44F3','pending','2025-06-03 08:58:41',NULL,NULL,NULL),(2,20250006,'202501','72EF0A74','pending','2025-06-03 08:58:42',NULL,NULL,NULL),(6,20250006,'202501','1CDBA86D','resolved','2025-06-03 14:31:32',NULL,'Jay Delos Santos','2025-06-06 11:47:38'),(7,20250006,'202501','896E1F32','pending','2025-06-03 08:58:43',NULL,NULL,NULL),(8,20250006,'202501','A1F59609','false alarm','2025-06-03 08:58:44','gumanon','Jay Delos Santos','2025-06-06 12:03:56'),(9,20250006,'202501','B81C057D','pending','2025-06-03 03:35:31',NULL,NULL,NULL),(10,20250008,'202501','BB487FB9','pending','2025-06-08 02:22:41',NULL,NULL,NULL),(11,20250008,'202501','D0662E7C','pending','2025-06-08 02:39:17',NULL,NULL,NULL);
+INSERT INTO `incident_logs_table` VALUES ('ALT001A1',20250006,'202501','47BC44F3','pending','2025-06-03 08:58:41',NULL,NULL,NULL),('ALT002B2',20250006,'202501','72EF0A74','pending','2025-06-03 08:58:42',NULL,NULL,NULL),('ALT006F6',20250006,'202501','1CDBA86D','resolved','2025-06-03 14:31:32',NULL,'Jay Delos Santos','2025-06-06 11:47:38'),('ALT007G7',20250006,'202501','896E1F32','pending','2025-06-03 08:58:43',NULL,NULL,NULL),('ALT008H8',20250006,'202501','A1F59609','false alarm','2025-06-03 08:58:44','gumanon','Jay Delos Santos','2025-06-06 12:03:56'),('ALT009I9',20250006,'202501','B81C057D','pending','2025-06-03 03:35:31',NULL,NULL,NULL),('ALT010J0',20250008,'202501','BB487FB9','pending','2025-06-08 02:22:41',NULL,NULL,NULL),('ALT011K1',20250008,'202501','D0662E7C','pending','2025-06-08 02:39:17',NULL,NULL,NULL);
 /*!40000 ALTER TABLE `incident_logs_table` ENABLE KEYS */;
 UNLOCK TABLES;
 
