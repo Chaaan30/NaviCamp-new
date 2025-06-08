@@ -22,4 +22,6 @@
     <color name="lightBlue">#E3F2FD</color>
     <color name="orange">#FF9800</color>
     <color name="lightOrange">#FFF3E0</color>
+
+    <color name="inactive_stroke">#d6d6d6</color>
 </resources>

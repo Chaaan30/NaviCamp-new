@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.Spinner
@@ -38,10 +39,11 @@ class IncidentLog : AppCompatActivity() {
     private lateinit var toggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
     private lateinit var tableLayout: TableLayout
-    private lateinit var filterTypeSpinner: Spinner
-    private lateinit var selectDateButton: Button
     private lateinit var loadingProgress: ProgressBar
     private lateinit var exportButton: Button
+    private lateinit var dateFilterSpinner: Spinner
+    private var selectedFilterType: String = "All"
+    private var selectedDate: Date = Date()
 
     private val viewModel: IncidentLogViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
@@ -81,6 +83,42 @@ class IncidentLog : AppCompatActivity() {
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
+
+        navigationView.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_logout -> {
+                    // Clear SharedPreferences
+                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                    val editor = sharedPreferences.edit()
+                    editor.clear()
+                    editor.apply()
+
+                    // Navigate to MainActivity
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                    true
+                }
+
+                R.id.nav_item1 -> {
+                    // Navigate to OfficerAccountSettingsActivity
+                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+
+                R.id.nav_item2 -> {
+                    // Navigate to SecurityOfficerActivity and clear the activity stack
+                    val intent = Intent(this, SecurityOfficerActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    true
+                }
+
+                else -> false
+            }
+        }
 
         // Set the officer's full name in the navigation header
         val headerView = navigationView.getHeaderView(0)
@@ -128,36 +166,47 @@ class IncidentLog : AppCompatActivity() {
         tableLayout = findViewById(R.id.tableLayout)
         loadingProgress = findViewById(R.id.loading_progress)
 
-        // Observe incident data from ViewModel
-        viewModel.incidentData.observe(this, Observer { data ->
-            android.util.Log.d("IncidentLog", "Fetched incident data: $data")
-            loadingProgress.visibility = View.GONE
-            val sortedData = data.sortedBy { it[0].toIntOrNull() ?: 0 }
-            displayDataInTable(sortedData)
-        })
-
         // Show ProgressBar and start refreshing incident data every second
         loadingProgress.visibility = View.VISIBLE
         handler.postDelayed(refreshRunnable, refreshInterval)
 
-        filterTypeSpinner = findViewById(R.id.filter_type_spinner)
-        selectDateButton = findViewById(R.id.select_date_button)
-        exportButton = findViewById(R.id.export_button)
+        dateFilterSpinner = findViewById(R.id.date_filter_spinner)
 
-        selectDateButton.setOnClickListener { showFilterPicker() }
+        dateFilterSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                selectedFilterType = parent.getItemAtPosition(position).toString()
+                (view as? TextView)?.text = "Date: $selectedFilterType"
 
-        filterTypeSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val selectedFilter = parent?.getItemAtPosition(position).toString()
-                viewModel.incidentData.observe(this@IncidentLog) { data ->
-                    val filteredData = filterDataByDate(data, selectedFilter)
-                    displayDataInTable(filteredData)
+                if (selectedFilterType == "All") {
+                    selectedDate = Date()
+                    viewModel.incidentData.value?.let {
+                        displayDataInTable(filterDataByDate(it, selectedFilterType, selectedDate))
+                    }
+                } else {
+                    showFilterPicker()
                 }
+                viewModel.fetchIncidentData()
             }
-
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.date_types,
+            R.layout.spinner_selected_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            dateFilterSpinner.adapter = adapter
+        }
+
+        // Observe incident data and filter
+        viewModel.incidentData.observe(this) { data ->
+            loadingProgress.visibility = View.GONE
+            val filteredData = filterDataByDate(data, selectedFilterType, selectedDate)
+            displayDataInTable(filteredData)
+        }
+
+        exportButton = findViewById(R.id.export_button)
         exportButton.setOnClickListener {
             val data = viewModel.incidentData.value ?: emptyList()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -165,14 +214,14 @@ class IncidentLog : AppCompatActivity() {
                 val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "text/csv"
-                    putExtra(Intent.EXTRA_TITLE, "incident_logs.csv")
+                    putExtra(Intent.EXTRA_TITLE, "incident_data.csv")
                 }
                 startActivityForResult(createFileIntent, CREATE_FILE_REQUEST_CODE)
             } else {
                 // Android 10 and below
                 val file = exportIncidentDataToCSV(this, data)
                 if (file != null) {
-                    Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Exported successfully to ${file.absolutePath}", Toast.LENGTH_LONG).show()
                 } else {
                     Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
                 }
@@ -181,7 +230,6 @@ class IncidentLog : AppCompatActivity() {
     }
 
     private fun showFilterPicker() {
-        val selectedFilterType = filterTypeSpinner.selectedItem.toString()
         when (selectedFilterType) {
             "Year" -> showYearPicker()
             "Month" -> showMonthPicker()
@@ -193,11 +241,11 @@ class IncidentLog : AppCompatActivity() {
     private fun showYearPicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, _, _ ->
-            val selectedDate = Calendar.getInstance()
-            selectedDate.set(year, 0, 1)
-            viewModel.incidentData.observe(this) { data ->
-                val filteredData = filterDataByDate(data, "Year", selectedDate.time)
-                displayDataInTable(filteredData)
+            val selected = Calendar.getInstance()
+            selected.set(year, 0, 1)
+            selectedDate = selected.time
+            viewModel.incidentData.value?.let {
+                displayDataInTable(filterDataByDate(it, "Year", selectedDate))
             }
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
@@ -205,11 +253,11 @@ class IncidentLog : AppCompatActivity() {
     private fun showMonthPicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, _ ->
-            val selectedDate = Calendar.getInstance()
-            selectedDate.set(year, month, 1)
-            viewModel.incidentData.observe(this) { data ->
-                val filteredData = filterDataByDate(data, "Month", selectedDate.time)
-                displayDataInTable(filteredData)
+            val selected = Calendar.getInstance()
+            selected.set(year, month, 1)
+            selectedDate = selected.time
+            viewModel.incidentData.value?.let {
+                displayDataInTable(filterDataByDate(it, "Month", selectedDate))
             }
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
@@ -217,11 +265,11 @@ class IncidentLog : AppCompatActivity() {
     private fun showWeekPicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, dayOfMonth ->
-            val selectedDate = Calendar.getInstance()
-            selectedDate.set(year, month, dayOfMonth)
-            viewModel.incidentData.observe(this) { data ->
-                val filteredData = filterDataByDate(data, "Week", selectedDate.time)
-                displayDataInTable(filteredData)
+            val selected = Calendar.getInstance()
+            selected.set(year, month, dayOfMonth)
+            selectedDate = selected.time
+            viewModel.incidentData.value?.let {
+                displayDataInTable(filterDataByDate(it, "Week", selectedDate))
             }
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
     }
@@ -229,13 +277,63 @@ class IncidentLog : AppCompatActivity() {
     private fun showDayPicker() {
         val calendar = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, dayOfMonth ->
-            val selectedDate = Calendar.getInstance()
-            selectedDate.set(year, month, dayOfMonth)
-            viewModel.incidentData.observe(this) { data ->
-                val filteredData = filterDataByDate(data, "Day", selectedDate.time)
-                displayDataInTable(filteredData)
+            val selected = Calendar.getInstance()
+            selected.set(year, month, dayOfMonth)
+            selectedDate = selected.time
+            viewModel.incidentData.value?.let {
+                displayDataInTable(filterDataByDate(it, "Day", selectedDate))
             }
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    private fun filterDataByDate(
+        data: List<List<String>>,
+        filterType: String,
+        selectedDate: Date = Date()
+    ): List<List<String>> {
+        val dateFormats = listOf(
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        )
+        val calendar = Calendar.getInstance()
+        calendar.time = selectedDate
+
+        fun parseDate(dateStr: String): Date? {
+            for (format in dateFormats) {
+                try {
+                    return format.parse(dateStr)
+                } catch (_: Exception) {}
+            }
+            return null
+        }
+
+        return when (filterType) {
+            "Year" -> data.filter {
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
+                date != null && calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR)
+            }
+            "Month" -> data.filter {
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
+                date != null &&
+                        calendar.get(Calendar.YEAR) == Calendar.getInstance().apply { time = date }.get(Calendar.YEAR) &&
+                        calendar.get(Calendar.MONTH) == Calendar.getInstance().apply { time = date }.get(Calendar.MONTH)
+            }
+            "Week" -> data.filter {
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
+                if (date == null) return@filter false
+                val userCal = Calendar.getInstance().apply { time = date }
+                calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
+                        calendar.get(Calendar.WEEK_OF_YEAR) == userCal.get(Calendar.WEEK_OF_YEAR)
+            }
+            "Day" -> data.filter {
+                val date = parseDate(it[8]) // Assuming "Time of Alert" is at index 8
+                if (date == null) return@filter false
+                val userCal = Calendar.getInstance().apply { time = date }
+                calendar.get(Calendar.YEAR) == userCal.get(Calendar.YEAR) &&
+                        calendar.get(Calendar.DAY_OF_YEAR) == userCal.get(Calendar.DAY_OF_YEAR)
+            }
+            else -> data
+        }
     }
 
     private fun displayDataInTable(incidentData: List<List<String>>) {
@@ -303,42 +401,6 @@ class IncidentLog : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(refreshRunnable) // Stop the handler when the activity is destroyed
-    }
-
-    private fun filterDataByDate(data: List<List<String>>, filterType: String, selectedDate: Date = Date()): List<List<String>> {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        val calendar = Calendar.getInstance()
-        calendar.time = selectedDate
-
-        return when (filterType) {
-            "Year" -> data.filter { it[7].startsWith("${calendar.get(Calendar.YEAR)}") }
-            "Month" -> data.filter { it[7].substring(0, 7) == "${calendar.get(Calendar.YEAR)}-${String.format("%02d", calendar.get(Calendar.MONTH) + 1)}" }
-            "Week" -> {
-                val weekStart = calendar.clone() as Calendar
-                weekStart.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-
-                val weekEnd = calendar.clone() as Calendar
-                weekEnd.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                weekEnd.add(Calendar.DAY_OF_WEEK, 6)
-
-                data.filter {
-                    try {
-                        val incidentDate = dateFormat.parse(it[7])
-                        incidentDate.after(weekStart.time) && incidentDate.before(weekEnd.time)
-                    } catch (e: Exception) {
-                        false
-                    }
-                }
-            }
-            "Day" -> data.filter {
-                val incidentDate = dateFormat.parse(it[7]) ?: return@filter false
-                val incidentCalendar = Calendar.getInstance()
-                incidentCalendar.time = incidentDate
-                calendar.get(Calendar.DAY_OF_YEAR) == incidentCalendar.get(Calendar.DAY_OF_YEAR) &&
-                        calendar.get(Calendar.YEAR) == incidentCalendar.get(Calendar.YEAR)
-            }
-            else -> data
-        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

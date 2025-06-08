@@ -33,4 +33,19 @@
         <item>Student/Personnel/Visitor</item>
         <item>Security Officer</item>
     </string-array>
+
+    <string-array name="registered_user_types">
+        <item>All</item>
+        <item>Student</item>
+        <item>Personnel</item>
+        <item>Visitor</item>
+    </string-array>
+
+    <string-array name="date_types">
+        <item>All</item>
+        <item>Year</item>
+        <item>Month</item>
+        <item>Week</item>
+        <item>Day</item>
+    </string-array>
 </resources>

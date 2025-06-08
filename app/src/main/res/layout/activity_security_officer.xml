@@ -158,11 +158,15 @@
                         android:stateListAnimator="@animator/card_elevation">
 
                         <LinearLayout
+                            android:id="@+id/registered_users_card"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:background="@drawable/monitoring_orange"
                             android:orientation="vertical"
-                            android:padding="16dp">
+                            android:padding="16dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:onClick="onRegUsersCardClick">
 
                             <TextView
                                 android:layout_width="match_parent"
