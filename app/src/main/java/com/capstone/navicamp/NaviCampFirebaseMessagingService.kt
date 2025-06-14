@@ -116,6 +116,22 @@ class NaviCampFirebaseMessagingService : FirebaseMessagingService() {
                     data
                 )
             }
+            "false_alarm" -> {
+                // Handle false alarm notification
+                val userName = data["userName"] ?: "A user"
+                val floorLevel = data["floorLevel"] ?: "unknown location"
+                val reason = data["reason"]
+                val message = if (reason.isNullOrEmpty()) {
+                    "$userName's assistance request on $floorLevel was marked as false alarm. [Alert: $alertID]"
+                } else {
+                    "$userName's assistance request on $floorLevel was marked as false alarm. Reason: $reason [Alert: $alertID]"
+                }
+                sendNotification(
+                    "🚫 False Alarm",
+                    message,
+                    data
+                )
+            }
         }
     }
 

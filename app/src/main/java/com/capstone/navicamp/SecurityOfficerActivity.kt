@@ -50,11 +50,6 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.SQLException
 import com.capstone.navicamp.MySQLHelper
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -66,18 +61,6 @@ class SecurityOfficerActivity : AppCompatActivity() {
     
     // Smart Polling Manager for real-time updates
     private lateinit var smartPollingManager: SmartPollingManager
-
-    // Declare the launcher for notification permission
-    private val requestPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-            if (isGranted) {
-                Log.d("Permission", "Notification permission granted")
-                Toast.makeText(this, "Notification permission granted! You will now receive assistance alerts.", Toast.LENGTH_LONG).show()
-            } else {
-                Log.d("Permission", "Notification permission denied")
-                Toast.makeText(this, "Notification permission denied. You may miss important assistance requests.", Toast.LENGTH_LONG).show()
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -153,9 +136,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     true
                 }
 
-                R.id.nav_notification_settings -> {
-                    // Show battery optimization settings
-                    showNotificationSettingsDialog()
+                R.id.nav_device_setup -> {
+                    // Start device setup
+                    startDeviceSetup()
                     true
                 }
 
@@ -212,49 +195,32 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
         registerReceiver(dataChangeReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
 
-        // Ask for notification permission
-        askNotificationPermission()
-        
-        // Check battery optimization for security officers
-        checkBatteryOptimization()
+        // Initialize user name from SharedPreferences
+        initializeUserName()
     }
 
-    private fun askNotificationPermission() {
-        // This is only necessary for API level 33 and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
-            ) {
-                // FCM SDK (and your app) can post notifications.
-                Log.d("Permission", "Notification permission is already granted")
-            } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                // Show an explanation dialog
-                androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Permission Needed")
-                    .setMessage("This app needs notification permission to alert you when students request assistance. This is essential for security operations.")
-                    .setPositiveButton("Grant Permission") { _, _ ->
-                        requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    .setNegativeButton("Not Now") { dialog, _ ->
-                        dialog.dismiss()
-                        Log.d("Permission", "User declined notification permission")
-                    }
-                    .show()
-            } else {
-                // Directly ask for the permission
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+    private fun initializeUserName() {
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val fullName = sharedPreferences.getString("fullName", "Officer")
+        
+        // Ensure UserSingleton is properly set
+        UserSingleton.fullName = fullName
+        
+        // Log for debugging
+        Log.d("SecurityOfficer", "Initializing name: $fullName")
+        
+        // Update UI elements with the name
+        findViewById<TextView>(R.id.secoff_fullname)?.text = fullName
+        
+        val navigationView = findViewById<NavigationView>(R.id.navigation_view)
+        navigationView?.let {
+            val headerView = it.getHeaderView(0)
+            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
         }
     }
 
-
-
-    // Update onResume to start smart polling
     override fun onResume() {
         super.onResume()
-        
-        // Re-check battery optimization when returning from settings
-        checkBatteryOptimizationOnResume()
         
         // Update user name - use SharedPreferences as fallback if singleton is empty
         val fullName = if (UserSingleton.fullName.isNullOrBlank()) {
@@ -284,7 +250,6 @@ class SecurityOfficerActivity : AppCompatActivity() {
         fetchUnverifiedUsers()
     }
 
-    // Update onPause to pause polling but keep it ready for quick resume
     override fun onPause() {
         super.onPause()
         // Pause polling when activity is not visible to save battery
@@ -298,62 +263,11 @@ class SecurityOfficerActivity : AppCompatActivity() {
         unregisterReceiver(dataChangeReceiver)
     }
 
-    private fun checkBatteryOptimization() {
-        // Check if we should show battery optimization dialog for security officers
-        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_officer", false)
-        
-        // If battery optimization is now disabled, mark as shown (user fixed it)
-        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
-            if (!hasShownDialog) {
-                prefs.edit().putBoolean("battery_optimization_dialog_shown_officer", true).apply()
-            }
-            return
-        }
-        
-        if (!hasShownDialog) {
-            // Show dialog after a short delay to let the UI settle
-            window.decorView.postDelayed({
-                BatteryOptimizationHelper.showBatteryOptimizationDialogWithCallback(
-                    this,
-                    "🚨 Important for Security Officers",
-                    "To receive assistance notifications immediately when students need help, please disable battery optimization for NaviCamp.\n\nThis ensures you won't miss critical assistance requests when the app is closed."
-                ) {
-                    // Only mark as shown when optimization is actually disabled
-                    prefs.edit().putBoolean("battery_optimization_dialog_shown_officer", true).apply()
-                }
-            }, 1500) // Slightly longer delay for officer dashboard
-        }
-    }
-
-    private fun checkBatteryOptimizationOnResume() {
-        // Check if user has now disabled battery optimization after returning from settings
-        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_officer", false)
-        
-        if (!hasShownDialog && BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
-            // User fixed the battery optimization, mark as shown
-            prefs.edit().putBoolean("battery_optimization_dialog_shown_officer", true).apply()
-        }
-    }
-
-    private fun showNotificationSettingsDialog() {
-        val isOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)
-        val status = if (isOptimized) "❌ Battery optimization is ON" else "✅ Battery optimization is OFF"
-        
-        AlertDialog.Builder(this)
-            .setTitle("Notification Settings")
-            .setMessage("Current status: $status\n\nFor reliable assistance notifications when the app is closed, please disable battery optimization for NaviCamp.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
-            }
-            .setNeutralButton("Device Instructions") { _, _ ->
-                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
+    private fun startDeviceSetup() {
+        val intent = Intent(this, SetupActivity::class.java)
+        // Add flag to indicate we want to return to main activity after setup
+        intent.putExtra("RETURN_TO_MAIN", true)
+        startActivity(intent)
     }
 
     private fun fetchUnverifiedUsers() {

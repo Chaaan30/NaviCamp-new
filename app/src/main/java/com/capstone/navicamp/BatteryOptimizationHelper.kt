@@ -24,130 +24,121 @@ object BatteryOptimizationHelper {
     }
     
     /**
-     * Show dialog to request battery optimization whitelist
+     * Show general battery optimization instructions for all devices
      */
-    fun showBatteryOptimizationDialog(context: Context) {
-        if (isIgnoringBatteryOptimizations(context)) {
-            return // Already whitelisted
+    fun showGeneralInstructions(context: Context) {
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        var instructions = """
+            To ensure you receive notifications when the app is closed:
+            
+            1. Go to Settings > Battery > Battery Optimization
+            2. Find "NaviCamp" in the list
+            3. Select "Don't optimize" or "Not optimized"
+            4. Go back to Settings > Apps > NaviCamp
+            5. Enable "Allow background activity"
+            
+            Note: Menu names may vary slightly between devices.
+        """.trimIndent()
+
+        if (manufacturer.contains("xiaomi")) {
+            instructions += "\n\nFor Xiaomi Users:\nAlso find and disable 'Pause app activity if unused' to ensure the app is not stopped."
         }
         
         AlertDialog.Builder(context)
             .setTitle("Enable Background Notifications")
-            .setMessage("To receive assistance notifications when the app is closed, please disable battery optimization for NaviCamp.\n\nThis ensures you'll get notified immediately when help is needed.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                requestIgnoreBatteryOptimizations(context)
+            .setMessage(instructions)
+            .setPositiveButton("Open App Settings") { dialog, _ ->
+                // Don't dismiss dialog here - it will be dismissed when user returns with settings changed
+                openAppSettings(context)
             }
             .setNegativeButton("Later") { dialog, _ ->
                 dialog.dismiss()
             }
-            .setCancelable(false)
+            .setCancelable(false) // Prevent dismissing by tapping outside
             .show()
     }
 
+
+
     /**
-     * Show dialog with callback to mark as shown only when user opens settings
+     * Show battery optimization dialog - simplified for all users
      */
-    fun showBatteryOptimizationDialogWithCallback(
-        context: Context, 
-        title: String, 
-        message: String, 
-        onOptimizationDisabled: () -> Unit
-    ) {
+    fun showBatteryOptimizationDialog(context: Context) {
         if (isIgnoringBatteryOptimizations(context)) {
-            // Already optimized, mark as shown since no action needed
-            onOptimizationDisabled()
-            return
+            return // Already optimized, no need to show dialog
         }
-        
-        AlertDialog.Builder(context)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("Open Settings") { _, _ ->
-                requestIgnoreBatteryOptimizations(context)
-                // Don't mark as shown here - user might not complete the process
-                // Only mark as shown when battery optimization is actually disabled (checked in onResume)
-            }
-            .setNeutralButton("Device Instructions") { _, _ ->
-                showManufacturerSpecificInstructions(context)
-                // Don't mark as shown - user just viewed instructions
-            }
-            .setNegativeButton("Later") { dialog, _ ->
-                dialog.dismiss()
-                // Don't mark as shown - user dismissed without action
-            }
-            .setCancelable(false)
-            .show()
+
+        val prefs = context.getSharedPreferences("battery_optimization", Context.MODE_PRIVATE)
+        val hasShown = prefs.getBoolean("battery_optimization_dialog_shown", false)
+
+        if (!hasShown) {
+            val dialog = AlertDialog.Builder(context)
+                .setTitle("📱 Enable Notifications")
+                .setMessage("To receive notifications when the app is closed, please configure your device settings.\n\nThis ensures you'll get notified immediately when needed.")
+                .setPositiveButton("Open App Settings") { dialogInterface, _ ->
+                    // Don't dismiss or mark as shown yet
+                    openAppSettings(context)
+                }
+                .setNegativeButton("Later") { dialogInterface, _ ->
+                    dialogInterface.dismiss()
+                }
+                .setCancelable(false)
+                .create()
+
+            dialog.show()
+
+            // Store reference to dialog for later dismissal
+            currentDialog = dialog
+        }
+    }
+
+    private var currentDialog: AlertDialog? = null
+
+    /**
+     * Check if settings were changed and dismiss dialog if needed
+     */
+    fun checkAndDismissDialog(context: Context) {
+        if (isIgnoringBatteryOptimizations(context)) {
+            currentDialog?.dismiss()
+            currentDialog = null
+            
+            // Mark as shown only when actually disabled
+            val prefs = context.getSharedPreferences("battery_optimization", Context.MODE_PRIVATE)
+            prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
+        }
     }
     
     /**
-     * Open battery optimization settings for the app
+     * Open app settings directly for all devices
      */
     @SuppressLint("BatteryLife")
-    private fun requestIgnoreBatteryOptimizations(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+    private fun openAppSettings(context: Context) {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = Uri.parse("package:${context.packageName}")
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback to general settings if app settings fail
             try {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                intent.data = Uri.parse("package:${context.packageName}")
+                val intent = Intent(Settings.ACTION_SETTINGS)
                 context.startActivity(intent)
-            } catch (e: Exception) {
-                // Fallback to general battery optimization settings
-                try {
-                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    context.startActivity(intent)
-                } catch (e2: Exception) {
-                    // Last fallback to app settings
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                    intent.data = Uri.parse("package:${context.packageName}")
-                    context.startActivity(intent)
-                }
+            } catch (e2: Exception) {
+                // Should not happen, but just in case
+                android.util.Log.e("BatteryOptimization", "Failed to open settings", e2)
             }
         }
     }
     
-    /**
-     * Show manufacturer-specific battery optimization instructions
-     */
-    fun showManufacturerSpecificInstructions(context: Context) {
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        val instructions = when {
-            manufacturer.contains("xiaomi") -> 
-                "For Xiaomi devices:\n1. Go to Settings > Apps > Manage apps\n2. Find NaviCamp\n3. Enable 'Autostart'\n4. Set Battery saver to 'No restrictions'"
-            
-            manufacturer.contains("huawei") || manufacturer.contains("honor") ->
-                "For Huawei/Honor devices:\n1. Go to Settings > Apps\n2. Find NaviCamp\n3. Enable 'Auto-launch'\n4. Go to Battery > App launch\n5. Set NaviCamp to 'Manage manually' and enable all options"
-            
-            manufacturer.contains("oppo") ->
-                "For OPPO devices:\n1. Go to Settings > Battery > Battery Optimization\n2. Find NaviCamp and select 'Don't optimize'\n3. Go to Settings > Apps > NaviCamp\n4. Enable 'Allow background activity'"
-            
-            manufacturer.contains("vivo") ->
-                "For Vivo devices:\n1. Go to Settings > Battery > Background App Refresh\n2. Find NaviCamp and enable it\n3. Go to Settings > Apps > NaviCamp\n4. Enable 'High background power consumption'"
-            
-            manufacturer.contains("samsung") ->
-                "For Samsung devices:\n1. Go to Settings > Apps > NaviCamp\n2. Battery > Optimize battery usage\n3. Turn OFF optimization for NaviCamp\n4. Enable 'Allow background activity'"
-            
-            else ->
-                "Please check your device's battery optimization settings and whitelist NaviCamp to ensure notifications work when the app is closed."
-        }
-        
-        AlertDialog.Builder(context)
-            .setTitle("Device-Specific Settings")
-            .setMessage(instructions)
-            .setPositiveButton("Got it") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
-    }
+
 
     /**
      * Reset battery optimization dialog flags for testing
      * Call this method to make the dialog appear again
      */
     fun resetDialogFlags(context: Context) {
-        val prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("battery_optimization", Context.MODE_PRIVATE)
         prefs.edit().apply {
             remove("battery_optimization_dialog_shown")
-            remove("battery_optimization_dialog_shown_officer")
-            remove("battery_optimization_dialog_shown_user")
             apply()
         }
     }

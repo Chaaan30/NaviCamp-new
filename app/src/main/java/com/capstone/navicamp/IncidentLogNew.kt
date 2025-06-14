@@ -222,8 +222,8 @@ class IncidentLogNew : AppCompatActivity() {
         findViewById<Chip>(R.id.chip_all_status).setOnClickListener { 
             selectStatusFilter("All Status")
         }
-        findViewById<Chip>(R.id.chip_active).setOnClickListener { 
-            selectStatusFilter("Active")
+                findViewById<Chip>(R.id.chip_ongoing).setOnClickListener {
+            selectStatusFilter("Ongoing")
         }
         findViewById<Chip>(R.id.chip_resolved).setOnClickListener { 
             selectStatusFilter("Resolved")
@@ -233,13 +233,13 @@ class IncidentLogNew : AppCompatActivity() {
     private fun selectStatusFilter(filter: String) {
         // Uncheck all status chips
         findViewById<Chip>(R.id.chip_all_status).isChecked = false
-        findViewById<Chip>(R.id.chip_active).isChecked = false
+        findViewById<Chip>(R.id.chip_ongoing).isChecked = false
         findViewById<Chip>(R.id.chip_resolved).isChecked = false
         
         // Check the selected chip
         when (filter) {
             "All Status" -> findViewById<Chip>(R.id.chip_all_status).isChecked = true
-            "Active" -> findViewById<Chip>(R.id.chip_active).isChecked = true
+            "Ongoing" -> findViewById<Chip>(R.id.chip_ongoing).isChecked = true
             "Resolved" -> findViewById<Chip>(R.id.chip_resolved).isChecked = true
         }
         
@@ -325,7 +325,7 @@ class IncidentLogNew : AppCompatActivity() {
             // Status filter
             val matchesStatus = when (selectedStatusFilter) {
                 "All Status" -> true
-                "Active" -> incident.status.equals("active", ignoreCase = true)
+                "Ongoing" -> incident.status.equals("ongoing", ignoreCase = true)
                 "Resolved" -> incident.status.equals("resolved", ignoreCase = true)
                 else -> true
             }

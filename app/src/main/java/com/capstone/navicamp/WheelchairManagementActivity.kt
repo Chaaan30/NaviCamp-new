@@ -13,6 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import com.google.android.material.button.MaterialButton
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,7 +29,8 @@ data class WheelchairDevice(
     val connectedUntil: String?,
     val rssi: Int?,
     val distance: Float?,
-    val userName: String? = null
+    val userName: String? = null,
+    val maintenanceReason: String? = null
 )
 
 class WheelchairManagementActivity : AppCompatActivity() {
@@ -36,10 +40,11 @@ class WheelchairManagementActivity : AppCompatActivity() {
     private lateinit var wheelchairsLayout: LinearLayout
     private lateinit var filterSpinner: Spinner
     private lateinit var searchEditText: EditText
-    private lateinit var refreshButton: Button
     
     private var allWheelchairs = listOf<WheelchairDevice>()
     private var filteredWheelchairs = listOf<WheelchairDevice>()
+    private var pollingJob: Job? = null
+    private val POLLING_INTERVAL = 10000L // 10 seconds
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +60,12 @@ class WheelchairManagementActivity : AppCompatActivity() {
         wheelchairsLayout = findViewById(R.id.wheelchairs_layout)
         filterSpinner = findViewById(R.id.filter_spinner)
         searchEditText = findViewById(R.id.search_edit_text)
-        refreshButton = findViewById(R.id.refresh_button)
         
-        refreshButton.setOnClickListener {
-            loadWheelchairs()
-        }
+        // Hide refresh button if it exists
+        findViewById<Button>(R.id.refresh_button)?.visibility = View.GONE
+        
+        // Start smart polling
+        startSmartPolling()
     }
 
     private fun setupSidebar() {
@@ -100,6 +106,11 @@ class WheelchairManagementActivity : AppCompatActivity() {
                     val intent = Intent(this, SecurityOfficerActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
+                    true
+                }
+                R.id.nav_device_setup -> {
+                    // Start device setup
+                    startDeviceSetup()
                     true
                 }
                 else -> false
@@ -254,7 +265,20 @@ class WheelchairManagementActivity : AppCompatActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_wheelchair_details, null)
         
         dialogView.findViewById<TextView>(R.id.detail_device_id).text = wheelchair.deviceID
-        dialogView.findViewById<TextView>(R.id.detail_status).text = wheelchair.status
+        
+        // Update status badge
+        val statusBadge = dialogView.findViewById<TextView>(R.id.detail_status_badge)
+        statusBadge.text = wheelchair.status.uppercase()
+        
+        // Set status badge color based on status
+        when (wheelchair.status.lowercase()) {
+            "available" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.holo_green_light))
+            "in_use" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.holo_blue_light))
+            "offline" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
+            "maintenance" -> statusBadge.setBackgroundColor(resources.getColor(R.color.orange))
+            else -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
+        }
+        
         dialogView.findViewById<TextView>(R.id.detail_user_id).text = wheelchair.userID?.toString() ?: "None"
         dialogView.findViewById<TextView>(R.id.detail_user_name).text = wheelchair.userName ?: "No user assigned"
         dialogView.findViewById<TextView>(R.id.detail_floor_level).text = wheelchair.floorLevel ?: "Unknown"
@@ -262,13 +286,149 @@ class WheelchairManagementActivity : AppCompatActivity() {
         dialogView.findViewById<TextView>(R.id.detail_longitude).text = wheelchair.longitude?.toString() ?: "N/A"
         dialogView.findViewById<TextView>(R.id.detail_rssi).text = wheelchair.rssi?.toString() ?: "N/A"
         dialogView.findViewById<TextView>(R.id.detail_distance).text = wheelchair.distance?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_connected_until).text = wheelchair.connectedUntil ?: "Not connected"
+        
+        // Format connected until date
+        val connectedUntilText = if (wheelchair.connectedUntil != null) {
+            try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val connectedDate = dateFormat.parse(wheelchair.connectedUntil)
+                val displayFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+                displayFormat.format(connectedDate!!)
+            } catch (e: Exception) {
+                wheelchair.connectedUntil
+            }
+        } else {
+            "Not connected"
+        }
+        dialogView.findViewById<TextView>(R.id.detail_connected_until).text = connectedUntilText
+
+        // Handle maintenance information
+        val maintenanceReasonLayout = dialogView.findViewById<LinearLayout>(R.id.maintenance_reason_layout)
+        val maintenanceReasonText = dialogView.findViewById<TextView>(R.id.detail_maintenance_reason)
+        val setMaintenanceBtn = dialogView.findViewById<MaterialButton>(R.id.btn_set_maintenance)
+        val removeMaintenanceBtn = dialogView.findViewById<MaterialButton>(R.id.btn_remove_maintenance)
+
+        if (wheelchair.status.equals("maintenance", ignoreCase = true)) {
+            // Device is in maintenance mode
+            maintenanceReasonLayout.visibility = View.VISIBLE
+            maintenanceReasonText.text = wheelchair.maintenanceReason ?: "Maintenance reason not available (feature in development)"
+            setMaintenanceBtn.visibility = View.GONE
+            removeMaintenanceBtn.visibility = View.VISIBLE
+        } else {
+            // Device is not in maintenance mode
+            maintenanceReasonLayout.visibility = View.GONE
+            setMaintenanceBtn.visibility = View.VISIBLE
+            removeMaintenanceBtn.visibility = View.GONE
+        }
+
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Set maintenance button click listener
+        setMaintenanceBtn.setOnClickListener {
+            showSetMaintenanceDialog(wheelchair.deviceID, dialog)
+        }
+
+        // Remove maintenance button click listener
+        removeMaintenanceBtn.setOnClickListener {
+            showRemoveMaintenanceDialog(wheelchair.deviceID, dialog)
+        }
+
+        dialog.show()
+    }
+
+    private fun showSetMaintenanceDialog(deviceID: String, parentDialog: androidx.appcompat.app.AlertDialog) {
+        val editText = EditText(this).apply {
+            hint = "Enter maintenance reason (optional - feature in development)"
+            maxLines = 3
+            setPadding(16, 16, 16, 16)
+        }
 
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Wheelchair Details")
-            .setView(dialogView)
-            .setPositiveButton("Close", null)
+            .setTitle("Set Maintenance Mode")
+            .setMessage("This will disconnect any current user and set the wheelchair to maintenance mode.\n\nNote: Maintenance reason storage is currently in development.")
+            .setView(editText)
+            .setPositiveButton("Set Maintenance") { _, _ ->
+                val reason = editText.text.toString().trim()
+                setDeviceMaintenanceMode(deviceID, true, reason, parentDialog)
+            }
+            .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showRemoveMaintenanceDialog(deviceID: String, parentDialog: androidx.appcompat.app.AlertDialog) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Remove Maintenance Mode")
+            .setMessage("This will set the wheelchair back to available status.")
+            .setPositiveButton("Remove Maintenance") { _, _ ->
+                setDeviceMaintenanceMode(deviceID, false, null, parentDialog)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun setDeviceMaintenanceMode(deviceID: String, isMaintenanceMode: Boolean, reason: String?, parentDialog: androidx.appcompat.app.AlertDialog) {
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.updateDeviceMaintenanceStatus(deviceID, isMaintenanceMode, reason)
+            }
+
+            if (success) {
+                val message = if (isMaintenanceMode) {
+                    "Wheelchair $deviceID set to maintenance mode"
+                } else {
+                    "Wheelchair $deviceID removed from maintenance mode"
+                }
+                Toast.makeText(this@WheelchairManagementActivity, message, Toast.LENGTH_SHORT).show()
+                
+                // Refresh the wheelchair list
+                loadWheelchairs()
+                
+                // Close the parent dialog
+                parentDialog.dismiss()
+            } else {
+                val errorMessage = if (isMaintenanceMode) {
+                    "Failed to set maintenance mode"
+                } else {
+                    "Failed to remove maintenance mode"
+                }
+                Toast.makeText(this@WheelchairManagementActivity, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun startDeviceSetup() {
+        val intent = Intent(this, SetupActivity::class.java)
+        // Add flag to indicate we want to return to main activity after setup
+        intent.putExtra("RETURN_TO_MAIN", true)
+        startActivity(intent)
+    }
+
+    private fun startSmartPolling() {
+        pollingJob = lifecycleScope.launch {
+            while (true) {
+                try {
+                    val newWheelchairs = withContext(Dispatchers.IO) {
+                        MySQLHelper.getAllWheelchairs()
+                    }
+                    
+                    // Only update if data has changed
+                    if (newWheelchairs != allWheelchairs) {
+                        allWheelchairs = newWheelchairs
+                        filterWheelchairs()
+                    }
+                } catch (e: Exception) {
+                    // Handle error silently, continue polling
+                }
+                delay(POLLING_INTERVAL)
+            }
+        }
+    }
+
+    private fun stopSmartPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
     }
 
     override fun onResume() {
@@ -279,5 +439,22 @@ class WheelchairManagementActivity : AppCompatActivity() {
             val headerView = it.getHeaderView(0)
             headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
+        
+        // Restart polling if it was stopped
+        if (pollingJob == null) {
+            startSmartPolling()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop polling when activity is not visible
+        stopSmartPolling()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Ensure polling is stopped
+        stopSmartPolling()
     }
 } 

@@ -22,6 +22,10 @@ import com.google.android.material.navigation.NavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -29,13 +33,14 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
     private lateinit var userTypeSpinner: Spinner
     private lateinit var searchEditText: EditText
-    private lateinit var refreshButton: Button
     private lateinit var loadingProgress: ProgressBar
     private lateinit var usersLayout: LinearLayout
     private val viewModel: DisplayRegisteredUsersViewModel by viewModels()
     
     private var allUsers = listOf<UserData>()
     private var filteredUsers = listOf<UserData>()
+    private var pollingJob: Job? = null
+    private val POLLING_INTERVAL = 15000L // 15 seconds
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,12 +56,13 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         usersLayout = findViewById(R.id.users_layout)
         userTypeSpinner = findViewById(R.id.user_type_spinner)
         searchEditText = findViewById(R.id.search_edit_text)
-        refreshButton = findViewById(R.id.refresh_button)
         loadingProgress = findViewById(R.id.loading_progress)
         
-        refreshButton.setOnClickListener {
-            loadUsers()
-        }
+        // Hide refresh button if it exists
+        findViewById<Button>(R.id.refresh_button)?.visibility = View.GONE
+        
+        // Start smart polling
+        startSmartPolling()
     }
 
     private fun setupSidebar() {
@@ -97,6 +103,11 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
                     val intent = Intent(this, SecurityOfficerActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
+                    true
+                }
+                R.id.nav_device_setup -> {
+                    // Start device setup
+                    startDeviceSetup()
                     true
                 }
                 else -> false
@@ -228,6 +239,39 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         }
     }
 
+    private fun startDeviceSetup() {
+        val intent = Intent(this, SetupActivity::class.java)
+        // Add flag to indicate we want to return to main activity after setup
+        intent.putExtra("RETURN_TO_MAIN", true)
+        startActivity(intent)
+    }
+
+    private fun startSmartPolling() {
+        pollingJob = lifecycleScope.launch {
+            while (true) {
+                try {
+                    val newUsers = withContext(Dispatchers.IO) {
+                        MySQLHelper.getAllVerifiedUsers()
+                    }
+                    
+                    // Only update if data has changed
+                    if (newUsers != allUsers) {
+                        allUsers = newUsers
+                        filterUsers()
+                    }
+                } catch (e: Exception) {
+                    // Handle error silently, continue polling
+                }
+                delay(POLLING_INTERVAL)
+            }
+        }
+    }
+
+    private fun stopSmartPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
+    }
+
     override fun onResume() {
         super.onResume()
         // Update navigation header
@@ -236,5 +280,22 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
             val headerView = it.getHeaderView(0)
             headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = UserSingleton.fullName
         }
+        
+        // Restart polling if it was stopped
+        if (pollingJob == null) {
+            startSmartPolling()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop polling when activity is not visible
+        stopSmartPolling()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Ensure polling is stopped
+        stopSmartPolling()
     }
 }

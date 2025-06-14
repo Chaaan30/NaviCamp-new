@@ -8,10 +8,20 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        
+        // Check if setup has been completed
+        val appPrefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val setupCompleted = appPrefs.getBoolean("setup_completed", false)
+        
+        if (!setupCompleted) {
+            // First time user - redirect to setup
+            val intent = Intent(this, SetupActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
 
-        // Check battery optimization on app startup
-        checkBatteryOptimization()
+        setContentView(R.layout.activity_main)
 
         // Retrieve token, fullName, and userType from SharedPreferences
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
@@ -39,7 +49,6 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             // No token, fullName, or userType, show login/register screen
-            setContentView(R.layout.activity_main)
             val showRegisterButton = findViewById<Button>(R.id.show_register_button)
             showRegisterButton.setOnClickListener {
                 val registerBottomSheet = RegisterBottomSheet()
@@ -51,34 +60,6 @@ class MainActivity : AppCompatActivity() {
                 val loginBottomSheet = LoginBottomSheet()
                 loginBottomSheet.show(supportFragmentManager, "LoginBottomSheet")
             }
-        }
-    }
-
-    private fun checkBatteryOptimization() {
-        // Check if we should show battery optimization dialog
-        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown", false)
-        
-        // If battery optimization is now disabled, mark as shown (user fixed it)
-        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
-            if (!hasShownDialog) {
-                prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
-            }
-            return
-        }
-        
-        if (!hasShownDialog) {
-            // Show dialog after a short delay to let the UI settle
-            window.decorView.postDelayed({
-                BatteryOptimizationHelper.showBatteryOptimizationDialogWithCallback(
-                    this,
-                    "Enable Background Notifications",
-                    "To receive assistance notifications when the app is closed, please disable battery optimization for NaviCamp.\n\nThis ensures you'll get notified immediately when help is needed."
-                ) {
-                    // Only mark as shown when optimization is actually disabled
-                    prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
-                }
-            }, 1000)
         }
     }
 }

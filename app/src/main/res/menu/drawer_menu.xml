@@ -12,8 +12,8 @@
             android:title="Main Menu"
             android:textColor="@color/onPrimaryColor" />
         <item
-            android:id="@+id/nav_notification_settings"
-            android:title="Notification Settings"
+            android:id="@+id/nav_device_setup"
+            android:title="Device Setup"
             android:textColor="@color/onPrimaryColor" />
         <item
             android:id="@+id/nav_logout"

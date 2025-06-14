@@ -142,6 +142,11 @@ class AccountSettingsActivity : AppCompatActivity() {
                     startActivity(intent)
                     true
                 }
+                R.id.nav_device_setup -> {
+                    // Start device setup
+                    startDeviceSetup()
+                    true
+                }
                 else -> false
             }
         }
@@ -349,6 +354,13 @@ class AccountSettingsActivity : AppCompatActivity() {
     private fun dismissLoadingDialog() {
         loadingDialog?.dismiss()
         loadingDialog = null
+    }
+
+    private fun startDeviceSetup() {
+        val intent = Intent(this, SetupActivity::class.java)
+        // Add flag to indicate we want to return to main activity after setup
+        intent.putExtra("RETURN_TO_MAIN", true)
+        startActivity(intent)
     }
 
     override fun onResume() {

@@ -7,6 +7,7 @@
     <color name="secondaryDarkColor">#dfdfdf</color>
     <color name="onSecondaryColor">#000000</color>
 
+    <color name="backgroundColor">#F0F3FD</color>
     <color name="custom_blue">#678AE7</color>
     <color name="dialogBackgroundColor">#F5F5F5</color> <!-- Light Grey -->
     
