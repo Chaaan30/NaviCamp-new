@@ -75,7 +75,7 @@ class MainActivity : AppCompatActivity() {
                     "Enable Background Notifications",
                     "To receive assistance notifications when the app is closed, please disable battery optimization for NaviCamp.\n\nThis ensures you'll get notified immediately when help is needed."
                 ) {
-                    // Only mark as shown when user opens settings or optimization is already disabled
+                    // Only mark as shown when optimization is actually disabled
                     prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
                 }
             }, 1000)

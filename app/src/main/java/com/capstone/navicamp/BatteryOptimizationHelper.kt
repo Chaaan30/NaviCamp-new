@@ -51,11 +51,11 @@ object BatteryOptimizationHelper {
         context: Context, 
         title: String, 
         message: String, 
-        onSettingsOpened: () -> Unit
+        onOptimizationDisabled: () -> Unit
     ) {
         if (isIgnoringBatteryOptimizations(context)) {
             // Already optimized, mark as shown since no action needed
-            onSettingsOpened()
+            onOptimizationDisabled()
             return
         }
         
@@ -64,8 +64,8 @@ object BatteryOptimizationHelper {
             .setMessage(message)
             .setPositiveButton("Open Settings") { _, _ ->
                 requestIgnoreBatteryOptimizations(context)
-                // Only mark as shown when user actually opens settings
-                onSettingsOpened()
+                // Don't mark as shown here - user might not complete the process
+                // Only mark as shown when battery optimization is actually disabled (checked in onResume)
             }
             .setNeutralButton("Device Instructions") { _, _ ->
                 showManufacturerSpecificInstructions(context)
@@ -136,5 +136,19 @@ object BatteryOptimizationHelper {
                 dialog.dismiss()
             }
             .show()
+    }
+
+    /**
+     * Reset battery optimization dialog flags for testing
+     * Call this method to make the dialog appear again
+     */
+    fun resetDialogFlags(context: Context) {
+        val prefs = context.getSharedPreferences("AppPrefs", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            remove("battery_optimization_dialog_shown")
+            remove("battery_optimization_dialog_shown_officer")
+            remove("battery_optimization_dialog_shown_user")
+            apply()
+        }
     }
 } 

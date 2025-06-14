@@ -319,7 +319,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     "🚨 Important for Security Officers",
                     "To receive assistance notifications immediately when students need help, please disable battery optimization for NaviCamp.\n\nThis ensures you won't miss critical assistance requests when the app is closed."
                 ) {
-                    // Only mark as shown when user opens settings or optimization is already disabled
+                    // Only mark as shown when optimization is actually disabled
                     prefs.edit().putBoolean("battery_optimization_dialog_shown_officer", true).apply()
                 }
             }, 1500) // Slightly longer delay for officer dashboard

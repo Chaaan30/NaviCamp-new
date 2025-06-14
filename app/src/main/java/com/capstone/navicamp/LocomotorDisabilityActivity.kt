@@ -576,7 +576,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     "📱 Stay Connected for Help",
                     "To receive notifications when security officers respond to your assistance requests, please disable battery optimization for NaviCamp.\n\nThis ensures you'll know when help is on the way, even if the app is closed."
                 ) {
-                    // Only mark as shown when user opens settings or optimization is already disabled
+                    // Only mark as shown when optimization is actually disabled
                     prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
                 }
             }, 1500) // Delay for user dashboard
