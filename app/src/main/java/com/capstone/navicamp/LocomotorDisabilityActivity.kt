@@ -165,6 +165,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     startActivity(intent)
                     true
                 }
+
+                R.id.nav_notification_settings -> {
+                    // Show battery optimization settings for normal users
+                    showNotificationSettingsDialog()
+                    true
+                }
                 else -> false
             }
         }
@@ -176,6 +182,9 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         // Register FCM token for this user
         registerFCMToken()
+        
+        // Check battery optimization for normal users
+        checkBatteryOptimization()
 
         // Set up the Ask for assistance button
         assistanceButton.setOnClickListener {
@@ -540,5 +549,56 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                  MySQLHelper.updateDeviceConnectionStatus(connectedDeviceID!!, null, null)
              }
         }
+    }
+
+    private fun checkBatteryOptimization() {
+        // Check if we should show battery optimization dialog for normal users
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_user", false)
+        
+        if (!hasShownDialog && !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            // Show dialog after a short delay to let the UI settle
+            window.decorView.postDelayed({
+                showBatteryOptimizationForUser()
+                // Mark as shown so we don't show it every time
+                prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
+            }, 1500) // Delay for user dashboard
+        }
+    }
+
+    private fun showBatteryOptimizationForUser() {
+        AlertDialog.Builder(this)
+            .setTitle("📱 Stay Connected for Help")
+            .setMessage("To receive notifications when security officers respond to your assistance requests, please disable battery optimization for NaviCamp.\n\nThis ensures you'll know when help is on the way, even if the app is closed.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
+            }
+            .setNeutralButton("Device Instructions") { _, _ ->
+                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
+            }
+            .setNegativeButton("Later") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showNotificationSettingsDialog() {
+        val isOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)
+        val status = if (isOptimized) "❌ Battery optimization is ON" else "✅ Battery optimization is OFF"
+        
+        AlertDialog.Builder(this)
+            .setTitle("Notification Settings")
+            .setMessage("Current status: $status\n\nFor reliable assistance response notifications when the app is closed, please disable battery optimization for NaviCamp.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
+            }
+            .setNeutralButton("Device Instructions") { _, _ ->
+                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 }

@@ -214,6 +214,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
         // Ask for notification permission
         askNotificationPermission()
+        
+        // Check battery optimization for security officers
+        checkBatteryOptimization()
     }
 
     private fun askNotificationPermission() {
@@ -290,6 +293,38 @@ class SecurityOfficerActivity : AppCompatActivity() {
         // Stop polling when activity is destroyed
         smartPollingManager.stopPolling()
         unregisterReceiver(dataChangeReceiver)
+    }
+
+    private fun checkBatteryOptimization() {
+        // Check if we should show battery optimization dialog for security officers
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_officer", false)
+        
+        if (!hasShownDialog && !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            // Show dialog after a short delay to let the UI settle
+            window.decorView.postDelayed({
+                showBatteryOptimizationForOfficer()
+                // Mark as shown so we don't show it every time
+                prefs.edit().putBoolean("battery_optimization_dialog_shown_officer", true).apply()
+            }, 1500) // Slightly longer delay for officer dashboard
+        }
+    }
+
+    private fun showBatteryOptimizationForOfficer() {
+        AlertDialog.Builder(this)
+            .setTitle("🚨 Important for Security Officers")
+            .setMessage("To receive assistance notifications immediately when students need help, please disable battery optimization for NaviCamp.\n\nThis ensures you won't miss critical assistance requests when the app is closed.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
+            }
+            .setNeutralButton("Device Instructions") { _, _ ->
+                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
+            }
+            .setNegativeButton("Later") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun showNotificationSettingsDialog() {
