@@ -1,782 +1,358 @@
 import json
+import logging
 import os
-import pymysql
-import boto3
-from botocore.exceptions import ClientError
-import base64
-from datetime import datetime, timezone, timedelta
-import traceback
-import re
+import urllib.request
+import urllib.parse
+import urllib.error
 import time
+from datetime import datetime, timezone
 
-# Configuration
-CONFIG = {
-    'MAX_USER_ID_LENGTH': 20,
-    'VALID_ACTIONS': ['verify', 'reject'],
-    'AUTO_CLOSE_DELAY': 10,     # seconds for HTML auto-close
-}
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
-# Environment variables
-SECRET_NAME = os.environ.get('DB_SECRET_NAME') 
-RDS_HOST = os.environ.get('DB_HOST') 
-DB_NAME = os.environ.get('DB_NAME') 
-
-def validate_input(user_id, action):
-    """Validate and sanitize input parameters."""
-    errors = []
-    
-    # Validate user_id
-    if not user_id:
-        errors.append("User ID is required")
-    elif len(user_id) > CONFIG['MAX_USER_ID_LENGTH']:
-        errors.append(f"User ID exceeds maximum length of {CONFIG['MAX_USER_ID_LENGTH']}")
-    elif not re.match(r'^[a-zA-Z0-9]+$', user_id):
-        errors.append("User ID contains invalid characters (only alphanumeric allowed)")
-    
-    # Validate action
-    if not action:
-        errors.append("Action is required")
-    elif action.lower() not in CONFIG['VALID_ACTIONS']:
-        errors.append(f"Invalid action. Must be one of: {', '.join(CONFIG['VALID_ACTIONS'])}")
-    
-    return errors
-
-def get_secret():
-    """Retrieves all credentials from AWS Secrets Manager with enhanced error handling."""
+def get_db_connection():
+    """Create database connection using direct credentials"""
     try:
-        print(f"INFO: Retrieving secret '{SECRET_NAME}' from AWS Secrets Manager")
-        region_name = os.environ.get('AWS_REGION', "ap-southeast-1")
-        session = boto3.session.Session()
-        client = session.client(service_name='secretsmanager', region_name=region_name)
-        
-        get_secret_value_response = client.get_secret_value(SecretId=SECRET_NAME)
-        
-        if 'SecretString' in get_secret_value_response:
-            secret_data = json.loads(get_secret_value_response['SecretString'])
-        else:
-            secret_data = json.loads(base64.b64decode(get_secret_value_response['SecretBinary']))
-        
-        # Validate required keys
-        required_keys = ['username', 'password']  # Removed gmail_app_password requirement
-        missing_keys = [key for key in required_keys if key not in secret_data]
-        if missing_keys:
-            raise ValueError(f"Secret missing required keys: {', '.join(missing_keys)}")
-        
-        print("INFO: Secret retrieved and validated successfully")
-        return secret_data
-        
-    except ClientError as e:
-        error_code = e.response['Error']['Code']
-        if error_code == 'ResourceNotFoundException':
-            print(f"ERROR: Secret '{SECRET_NAME}' not found")
-        elif error_code == 'InvalidRequestException':
-            print(f"ERROR: Invalid request for secret '{SECRET_NAME}'")
-        elif error_code == 'InvalidParameterException':
-            print(f"ERROR: Invalid parameter for secret '{SECRET_NAME}'")
-        else:
-            print(f"ERROR: AWS error retrieving secret: {error_code} - {e}")
-        raise e
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Secret contains invalid JSON: {e}")
-        raise e
+        import pymysql
+        connection = pymysql.connect(
+            host=os.environ.get('DB_HOST', 'campusnavigator.c10aiyo64bnv.ap-southeast-1.rds.amazonaws.com'),
+            user=os.environ.get('DB_USER', 'navicamp'),
+            password=os.environ.get('DB_PASSWORD', 'navicamp'),
+            database=os.environ.get('DB_NAME', 'campusnavigator'),
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        logger.info("Database connection established successfully")
+        return connection
     except Exception as e:
-        print(f"ERROR: Unexpected error retrieving secret: {e}")
+        logger.error(f"Database connection failed: {str(e)}")
         raise e
 
-def send_email_via_sqs(full_name, user_id, action_type, recipient_email):
-    """Send email request to SQS instead of sending directly via SMTP."""
+def get_security_officer_tokens():
+    """Get all FCM tokens for verified Security Officers"""
+    connection = None
     try:
-        sqs_client = boto3.client('sqs', region_name='ap-southeast-1')
-        queue_url = 'https://ap-southeast-1.queue.amazonaws.com/043309335171/navicamp-email-queue'
-        
-        # Create message for SQS
-        email_message = {
-            'full_name': full_name,
-            'user_id': user_id,
-            'action_type': action_type,
-            'recipient_email': recipient_email
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            query = """
+                SELECT fcm_token FROM user_table 
+                WHERE userType = 'Security Officer' AND verified = 1 AND fcm_token IS NOT NULL AND fcm_token != ''
+            """
+            cursor.execute(query)
+            tokens = [row['fcm_token'] for row in cursor.fetchall()]
+            logger.info(f"Found {len(tokens)} Security Officer FCM tokens")
+            return tokens
+    except Exception as e:
+        logger.error(f"Error getting security officer tokens: {str(e)}")
+        return []
+    finally:
+        if connection:
+            connection.close()
+
+def get_user_details(user_id):
+    """Get user details for notification"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            query = "SELECT fullName, userType FROM user_table WHERE userID = %s"
+            cursor.execute(query, (user_id,))
+            return cursor.fetchone()
+    except Exception as e:
+        logger.error(f"Error getting user details for userID {user_id}: {str(e)}")
+        return None
+    finally:
+        if connection:
+            connection.close()
+
+def get_assistance_details(location_id):
+    """Get assistance request details"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            query = """
+                SELECT l.locationID, l.userID, l.deviceID, u.fullName, l.floorLevel, 
+                       i.status, l.latitude, l.longitude, l.dateTime, i.officerResponded, i.alertID 
+                FROM location_table l
+                JOIN user_table u ON l.userID = u.userID
+                LEFT JOIN incident_logs_table i ON l.locationID = i.locationID
+                WHERE l.locationID = %s ORDER BY i.alertDateTime DESC LIMIT 1
+            """
+            cursor.execute(query, (location_id,))
+            result = cursor.fetchone()
+            logger.info(f"Database result for locationID {location_id}: {result}")
+            return result
+    except Exception as e:
+        logger.error(f"Error getting assistance details for locationID {location_id}: {str(e)}")
+        return None
+    finally:
+        if connection:
+            connection.close()
+
+def get_access_token():
+    """Generate OAuth access token using Firebase service account key"""
+    try:
+        service_account_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_KEY')
+        if not service_account_json:
+            logger.error("Firebase service account key not found in environment")
+            return None
+        service_account = json.loads(service_account_json)
+        from jose import jwt
+        now = int(time.time())
+        payload = {
+            'iss': service_account['client_email'], 'sub': service_account['client_email'],
+            'aud': 'https://oauth2.googleapis.com/token', 'iat': now, 'exp': now + 3600,
+            'scope': 'https://www.googleapis.com/auth/firebase.messaging'
         }
-        
-        print(f"INFO: Sending email request to SQS for {user_id} ({action_type}) to {recipient_email}")
-        
-        # Send message to SQS
-        response = sqs_client.send_message(
-            QueueUrl=queue_url,
-            MessageBody=json.dumps(email_message)
+        private_key = service_account['private_key']
+        jwt_token = jwt.encode(payload, private_key, algorithm='RS256')
+        token_url = 'https://oauth2.googleapis.com/token'
+        token_data = {'grant_type': 'urn:ietf:params:oauth:grant-type:jwt-bearer', 'assertion': jwt_token}
+        token_request = urllib.request.Request(
+            token_url, data=urllib.parse.urlencode(token_data).encode('utf-8'),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'}
         )
-        
-        print(f"SUCCESS: Email request sent to SQS with MessageId: {response.get('MessageId')}")
-        return True
-        
+        with urllib.request.urlopen(token_request) as response:
+            token_response = json.loads(response.read().decode('utf-8'))
+            access_token = token_response.get('access_token')
+            if access_token:
+                logger.info("Successfully obtained OAuth access token")
+                return access_token
+            else:
+                logger.error(f"No access token in response: {token_response}")
+                return None
     except Exception as e:
-        print(f"ERROR: Failed to send email request to SQS: {e}")
-        return False
+        logger.error(f"Failed to get OAuth access token: {str(e)}", exc_info=True)
+        return None
 
-def create_response_page(message, success, email_sent, user_details=None):
-    """Create HTML response page for the Lambda function."""
-    if success:
-        title = "✅ Action Completed Successfully"
-        icon = "✅"
-        color = "#28a745"
-        gradient = "linear-gradient(135deg, #28a745 0%, #20c997 100%)"
-    else:
-        title = "❌ Action Failed"
-        icon = "❌"
-        color = "#dc3545"
-        gradient = "linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)"
-    
-    # Email status section
-    email_status = ""
-    if email_sent:
-        email_status = """
-        <div class="email-status success">
-            <div class="email-icon">📧</div>
-            <div>
-                <strong>Email Notification Queued</strong>
-                <p>The email notification has been successfully queued for delivery.</p>
-            </div>
-        </div>
-        """
-    elif email_sent is False:  # Explicitly False, not None
-        email_status = """
-        <div class="email-status warning">
-            <div class="email-icon">⚠️</div>
-            <div>
-                <strong>Email Notification Failed</strong>
-                <p>The action was completed but email notification could not be queued.</p>
-            </div>
-        </div>
-        """
-    
-    # User details section
-    user_info = ""
-    if user_details:
-        user_info = f"""
-        <div class="user-details">
-            <h3>📋 Action Details</h3>
-            <div class="detail-row">
-                <span class="label">Officer ID:</span>
-                <span class="value">{user_details.get('user_id', 'N/A')}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Officer Name:</span>
-                <span class="value">{user_details.get('full_name', 'N/A')}</span>
-            </div>
-            <div class="detail-row">
-                <span class="label">Action Taken:</span>
-                <span class="value">{user_details.get('action', 'N/A')}</span>
-            </div>
-        </div>
-        """
-    
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{title} - NaviCamp Admin</title>
-        <style>
-            * {{
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }}
-            
-            body {{
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }}
-            
-            .container {{
-                background: white;
-                border-radius: 20px;
-                padding: 40px;
-                box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-                max-width: 600px;
-                width: 100%;
-                text-align: center;
-                position: relative;
-                overflow: hidden;
-                animation: slideIn 0.5s ease-out;
-            }}
-            
-            @keyframes slideIn {{
-                from {{ opacity: 0; transform: translateY(30px); }}
-                to {{ opacity: 1; transform: translateY(0); }}
-            }}
-            
-            .container::before {{
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 6px;
-                background: {gradient};
-            }}
-            
-            .logo {{
-                font-size: 18px;
-                font-weight: 600;
-                color: #666;
-                margin-bottom: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            }}
-            
-            .status-icon {{
-                font-size: 64px;
-                margin-bottom: 20px;
-                animation: bounce 0.6s ease-out;
-            }}
-            
-            @keyframes bounce {{
-                0%, 20%, 50%, 80%, 100% {{ transform: translateY(0); }}
-                40% {{ transform: translateY(-10px); }}
-                60% {{ transform: translateY(-5px); }}
-            }}
-            
-            .title {{
-                font-size: 28px;
-                font-weight: 700;
-                color: #333;
-                margin-bottom: 20px;
-                line-height: 1.2;
-            }}
-            
-            .message {{
-                background: rgba({color.replace('#', '').replace(color.replace('#', ''), f"{int(color.replace('#', '')[:2], 16)}, {int(color.replace('#', '')[2:4], 16)}, {int(color.replace('#', '')[4:], 16)}")}, 0.1);
-                border: 2px solid {color};
-                color: {color};
-                padding: 25px;
-                border-radius: 12px;
-                margin-bottom: 25px;
-                font-size: 18px;
-                line-height: 1.6;
-                font-weight: 500;
-            }}
-            
-            .email-status {{
-                display: flex;
-                align-items: center;
-                padding: 20px;
-                border-radius: 10px;
-                margin-bottom: 25px;
-                gap: 15px;
-                text-align: left;
-            }}
-            
-            .email-status.success {{
-                background-color: #e8f5e8;
-                color: #2d5016;
-                border: 2px solid #c3e6cb;
-            }}
-            
-            .email-status.warning {{
-                background-color: #fff3cd;
-                color: #856404;
-                border: 2px solid #ffeaa7;
-            }}
-            
-            .email-icon {{
-                font-size: 24px;
-                flex-shrink: 0;
-            }}
-            
-            .email-status p {{
-                margin: 5px 0 0 0;
-                font-size: 14px;
-                opacity: 0.9;
-            }}
-            
-            .user-details {{
-                background: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 10px;
-                padding: 25px;
-                margin-bottom: 25px;
-                text-align: left;
-            }}
-            
-            .user-details h3 {{
-                color: #333;
-                margin-bottom: 20px;
-                text-align: center;
-                font-size: 20px;
-            }}
-            
-            .detail-row {{
-                display: flex;
-                justify-content: space-between;
-                padding: 10px 0;
-                border-bottom: 1px solid #e9ecef;
-            }}
-            
-            .detail-row:last-child {{
-                border-bottom: none;
-            }}
-            
-            .label {{
-                font-weight: 600;
-                color: #666;
-            }}
-            
-            .value {{
-                color: #333;
-                font-weight: 500;
-            }}
-            
-            .actions {{
-                display: flex;
-                gap: 15px;
-                justify-content: center;
-                margin-bottom: 25px;
-            }}
-            
-            .close-btn {{
-                background: {gradient};
-                color: white;
-                border: none;
-                padding: 15px 35px;
-                border-radius: 30px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                text-decoration: none;
-                display: inline-block;
-                box-shadow: 0 4px 15px rgba(102,126,234,0.3);
-            }}
-            
-            .close-btn:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(102,126,234,0.4);
-            }}
-            
-            .refresh-btn {{
-                background: transparent;
-                color: #667eea;
-                border: 2px solid #667eea;
-                padding: 15px 35px;
-                border-radius: 30px;
-                font-size: 16px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                text-decoration: none;
-                display: inline-block;
-            }}
-            
-            .refresh-btn:hover {{
-                background: #667eea;
-                color: white;
-                transform: translateY(-2px);
-            }}
-            
-            .countdown {{
-                margin-top: 25px;
-                font-size: 14px;
-                color: #666;
-                background: #f8f9fa;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #dee2e6;
-            }}
-            
-            .footer {{
-                margin-top: 35px;
-                padding-top: 25px;
-                border-top: 1px solid #eee;
-                color: #666;
-                font-size: 12px;
-                line-height: 1.4;
-            }}
-            
-            @media (max-width: 480px) {{
-                .container {{
-                    padding: 25px;
-                    margin: 10px;
-                }}
-                .title {{
-                    font-size: 24px;
-                }}
-                .message {{
-                    font-size: 16px;
-                }}
-                .actions {{
-                    flex-direction: column;
-                }}
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="logo">🧭 NaviCamp Security Officer Admin</div>
-            <div class="status-icon">{icon}</div>
-            <h1 class="title">{title}</h1>
-            <div class="message">{message}</div>
-            {email_status}
-            {user_info}
-            <div class="actions">
-                <button class="close-btn" onclick="window.close();">Close Window</button>
-                <button class="refresh-btn" onclick="window.location.reload();">Refresh Page</button>
-            </div>
-            <div class="countdown" id="countdown"></div>
-            <div class="footer">
-                NaviCamp Security Officer Verification System<br>
-                Mapua Malayan Colleges Laguna (MMCL) - Secure Administrative Portal<br>
-                {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
-            </div>
-        </div>
-        
-        <script>
-            let timeLeft = {CONFIG['AUTO_CLOSE_DELAY']};
-            let isPaused = false;
-            let countdownTimer;
-            const countdownElement = document.getElementById('countdown');
-            const containerElement = document.querySelector('.container');
-            
-            function updateCountdown() {{
-                if (!isPaused && timeLeft > 0) {{
-                    countdownElement.innerHTML = `🕒 This window will close automatically in ${{timeLeft}} seconds`;
-                    timeLeft--;
-                }} else if (!isPaused && timeLeft <= 0) {{
-                    countdownElement.innerHTML = "🕒 Closing window...";
-                    setTimeout(() => window.close(), 1000);
-                    return;
-                }} else if (isPaused) {{
-                    countdownElement.innerHTML = "⏸️ Timer paused - Move cursor away from card to resume";
-                }}
-                
-                countdownTimer = setTimeout(updateCountdown, 1000);
-            }}
-            
-            // Add hover event listeners to pause/resume timer
-            containerElement.addEventListener('mouseenter', function() {{
-                isPaused = true;
-            }});
-            
-            containerElement.addEventListener('mouseleave', function() {{
-                isPaused = false;
-                timeLeft = {CONFIG['AUTO_CLOSE_DELAY']}; // Reset timer to 10 seconds
-                countdownElement.innerHTML = `🕒 Timer reset - Window will close in ${{timeLeft}} seconds`;
-            }});
-            
-            // Start the countdown
-            updateCountdown();
-        </script>
-    </body>
-    </html>
-    """
-    
-    return html
-
-def check_user_status(cursor, user_id):
-    """Check if user exists and get their current status."""
-    try:
-        query = """
-        SELECT fullName, email, verified, proofPicture 
-        FROM user_table 
-        WHERE userID = %s
-        """
-        cursor.execute(query, (user_id,))
-        result = cursor.fetchone()
-        
-        if result:
-            return {
-                'exists': True,
-                'full_name': result[0],
-                'email': result[1],
-                'verified': bool(result[2]),
-                'proof_picture': result[3]
-            }
-        else:
-            return {'exists': False}
-    except Exception as e:
-        print(f"ERROR: Error checking user status: {e}")
-        return {'exists': False}
-
-def delete_s3_proof_image(proof_picture_filename):
-    """Delete proof image from S3 bucket with timeout controls."""
-    if not proof_picture_filename:
-        print(f"INFO: No proof picture filename provided, skipping S3 deletion")
-        return True
-    
-    try:
-        # Set timeouts for S3 operations
-        s3_client = boto3.client(
-            's3',
-            config=boto3.session.Config(
-                connect_timeout=10,
-                read_timeout=15,
-                retries={'max_attempts': 2}
-            )
-        )
-        bucket_name = 'navicampbucket'
-        # Don't add prefix - the filename already contains the full path
-        object_key = proof_picture_filename
-        
-        print(f"INFO: Attempting to delete S3 object: {object_key} from bucket: {bucket_name}")
-        
-        # Skip existence check to save time, just try to delete directly
-        s3_client.delete_object(Bucket=bucket_name, Key=object_key)
-        print(f"SUCCESS: Deleted S3 object {object_key}")
-        return True
-        
-    except ClientError as e:
-        error_code = e.response['Error']['Code']
-        if error_code == 'NoSuchKey':
-            print(f"WARNING: S3 object {object_key} not found, may have been already deleted")
-            return True  # Consider this a success since object doesn't exist
-        else:
-            print(f"ERROR: S3 ClientError deleting {object_key}: {error_code} - {e}")
-            return False
-    except Exception as e:
-        print(f"ERROR: Unexpected error deleting S3 object {object_key}: {e}")
-        return False
+def send_fcm_notification(tokens, title, body, data=None):
+    """Sends FCM notification to a list of tokens using Firebase HTTP v1 API."""
+    project_id = 'campus-navigator-ab838'
+    url = f'https://fcm.googleapis.com/v1/projects/{project_id}/messages:send'
+    access_token = get_access_token()
+    if not access_token:
+        logger.error("Could not get access token, cannot send FCM notification.")
+        return 0
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+    success_count = 0
+    for token in tokens:
+        payload = {"message": {"token": token, "notification": {"title": title, "body": body}, "data": data if data else {}, "android": {"priority": "high", "notification": {"sound": "default", "channel_id": "navicamp_notifications"}}}}
+        try:
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers)
+            with urllib.request.urlopen(req) as response:
+                if 200 <= response.status < 300:
+                    logger.info(f"Successfully sent FCM to token: ...{token[-20:]}")
+                    success_count += 1
+                else:
+                    logger.error(f"Failed to send FCM. Status: {response.status}, Response: {response.read().decode('utf-8')}")
+        except urllib.error.HTTPError as e:
+            logger.error(f"HTTP error sending FCM: {e.code} - {e.read().decode('utf-8')}")
+        except Exception as e:
+            logger.error(f"Error sending FCM notification: {str(e)}", exc_info=True)
+    logger.info(f"Successfully sent {success_count}/{len(tokens)} FCM notifications")
+    return success_count
 
 def lambda_handler(event, context):
-    """Enhanced Lambda handler that uses SQS for email notifications."""
-    print(f"INFO: Lambda execution started - Request ID: {context.aws_request_id}")
-    
+    """Main Lambda handler function"""
     try:
-        # Extract and validate parameters
-        params = event.get('queryStringParameters', {})
-        user_id = params.get('userID', '').strip()
-        action = params.get('action', '').strip().lower()
+        body = json.loads(event.get('body', '{}'))
+        logger.info(f"Received request: {json.dumps(body, default=str)}")
         
-        print(f"INFO: Processing request - User ID: {user_id}, Action: {action}")
-        
-        # Input validation
-        validation_errors = validate_input(user_id, action)
-        if validation_errors:
-            error_message = "Invalid request: " + "; ".join(validation_errors)
-            print(f"ERROR: {error_message}")
-            return {
-                'statusCode': 400,
-                'headers': {'Content-Type': 'text/html'},
-                'body': create_response_page(error_message, False, False)
-            }
-        
-        # Environment validation
-        if not all([SECRET_NAME, RDS_HOST, DB_NAME]):
-            print("ERROR: Missing required environment variables")
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'text/html'},
-                'body': create_response_page("Server configuration error: Missing environment variables.", False, False)
-            }
-        
-        # Get credentials
-        print("INFO: Retrieving database credentials")
-        secrets = get_secret()
-        db_username = secrets.get('username')
-        db_password = secrets.get('password')
-        
-        if not all([db_username, db_password]):
-            print("ERROR: Incomplete credentials in secret")
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'text/html'},
-                'body': create_response_page("Server configuration error: Incomplete credentials.", False, False)
-            }
-        
-        # Database operations
-        print("INFO: Connecting to database")
-        connection = None
-        try:
-            connection = pymysql.connect(
-                host=RDS_HOST,
-                user=db_username,
-                password=db_password,
-                database=DB_NAME,
-                connect_timeout=30,
-                read_timeout=30,
-                write_timeout=30
-            )
-            
-            with connection.cursor() as cursor:
-                # Check current user status
-                print(f"INFO: Checking status for user {user_id}")
-                user_status = check_user_status(cursor, user_id)
-                
-                if not user_status['exists']:
-                    message = f"Security Officer {user_id} not found in the database."
-                    print(f"WARNING: {message}")
-                    return {
-                        'statusCode': 404,
-                        'headers': {'Content-Type': 'text/html'},
-                        'body': create_response_page(message, False, False)
-                    }
-                
-                # Duplicate action prevention
-                if action == 'verify':
-                    if user_status['verified']:
-                        message = f"Security Officer {user_status['full_name']} ({user_id}) is already verified. No action taken."
-                        print(f"INFO: {message}")
-                        return {
-                            'statusCode': 200,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(
-                                message, 
-                                True, 
-                                False,
-                                {
-                                    'user_id': user_id,
-                                    'full_name': user_status['full_name'],
-                                    'action': 'Already Verified'
-                                }
-                            )
-                        }
-                    
-                    # Proceed with verification
-                    print(f"INFO: Verifying user {user_id}")
-                    update_query = "UPDATE user_table SET verified = 1 WHERE userID = %s"
-                    cursor.execute(update_query, (user_id,))
-                    connection.commit()
-                    
-                    if cursor.rowcount > 0:
-                        message = f"✅ Security Officer {user_status['full_name']} ({user_id}) has been successfully verified and authorized!"
-                        print(f"SUCCESS: User {user_id} verified")
-                        
-                        # Send notification email via SQS
-                        email_sent = send_email_via_sqs(
-                            user_status['full_name'], 
-                            user_id, 
-                            "verified", 
-                            user_status['email']
-                        )
-                        
-                        return {
-                            'statusCode': 200,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(
-                                message, 
-                                True, 
-                                email_sent,
-                                {
-                                    'user_id': user_id,
-                                    'full_name': user_status['full_name'],
-                                    'action': 'Verified'
-                                }
-                            )
-                        }
-                    else:
-                        message = f"Failed to verify Security Officer {user_id}. Database update unsuccessful."
-                        print(f"ERROR: {message}")
-                        return {
-                            'statusCode': 500,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(message, False, False)
-                        }
-                
-                elif action == 'reject':
-                    # Check if user is already verified - prevent deletion of verified users
-                    if user_status['verified']:
-                        message = f"❌ Cannot reject Security Officer {user_status['full_name']} ({user_id}) - Officer is already verified and active in the system. Verified officers cannot be deleted to prevent data loss."
-                        print(f"WARNING: Attempted to reject verified user {user_id}")
-                        return {
-                            'statusCode': 403,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(
-                                message, 
-                                False, 
-                                False,
-                                {
-                                    'user_id': user_id,
-                                    'full_name': user_status['full_name'],
-                                    'action': 'Rejection Blocked - Officer Already Verified'
-                                }
-                            )
-                        }
-                    
-                    # Proceed with rejection (deletion) only for unverified users
-                    print(f"INFO: Rejecting unverified user {user_id}")
-                    
-                    # First, delete the proof image from S3 if it exists (with timeout protection)
-                    s3_deletion_success = True
-                    if user_status.get('proof_picture'):
-                        print(f"INFO: Deleting proof image for user {user_id}: {user_status['proof_picture']}")
-                        try:
-                            s3_deletion_success = delete_s3_proof_image(user_status['proof_picture'])
-                            if not s3_deletion_success:
-                                print(f"WARNING: Failed to delete S3 proof image, but continuing with database deletion")
-                        except Exception as e:
-                            print(f"WARNING: S3 deletion failed with exception: {e}, but continuing with database deletion")
-                            s3_deletion_success = False
-                    else:
-                        print(f"INFO: No proof picture found for user {user_id}, skipping S3 deletion")
-                    
-                    # Delete from database
-                    delete_query = "DELETE FROM user_table WHERE userID = %s AND verified = 0"
-                    cursor.execute(delete_query, (user_id,))
-                    connection.commit()
-                    
-                    if cursor.rowcount > 0:
-                        # Construct success message (always clean, regardless of S3 status)
-                        message = f"❌ Security Officer application for {user_status['full_name']} ({user_id}) has been rejected and removed from the system."
-                        
-                        print(f"SUCCESS: Unverified user {user_id} rejected and deleted")
-                        
-                        # Send notification email via SQS
-                        email_sent = send_email_via_sqs(
-                            user_status['full_name'], 
-                            user_id, 
-                            "rejected", 
-                            user_status['email']
-                        )
-                        
-                        return {
-                            'statusCode': 200,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(
-                                message, 
-                                True, 
-                                email_sent,
-                                {
-                                    'user_id': user_id,
-                                    'full_name': user_status['full_name'],
-                                    'action': 'Rejected'
-                                }
-                            )
-                        }
-                    else:
-                        message = f"Failed to reject Security Officer {user_id}. Officer may not exist or may already be verified."
-                        print(f"ERROR: {message}")
-                        return {
-                            'statusCode': 500,
-                            'headers': {'Content-Type': 'text/html'},
-                            'body': create_response_page(message, False, False)
-                        }
-        
-        except pymysql.Error as e:
-            error_msg = f"Database error: {str(e)}"
-            print(f"ERROR: {error_msg}")
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'text/html'},
-                'body': create_response_page(f"Database operation failed: {str(e)}", False, False)
-            }
-        
-        finally:
-            if connection:
-                connection.close()
-                print("INFO: Database connection closed")
-    
+        # FIX #1: Handle both 'notificationType' (from assistance req) and 'type' (from officer res)
+        notification_type = body.get('notificationType', body.get('type', ''))
+
+        if notification_type == 'assistance_request':
+            return handle_assistance_request(body)
+        elif notification_type == 'officer_response':
+            return handle_officer_response(body)
+        elif notification_type == 'assistance_resolved':
+            return handle_assistance_resolved(body)
+        else:
+            return create_error_response(f"Unknown or missing notification type. Received: '{notification_type}'")
     except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
-        print(f"ERROR: {error_msg}")
-        print(f"ERROR: Traceback: {traceback.format_exc()}")
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'text/html'},
-            'body': create_response_page("An unexpected server error occurred. Please try again later.", False, False)
-        } 
+        logger.error(f"CRITICAL ERROR in lambda_handler: {str(e)}", exc_info=True)
+        return create_error_response("Internal server error occurred", 500)
+
+def handle_assistance_request(body):
+    """Handles new assistance requests"""
+    location_id = body.get('locationID')
+    user_id = body.get('userID')
+    if not all([location_id, user_id]):
+        return create_error_response("locationID and userID are required for assistance request")
+
+    user_details = get_user_details(user_id)
+    details = get_assistance_details(location_id)
+    if not user_details or not details:
+        return create_error_response("Could not retrieve user or assistance details")
+
+    user_name = user_details.get('fullName', 'A user')
+    floor = details.get('floorLevel', 'an unknown location')
+    device_id = details.get('deviceID', 'Unknown device')
+    alert_id = details.get('alertID', 'Unknown')
+    title = f"🚨 Assistance Request at {floor}"
+    message_body = f"{user_name} needs help. (Device: {device_id}) [Alert: {alert_id}]"
+    
+    # FIX #2: Use 'type' key consistently for Android app to parse correctly
+    data = {
+        "type": "assistance_request", "locationID": str(location_id), "userID": str(user_id),
+        "fullName": user_name, "floorLevel": floor, "deviceID": str(device_id),
+        "alertID": str(alert_id), "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    tokens = get_security_officer_tokens()
+    if not tokens:
+        return create_error_response("No security officers available to notify")
+    success_count = send_fcm_notification(tokens, title, message_body, data)
+    return create_success_response(f"Sent assistance request to {success_count}/{len(tokens)} officers.")
+
+def get_other_security_officer_tokens(responding_officer_id):
+    """Get all FCM tokens for verified Security Officers, excluding the responding officer"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            query = "SELECT fcm_token FROM user_table WHERE userType = 'Security Officer' AND verified = 1 AND fcm_token IS NOT NULL AND fcm_token != '' AND userID != %s"
+            cursor.execute(query, (responding_officer_id,))
+            tokens = [row['fcm_token'] for row in cursor.fetchall()]
+            logger.info(f"Found {len(tokens)} other officers to notify.")
+            return tokens
+    except Exception as e:
+        logger.error(f"Error getting other security officer tokens: {str(e)}")
+        return []
+    finally:
+        if connection:
+            connection.close()
+
+def get_user_fcm_token(user_id):
+    """Get FCM token for a specific user"""
+    connection = None
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            query = "SELECT fcm_token FROM user_table WHERE userID = %s AND fcm_token IS NOT NULL AND fcm_token != ''"
+            cursor.execute(query, (user_id,))
+            result = cursor.fetchone()
+            if result:
+                logger.info(f"Found FCM token for user {user_id}")
+                return result['fcm_token']
+            else:
+                logger.warning(f"No FCM token found for user {user_id}")
+                return None
+    except Exception as e:
+        logger.error(f"Error getting FCM token for user {user_id}: {str(e)}")
+        return None
+    finally:
+        if connection:
+            connection.close()
+
+def handle_officer_response(body):
+    """Handles officer responding to an assistance request"""
+    location_id = body.get('locationID')
+    officer_id = body.get('officerID')
+    user_id = body.get('userID', '')
+    
+    if not all([location_id, officer_id]):
+        return create_error_response("locationID and officerID are required for officer response")
+    
+    officer_details = get_user_details(officer_id)
+    if not officer_details:
+        return create_error_response(f"Could not find details for officer {officer_id}")
+    
+    # Get assistance details to extract alertID
+    assistance_details = get_assistance_details(location_id)
+    alert_id = assistance_details.get('alertID', 'Unknown') if assistance_details else 'Unknown'
+    
+    officer_name = officer_details.get('fullName', 'An officer')
+    
+    # Notify other officers that this officer is responding
+    other_officer_tokens = get_other_security_officer_tokens(officer_id)
+    officers_notified = 0
+    if other_officer_tokens:
+        title = "✅ Assistance Claimed"
+        notification_body = f"{officer_name} is responding to the request. [Alert: {alert_id}]"
+        data = {
+            "type": "officer_response", "locationID": str(location_id), "officerID": str(officer_id),
+            "officerName": officer_name, "userID": user_id, "alertID": str(alert_id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        officers_notified = send_fcm_notification(other_officer_tokens, title, notification_body, data)
+    
+    # Notify the user who requested assistance that help is coming
+    user_notified = 0
+    if user_id:
+        user_token = get_user_fcm_token(user_id)
+        if user_token:
+            user_title = "🚀 Help is Coming!"
+            user_notification_body = f"{officer_name} is coming to assist you. [Alert: {alert_id}]"
+            user_data = {
+                "type": "officer_coming", "locationID": str(location_id), "officerID": str(officer_id),
+                "officerName": officer_name, "userID": user_id, "alertID": str(alert_id),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            user_notified = send_fcm_notification([user_token], user_title, user_notification_body, user_data)
+    
+    # Create response message
+    messages = [f"Response from {officer_name} recorded."]
+    if officers_notified > 0:
+        messages.append(f"Notified {officers_notified} other officer(s).")
+    if user_notified > 0:
+        messages.append(f"Notified user that help is coming.")
+    elif user_id:
+        messages.append("Could not notify user (no FCM token found).")
+    
+    return create_success_response(" ".join(messages))
+
+def handle_assistance_resolved(body):
+    """Handles assistance resolution notifications"""
+    logger.info("Assistance resolved notification received")
+    
+    location_id = body.get('locationID')
+    user_id = body.get('userID')
+    officer_id = body.get('officerID', '')  # The officer who resolved it
+    
+    if not all([location_id, user_id]):
+        return create_error_response("locationID and userID are required for assistance resolved")
+    
+    # Get user details who originally requested assistance
+    user_details = get_user_details(user_id)
+    assistance_details = get_assistance_details(location_id)
+    
+    if not user_details:
+        return create_error_response(f"Could not find details for user {user_id}")
+    
+    user_name = user_details.get('fullName', 'A user')
+    floor = assistance_details.get('floorLevel', 'unknown location') if assistance_details else 'unknown location'
+    alert_id = assistance_details.get('alertID', 'Unknown') if assistance_details else 'Unknown'
+    
+    # Notify all security officers EXCEPT the one who resolved it
+    if officer_id:
+        officer_tokens = get_other_security_officer_tokens(officer_id)
+    else:
+        officer_tokens = get_security_officer_tokens()
+    
+    officers_notified = 0
+    
+    if officer_tokens:
+        title = "✅ Assistance Resolved"
+        notification_body = f"{user_name}'s assistance request on {floor} has been resolved. [Alert: {alert_id}]"
+        data = {
+            "type": "assistance_resolved", "locationID": str(location_id), "userID": str(user_id),
+            "userName": user_name, "floorLevel": floor, "alertID": str(alert_id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        officers_notified = send_fcm_notification(officer_tokens, title, notification_body, data)
+    
+    # Create response message
+    if officers_notified > 0:
+        return create_success_response(f"Assistance resolved. Notified {officers_notified} other officer(s).")
+    else:
+        return create_success_response("Assistance resolved. No other officers to notify.")
+
+def create_success_response(message):
+    """Create a successful response"""
+    return {'statusCode': 200, 'body': json.dumps({'success': True, 'message': message})}
+
+def create_error_response(message, status_code=400):
+    """Create an error response"""
+    return {'statusCode': status_code, 'body': json.dumps({'success': False, 'error': message})} 

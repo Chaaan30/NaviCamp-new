@@ -16,3 +16,9 @@ local.properties
 
 # Ignore config.properties file
 app/src/main/assets/config.properties
+
+# Lambda deployment files
+lambda-layer/
+*.zip
+deployment-packages/
+tmp_*/

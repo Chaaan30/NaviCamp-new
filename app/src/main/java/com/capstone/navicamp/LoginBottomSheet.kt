@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import com.amazonaws.services.s3.model.PutObjectRequest
+import com.google.firebase.messaging.FirebaseMessaging
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
 
@@ -110,6 +111,9 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                                 putBoolean("isLoggedIn", true)
                                 apply()
                             }
+
+                            // Register FCM token for all users
+                            registerFCMToken(userData.userID)
 
                             val intent = when (userData.userType) {
                                 "Student", "Personnel", "Visitor" -> Intent(context, LocomotorDisabilityActivity::class.java)
@@ -272,6 +276,34 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             }
         }
         return path ?: ""
+    }
+
+    private fun registerFCMToken(userID: String) {
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("LoginBottomSheet", "Fetching FCM registration token failed", task.exception)
+                    return@addOnCompleteListener
+                }
+
+                // Get new FCM registration token
+                val token = task.result
+                Log.d("LoginBottomSheet", "FCM Token: $token")
+
+                // Update token in database
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val success = MySQLHelper.updateUserFCMToken(userID, token)
+                        if (success) {
+                            Log.d("LoginBottomSheet", "FCM token updated successfully for user: $userID")
+                        } else {
+                            Log.e("LoginBottomSheet", "Failed to update FCM token for user: $userID")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("LoginBottomSheet", "Error updating FCM token: ${e.message}", e)
+                    }
+                }
+            }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
