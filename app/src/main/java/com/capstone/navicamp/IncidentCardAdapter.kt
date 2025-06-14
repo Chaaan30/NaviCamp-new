@@ -135,7 +135,7 @@ class IncidentCardAdapter(
             statusBadge.text = status.uppercase()
             
             when (status.lowercase()) {
-                "active", "pending" -> {
+                "ongoing", "pending" -> {
                     statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_red_light))
                     statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
                 }
@@ -223,7 +223,7 @@ class IncidentCardAdapter(
             
             // Long press for resolve functionality (as buttons were removed)
             itemView.setOnLongClickListener {
-                if (incident.status.lowercase() == "active") {
+                if (incident.status.lowercase() == "ongoing") {
                     onResolveClick(incident)
                     true
                 } else {

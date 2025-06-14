@@ -113,7 +113,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                             }
 
                             // Register FCM token for all users
-                            registerFCMToken(userData.userID)
+                                registerFCMToken(userData.userID)
 
                             val intent = when (userData.userType) {
                                 "Student", "Personnel", "Visitor" -> Intent(context, LocomotorDisabilityActivity::class.java)

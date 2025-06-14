@@ -8,6 +8,19 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if setup has been completed
+        val appPrefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val setupCompleted = appPrefs.getBoolean("setup_completed", false)
+        
+        if (!setupCompleted) {
+            // First time user - redirect to setup
+            val intent = Intent(this, SetupActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+
         setContentView(R.layout.activity_main)
 
         // Retrieve token, fullName, and userType from SharedPreferences
@@ -36,7 +49,6 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             // No token, fullName, or userType, show login/register screen
-            setContentView(R.layout.activity_main)
             val showRegisterButton = findViewById<Button>(R.id.show_register_button)
             showRegisterButton.setOnClickListener {
                 val registerBottomSheet = RegisterBottomSheet()

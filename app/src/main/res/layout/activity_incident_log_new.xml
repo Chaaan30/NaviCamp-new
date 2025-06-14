@@ -254,11 +254,11 @@
                         android:layout_marginEnd="6dp" />
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_active"
+                        android:id="@+id/chip_ongoing"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Active"
+                        android:text="Ongoing"
                         android:textColor="@color/primaryColor"
                         app:chipBackgroundColor="@android:color/white"
                         app:chipStrokeColor="@color/primaryColor"

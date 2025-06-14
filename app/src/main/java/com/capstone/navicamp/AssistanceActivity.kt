@@ -1,22 +1,17 @@
 package com.capstone.navicamp
 
-import android.Manifest
 import android.app.Dialog
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import com.google.firebase.messaging.FirebaseMessaging
@@ -31,22 +26,6 @@ class AssistanceActivity : AppCompatActivity() {
     private lateinit var navigationView: NavigationView
     private lateinit var assistanceButton: Button
     private var loadingDialog: Dialog? = null
-
-    // Permission launcher for notification permissions
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(this, "Notification permission granted! You will receive assistance updates.", Toast.LENGTH_SHORT).show()
-        } else {
-            // Show explanation dialog
-            AlertDialog.Builder(this)
-                .setTitle("Notification Permission Required")
-                .setMessage("To receive assistance updates when help is on the way, please enable notifications in your device settings.")
-                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
-                .show()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,9 +88,6 @@ class AssistanceActivity : AppCompatActivity() {
         // Log to verify UserSingleton is properly set for FCM token management
         Log.d("AssistanceActivity", "UserSingleton.userID set to: ${UserSingleton.userID}")
 
-        // Request notification permission for receiving assistance updates
-        requestNotificationPermission()
-
         // Register FCM token for this user
         registerFCMTokenForUser()
 
@@ -150,40 +126,6 @@ class AssistanceActivity : AppCompatActivity() {
                 Log.e("AssistanceActivity", "User ID or Full Name is null")
                 Toast.makeText(this, "User ID or Full Name is missing. Please log in again.", Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Permission already granted
-                    Log.d("NotificationPermission", "Notification permission already granted")
-                }
-                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
-                    // Show explanation dialog
-                    AlertDialog.Builder(this)
-                        .setTitle("Notification Permission Needed")
-                        .setMessage("This app needs notification permission to alert you when assistance is on the way. This helps ensure you don't miss important updates about your assistance requests.")
-                        .setPositiveButton("Grant Permission") { _, _ ->
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                        .setNegativeButton("Skip") { dialog, _ ->
-                            dialog.dismiss()
-                        }
-                        .show()
-                }
-                else -> {
-                    // Request permission directly
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
-        } else {
-            // For Android versions below 13, notifications are automatically granted
-            Log.d("NotificationPermission", "Android version below 13, notification permission not required")
         }
     }
 

@@ -169,6 +169,8 @@ def lambda_handler(event, context):
             return handle_officer_response(body)
         elif notification_type == 'assistance_resolved':
             return handle_assistance_resolved(body)
+        elif notification_type == 'false_alarm':
+            return handle_false_alarm(body)
         else:
             return create_error_response(f"Unknown or missing notification type. Received: '{notification_type}'")
     except Exception as e:
@@ -343,11 +345,54 @@ def handle_assistance_resolved(body):
         }
         officers_notified = send_fcm_notification(officer_tokens, title, notification_body, data)
     
-    # Create response message
-    if officers_notified > 0:
-        return create_success_response(f"Assistance resolved. Notified {officers_notified} other officer(s).")
+    return create_success_response(f"Sent assistance resolved notification to {officers_notified} officers.")
+
+def handle_false_alarm(body):
+    """Handles false alarm notifications"""
+    logger.info("False alarm notification received")
+    
+    location_id = body.get('locationID')
+    user_id = body.get('userID')
+    officer_id = body.get('officerID', '')  # The officer who marked it as false alarm
+    reason = body.get('reason', '')  # Optional reason for false alarm
+    
+    if not all([location_id, user_id]):
+        return create_error_response("locationID and userID are required for false alarm")
+    
+    # Get user details who originally requested assistance
+    user_details = get_user_details(user_id)
+    assistance_details = get_assistance_details(location_id)
+    
+    if not user_details:
+        return create_error_response(f"Could not find details for user {user_id}")
+    
+    user_name = user_details.get('fullName', 'A user')
+    floor = assistance_details.get('floorLevel', 'unknown location') if assistance_details else 'unknown location'
+    alert_id = assistance_details.get('alertID', 'Unknown') if assistance_details else 'Unknown'
+    
+    # Notify all security officers EXCEPT the one who marked it as false alarm
+    if officer_id:
+        officer_tokens = get_other_security_officer_tokens(officer_id)
     else:
-        return create_success_response("Assistance resolved. No other officers to notify.")
+        officer_tokens = get_security_officer_tokens()
+    
+    officers_notified = 0
+    
+    if officer_tokens:
+        title = "🚫 False Alarm"
+        notification_body = f"{user_name}'s assistance request on {floor} was marked as false alarm."
+        if reason:
+            notification_body += f" Reason: {reason}"
+        notification_body += f" [Alert: {alert_id}]"
+        
+        data = {
+            "type": "false_alarm", "locationID": str(location_id), "userID": str(user_id),
+            "userName": user_name, "floorLevel": floor, "alertID": str(alert_id),
+            "reason": reason, "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        officers_notified = send_fcm_notification(officer_tokens, title, notification_body, data)
+    
+    return create_success_response(f"Sent false alarm notification to {officers_notified} officers.")
 
 def create_success_response(message):
     """Create a successful response"""
