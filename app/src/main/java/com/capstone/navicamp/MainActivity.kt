@@ -10,6 +10,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Check battery optimization on app startup
+        checkBatteryOptimization()
+
         // Retrieve token, fullName, and userType from SharedPreferences
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val isLoggedIn = userPrefs.getBoolean("isLoggedIn", false)
@@ -48,6 +51,21 @@ class MainActivity : AppCompatActivity() {
                 val loginBottomSheet = LoginBottomSheet()
                 loginBottomSheet.show(supportFragmentManager, "LoginBottomSheet")
             }
+        }
+    }
+
+    private fun checkBatteryOptimization() {
+        // Check if we should show battery optimization dialog
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown", false)
+        
+        if (!hasShownDialog && !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            // Show dialog after a short delay to let the UI settle
+            window.decorView.postDelayed({
+                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
+                // Mark as shown so we don't show it every time
+                prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
+            }, 1000)
         }
     }
 }

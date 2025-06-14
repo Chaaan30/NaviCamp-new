@@ -269,10 +269,10 @@ def handle_officer_response(body):
     other_officer_tokens = get_other_security_officer_tokens(officer_id)
     officers_notified = 0
     if other_officer_tokens:
-        title = "✅ Assistance Claimed"
+    title = "✅ Assistance Claimed"
         notification_body = f"{officer_name} is responding to the request. [Alert: {alert_id}]"
-        data = {
-            "type": "officer_response", "locationID": str(location_id), "officerID": str(officer_id),
+    data = {
+        "type": "officer_response", "locationID": str(location_id), "officerID": str(officer_id),
             "officerName": officer_name, "userID": user_id, "alertID": str(alert_id),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
@@ -288,8 +288,8 @@ def handle_officer_response(body):
             user_data = {
                 "type": "officer_coming", "locationID": str(location_id), "officerID": str(officer_id),
                 "officerName": officer_name, "userID": user_id, "alertID": str(alert_id),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
             user_notified = send_fcm_notification([user_token], user_title, user_notification_body, user_data)
     
     # Create response message

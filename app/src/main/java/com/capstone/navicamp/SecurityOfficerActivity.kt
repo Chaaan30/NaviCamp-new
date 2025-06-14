@@ -153,6 +153,12 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     true
                 }
 
+                R.id.nav_notification_settings -> {
+                    // Show battery optimization settings
+                    showNotificationSettingsDialog()
+                    true
+                }
+
                 else -> false
             }
         }
@@ -284,6 +290,25 @@ class SecurityOfficerActivity : AppCompatActivity() {
         // Stop polling when activity is destroyed
         smartPollingManager.stopPolling()
         unregisterReceiver(dataChangeReceiver)
+    }
+
+    private fun showNotificationSettingsDialog() {
+        val isOptimized = !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)
+        val status = if (isOptimized) "❌ Battery optimization is ON" else "✅ Battery optimization is OFF"
+        
+        AlertDialog.Builder(this)
+            .setTitle("Notification Settings")
+            .setMessage("Current status: $status\n\nFor reliable assistance notifications when the app is closed, please disable battery optimization for NaviCamp.")
+            .setPositiveButton("Open Settings") { _, _ ->
+                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
+            }
+            .setNeutralButton("Device Instructions") { _, _ ->
+                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun fetchUnverifiedUsers() {
