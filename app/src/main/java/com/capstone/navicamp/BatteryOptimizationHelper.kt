@@ -43,6 +43,41 @@ object BatteryOptimizationHelper {
             .setCancelable(false)
             .show()
     }
+
+    /**
+     * Show dialog with callback to mark as shown only when user opens settings
+     */
+    fun showBatteryOptimizationDialogWithCallback(
+        context: Context, 
+        title: String, 
+        message: String, 
+        onSettingsOpened: () -> Unit
+    ) {
+        if (isIgnoringBatteryOptimizations(context)) {
+            // Already optimized, mark as shown since no action needed
+            onSettingsOpened()
+            return
+        }
+        
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("Open Settings") { _, _ ->
+                requestIgnoreBatteryOptimizations(context)
+                // Only mark as shown when user actually opens settings
+                onSettingsOpened()
+            }
+            .setNeutralButton("Device Instructions") { _, _ ->
+                showManufacturerSpecificInstructions(context)
+                // Don't mark as shown - user just viewed instructions
+            }
+            .setNegativeButton("Later") { dialog, _ ->
+                dialog.dismiss()
+                // Don't mark as shown - user dismissed without action
+            }
+            .setCancelable(false)
+            .show()
+    }
     
     /**
      * Open battery optimization settings for the app

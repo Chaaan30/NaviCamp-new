@@ -59,12 +59,25 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown", false)
         
-        if (!hasShownDialog && !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+        // If battery optimization is now disabled, mark as shown (user fixed it)
+        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            if (!hasShownDialog) {
+                prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
+            }
+            return
+        }
+        
+        if (!hasShownDialog) {
             // Show dialog after a short delay to let the UI settle
             window.decorView.postDelayed({
-                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
-                // Mark as shown so we don't show it every time
-                prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
+                BatteryOptimizationHelper.showBatteryOptimizationDialogWithCallback(
+                    this,
+                    "Enable Background Notifications",
+                    "To receive assistance notifications when the app is closed, please disable battery optimization for NaviCamp.\n\nThis ensures you'll get notified immediately when help is needed."
+                ) {
+                    // Only mark as shown when user opens settings or optimization is already disabled
+                    prefs.edit().putBoolean("battery_optimization_dialog_shown", true).apply()
+                }
             }, 1000)
         }
     }

@@ -466,6 +466,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        
+        // Re-check battery optimization when returning from settings
+        checkBatteryOptimizationOnResume()
+        
         // Retrieve the full name and userID from SharedPreferences
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         currentUserFullName = userPrefs.getString("fullName", "Full Name!")
@@ -556,31 +560,38 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_user", false)
         
-        if (!hasShownDialog && !BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+        // If battery optimization is now disabled, mark as shown (user fixed it)
+        if (BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            if (!hasShownDialog) {
+                prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
+            }
+            return
+        }
+        
+        if (!hasShownDialog) {
             // Show dialog after a short delay to let the UI settle
             window.decorView.postDelayed({
-                showBatteryOptimizationForUser()
-                // Mark as shown so we don't show it every time
-                prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
+                BatteryOptimizationHelper.showBatteryOptimizationDialogWithCallback(
+                    this,
+                    "📱 Stay Connected for Help",
+                    "To receive notifications when security officers respond to your assistance requests, please disable battery optimization for NaviCamp.\n\nThis ensures you'll know when help is on the way, even if the app is closed."
+                ) {
+                    // Only mark as shown when user opens settings or optimization is already disabled
+                    prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
+                }
             }, 1500) // Delay for user dashboard
         }
     }
 
-    private fun showBatteryOptimizationForUser() {
-        AlertDialog.Builder(this)
-            .setTitle("📱 Stay Connected for Help")
-            .setMessage("To receive notifications when security officers respond to your assistance requests, please disable battery optimization for NaviCamp.\n\nThis ensures you'll know when help is on the way, even if the app is closed.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                BatteryOptimizationHelper.showBatteryOptimizationDialog(this)
-            }
-            .setNeutralButton("Device Instructions") { _, _ ->
-                BatteryOptimizationHelper.showManufacturerSpecificInstructions(this)
-            }
-            .setNegativeButton("Later") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setCancelable(false)
-            .show()
+    private fun checkBatteryOptimizationOnResume() {
+        // Check if user has now disabled battery optimization after returning from settings
+        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        val hasShownDialog = prefs.getBoolean("battery_optimization_dialog_shown_user", false)
+        
+        if (!hasShownDialog && BatteryOptimizationHelper.isIgnoringBatteryOptimizations(this)) {
+            // User fixed the battery optimization, mark as shown
+            prefs.edit().putBoolean("battery_optimization_dialog_shown_user", true).apply()
+        }
     }
 
     private fun showNotificationSettingsDialog() {
