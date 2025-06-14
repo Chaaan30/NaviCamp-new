@@ -2,20 +2,26 @@ package com.capstone.navicamp
 
 import androidx.appcompat.app.AlertDialog
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.navigation.NavigationView
+import com.google.firebase.messaging.FirebaseMessaging
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +48,21 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private var currentUserID: String? = null
     private var currentUserFullName: String? = null
 
+    // Permission launcher for notification permissions
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(this, "Notification permission granted! You will receive assistance updates.", Toast.LENGTH_SHORT).show()
+        } else {
+            // Show explanation dialog
+            AlertDialog.Builder(this)
+                .setTitle("Notification Permission Required")
+                .setMessage("To receive assistance updates when help is on the way, please enable notifications in your device settings.")
+                .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+                .show()
+        }
+    }
 
     private val qrCodeScannerLauncher = registerForActivityResult(ScanContract()) { result ->
         if (result.contents == null) {
@@ -86,6 +107,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         currentUserID = sharedPreferences.getString("userID", null)
         currentUserFullName = sharedPreferences.getString("fullName", "User")
+
+        // Set UserSingleton values for FCM token management
+        UserSingleton.userID = currentUserID
+        UserSingleton.fullName = currentUserFullName
 
 
         // Initialize navigationView
@@ -146,6 +171,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         updateConnectionStatusUI()
 
+        // Request notification permission for receiving assistance updates
+        requestNotificationPermission()
+
+        // Register FCM token for this user
+        registerFCMToken()
+
         // Set up the Ask for assistance button
         assistanceButton.setOnClickListener {
             if (connectedDeviceID != null && currentUserID != null && currentUserFullName != null) {
@@ -175,6 +206,72 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 // Already connected, so disconnect
                 disconnectFromDevice()
             }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // Permission already granted
+                    Log.d("NotificationPermission", "Notification permission already granted")
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // Show explanation dialog
+                    AlertDialog.Builder(this)
+                        .setTitle("Notification Permission Needed")
+                        .setMessage("This app needs notification permission to alert you when assistance is on the way. This helps ensure you don't miss important updates about your assistance requests.")
+                        .setPositiveButton("Grant Permission") { _, _ ->
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        .setNegativeButton("Skip") { dialog, _ ->
+                            dialog.dismiss()
+                        }
+                        .show()
+                }
+                else -> {
+                    // Request permission directly
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            // For Android versions below 13, notifications are automatically granted
+            Log.d("NotificationPermission", "Android version below 13, notification permission not required")
+        }
+    }
+
+    private fun registerFCMToken() {
+        if (currentUserID != null) {
+            FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        Log.w("LocomotorDisability", "Fetching FCM registration token failed", task.exception)
+                        return@addOnCompleteListener
+                    }
+
+                    // Get new FCM registration token
+                    val token = task.result
+                    Log.d("LocomotorDisability", "FCM Token: $token")
+
+                    // Update token in database
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val success = MySQLHelper.updateUserFCMToken(currentUserID!!, token)
+                            if (success) {
+                                Log.d("LocomotorDisability", "FCM token updated successfully for user: $currentUserID")
+                            } else {
+                                Log.e("LocomotorDisability", "Failed to update FCM token for user: $currentUserID")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("LocomotorDisability", "Error updating FCM token: ${e.message}", e)
+                        }
+                    }
+                }
+        } else {
+            Log.w("LocomotorDisability", "Cannot register FCM token - currentUserID is null")
         }
     }
 

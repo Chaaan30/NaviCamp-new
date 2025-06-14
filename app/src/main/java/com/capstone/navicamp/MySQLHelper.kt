@@ -18,6 +18,13 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // Data class to hold active connection information
 data class ActiveConnectionInfo(
@@ -511,6 +518,9 @@ object MySQLHelper {
             val rowsAffected = statement.executeUpdate()
             if (rowsAffected > 0) {
                 SmartPollingManager.getInstance().triggerFastUpdate()
+                
+                // Send FCM notification about assistance resolution
+                sendAssistanceResolvedNotification(locationID, status, officerName)
             }
             rowsAffected > 0
         } catch (e: SQLException) {
@@ -628,6 +638,9 @@ object MySQLHelper {
                 )
                 context.sendBroadcast(intent)
                 SmartPollingManager.getInstance().triggerFastUpdate()
+                
+                // Send FCM notification to all Security Officers about new assistance request
+                sendAssistanceRequestNotification(locationID, userID)
             }
             locationRows > 0 && incidentRows > 0
         } catch (e: SQLException) {
@@ -1284,6 +1297,9 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Updated incident response: $rowsAffected rows affected")
             if (rowsAffected > 0) {
                 SmartPollingManager.getInstance().triggerFastUpdate()
+                
+                // Send FCM notification about officer response
+                sendOfficerResponseNotification(locationID, officerName)
             }
             rowsAffected > 0
         } catch (e: SQLException) {
@@ -1777,6 +1793,72 @@ object MySQLHelper {
     }
 
     // In MySQLHelper.kt, update the getAssistanceDetails function
+    fun updateUserFCMToken(userID: String, fcmToken: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE user_table SET fcm_token = ? WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, fcmToken)
+            statement.setString(2, userID)
+
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getAllSecurityOfficerFCMTokens(): List<String> {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        val tokens = mutableListOf<String>()
+        
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return emptyList()
+            }
+
+            val query = """
+                SELECT fcm_token FROM user_table 
+                WHERE userType = 'Security Officer' 
+                AND verified = 1 
+                AND fcm_token IS NOT NULL 
+                AND fcm_token != ''
+            """
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+
+            while (resultSet.next()) {
+                val token = resultSet.getString("fcm_token")
+                if (!token.isNullOrBlank()) {
+                    tokens.add(token)
+                }
+            }
+            tokens
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            emptyList()
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun getAssistanceDetails(locationId: String): LocationItem? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -1921,5 +2003,179 @@ object MySQLHelper {
             connection?.close()
         }
         return users
+    }
+
+    // FCM Notification Integration Functions
+    
+    private fun sendAssistanceRequestNotification(locationID: String, userID: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = "https://cl67pknqo8.execute-api.ap-southeast-1.amazonaws.com/prod/fcm-notification"
+                val client = OkHttpClient()
+                
+                val jsonBody = """
+                    {
+                        "notificationType": "assistance_request",
+                        "locationID": "$locationID",
+                        "userID": "$userID"
+                    }
+                """.trimIndent()
+                
+                val body = jsonBody.toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url(url)
+                    .post(body)
+                    .build()
+                
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("MySQLHelper", "Assistance request notification sent successfully")
+                    } else {
+                        Log.e("MySQLHelper", "Failed to send assistance request notification: ${response.code}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Error sending assistance request notification: ${e.message}")
+            }
+        }
+    }
+    
+    private fun sendOfficerResponseNotification(locationID: String, officerName: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Get userID for the officer
+                val officerUserID = getUserIDByFullName(officerName)
+                // Get userID from the assistance request
+                val assistanceUserID = getUserIDByLocationID(locationID)
+                
+                if (officerUserID != null && assistanceUserID != null) {
+                    val url = "https://cl67pknqo8.execute-api.ap-southeast-1.amazonaws.com/prod/fcm-notification"
+                    val client = OkHttpClient()
+                    
+                    val jsonBody = """
+                        {
+                            "notificationType": "officer_response",
+                            "locationID": "$locationID",
+                            "officerID": "$officerUserID",
+                            "userID": "$assistanceUserID"
+                        }
+                    """.trimIndent()
+                    
+                    val body = jsonBody.toRequestBody("application/json".toMediaType())
+                    val request = Request.Builder()
+                        .url(url)
+                        .post(body)
+                        .build()
+                    
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            Log.d("MySQLHelper", "Officer response notification sent successfully")
+                        } else {
+                            Log.e("MySQLHelper", "Failed to send officer response notification: ${response.code}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Error sending officer response notification: ${e.message}")
+            }
+        }
+    }
+    
+    private fun sendAssistanceResolvedNotification(locationID: String, status: String, officerName: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Only send resolved notifications for actual resolutions, not false alarms
+                if (status == "resolved") {
+                    val assistanceUserID = getUserIDByLocationID(locationID)
+                    val officerUserID = getUserIDByFullName(officerName)
+                    
+                    if (assistanceUserID != null && officerUserID != null) {
+                        val url = "https://cl67pknqo8.execute-api.ap-southeast-1.amazonaws.com/prod/fcm-notification"
+                        val client = OkHttpClient()
+                        
+                        val jsonBody = """
+                            {
+                                "notificationType": "assistance_resolved",
+                                "locationID": "$locationID",
+                                "userID": "$assistanceUserID",
+                                "officerID": "$officerUserID"
+                            }
+                        """.trimIndent()
+                        
+                        val body = jsonBody.toRequestBody("application/json".toMediaType())
+                        val request = Request.Builder()
+                            .url(url)
+                            .post(body)
+                            .build()
+                        
+                        client.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                Log.d("MySQLHelper", "Assistance resolved notification sent successfully")
+                            } else {
+                                Log.e("MySQLHelper", "Failed to send assistance resolved notification: ${response.code}")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Error sending assistance resolved notification: ${e.message}")
+            }
+        }
+    }
+    
+    private fun getUserIDByFullName(fullName: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) return null
+            
+            val query = "SELECT userID FROM user_table WHERE fullName = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, fullName)
+            resultSet = statement.executeQuery()
+            
+            if (resultSet.next()) {
+                resultSet.getString("userID")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+    
+    private fun getUserIDByLocationID(locationID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) return null
+            
+            val query = "SELECT userID FROM location_table WHERE locationID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, locationID)
+            resultSet = statement.executeQuery()
+            
+            if (resultSet.next()) {
+                resultSet.getString("userID")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
     }
 }

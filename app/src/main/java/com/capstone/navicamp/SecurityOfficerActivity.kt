@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.drawerlayout.widget.DrawerLayout
@@ -36,7 +37,6 @@ import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.load.engine.GlideException
 import android.graphics.drawable.Drawable
-import android.widget.Toast
 import com.bumptech.glide.load.DataSource
 import kotlinx.coroutines.CoroutineScope
 import java.util.Properties
@@ -50,7 +50,11 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.SQLException
 import com.capstone.navicamp.MySQLHelper
-
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -62,6 +66,18 @@ class SecurityOfficerActivity : AppCompatActivity() {
     
     // Smart Polling Manager for real-time updates
     private lateinit var smartPollingManager: SmartPollingManager
+
+    // Declare the launcher for notification permission
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+            if (isGranted) {
+                Log.d("Permission", "Notification permission granted")
+                Toast.makeText(this, "Notification permission granted! You will now receive assistance alerts.", Toast.LENGTH_LONG).show()
+            } else {
+                Log.d("Permission", "Notification permission denied")
+                Toast.makeText(this, "Notification permission denied. You may miss important assistance requests.", Toast.LENGTH_LONG).show()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -189,7 +205,42 @@ class SecurityOfficerActivity : AppCompatActivity() {
         }
         val intentFilter = IntentFilter("com.capstone.navicamp.DATA_CHANGED")
         registerReceiver(dataChangeReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-    }    // Update onResume to start smart polling
+
+        // Ask for notification permission
+        askNotificationPermission()
+    }
+
+    private fun askNotificationPermission() {
+        // This is only necessary for API level 33 and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                // FCM SDK (and your app) can post notifications.
+                Log.d("Permission", "Notification permission is already granted")
+            } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // Show an explanation dialog
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Permission Needed")
+                    .setMessage("This app needs notification permission to alert you when students request assistance. This is essential for security operations.")
+                    .setPositiveButton("Grant Permission") { _, _ ->
+                        requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    .setNegativeButton("Not Now") { dialog, _ ->
+                        dialog.dismiss()
+                        Log.d("Permission", "User declined notification permission")
+                    }
+                    .show()
+            } else {
+                // Directly ask for the permission
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+
+
+    // Update onResume to start smart polling
     override fun onResume() {
         super.onResume()
         
@@ -219,12 +270,16 @@ class SecurityOfficerActivity : AppCompatActivity() {
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
         fetchUnverifiedUsers()
-    }    // Update onPause to pause polling but keep it ready for quick resume
+    }
+
+    // Update onPause to pause polling but keep it ready for quick resume
     override fun onPause() {
         super.onPause()
         // Pause polling when activity is not visible to save battery
         smartPollingManager.stopPolling()
-    }    override fun onDestroy() {
+    }
+
+    override fun onDestroy() {
         super.onDestroy()
         // Stop polling when activity is destroyed
         smartPollingManager.stopPolling()
@@ -238,7 +293,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
             }
             updateVerificationCards(unverifiedUsers)
         }
-    }    private fun updateVerificationCards(users: List<UserData>) {
+    }
+
+    private fun updateVerificationCards(users: List<UserData>) {
         val verificationLayout = findViewById<LinearLayout>(R.id.verification_layout)
         verificationLayout.removeAllViews()
 
@@ -554,7 +611,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
-    }    private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
+    }
+
+    private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
         assistanceLayout.removeAllViews()
         val noAssistanceTextView = findViewById<TextView>(R.id.no_assistance_text)
         val noAssistanceProgress = findViewById<ProgressBar>(R.id.no_assistance_progress)
@@ -687,7 +746,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 }
             }
         }
-    }    private fun setupSmartPollingListeners() {
+    }
+
+    private fun setupSmartPollingListeners() {
         // Set up smart polling data update callback
         smartPollingManager.onDataUpdate = {
             // Fetch fresh data when changes are detected
