@@ -3,6 +3,9 @@
 
 MPU6050 mpu;
 
+// New: Line Follower Control Flag
+bool lineFollowerEnabled = false;
+
 // IR Sensor Pins
 const int farLeftIR = 25;
 const int leftIR   = 22;
@@ -45,13 +48,39 @@ void setup() {
   pinMode(trigPin2, OUTPUT);
   pinMode(echoPin2, INPUT);
 
+  // New: Initialize Serial1 for communication with ESP32 Scanner/Broadcaster
+  Serial1.begin(115200); // Using Pins 19 (RX1) and 18 (TX1)
+  Serial.println("Arduino Mega Ready for Line Follower Commands.");
 }
 
 unsigned long prevMPU = 0;
 unsigned long prevUltrasonic = 0;
 
 void loop() {
-  readLineSensors();
+  // New: Check for incoming commands from ESP32 Scanner/Broadcaster
+  if (Serial1.available()) {
+    String command = Serial1.readStringUntil('\n');
+    command.trim();
+    Serial.print("Received command from ESP32: ");
+    Serial.println(command);
+
+    if (command == "LF_ON") {
+      lineFollowerEnabled = true;
+      Serial.println("Line Follower ENABLED.");
+    } else if (command == "LF_OFF") {
+      lineFollowerEnabled = false;
+      stopMoving(); // Immediately stop motors when line follower is disabled
+      Serial.println("Line Follower DISABLED.");
+    }
+  }
+
+  // Only execute line follower logic if it's enabled
+  if (lineFollowerEnabled) {
+    readLineSensors();
+  } else {
+    // Ensure motors are stopped if line follower is disabled
+    stopMoving();
+  }
 
   unsigned long now = millis();
 

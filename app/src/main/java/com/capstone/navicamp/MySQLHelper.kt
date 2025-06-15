@@ -2606,4 +2606,39 @@ object MySQLHelper {
         }
     }
 
+    // New: Function to get deviceName by deviceID
+    suspend fun getDeviceNameById(deviceID: String): String? = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return@withContext try {
+            connection = getConnection()
+            if (connection == null) {
+                Log.e("MySQLHelper", "Database connection failed for getDeviceNameById.")
+                return@withContext null
+            }
+
+            val query = "SELECT deviceName FROM devices_table WHERE deviceID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, deviceID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                val deviceName = resultSet.getString("deviceName")
+                Log.d("MySQLHelper", "Found deviceName '$deviceName' for deviceID $deviceID")
+                deviceName
+            } else {
+                Log.w("MySQLHelper", "No device found with deviceID: $deviceID")
+                null
+            }
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "SQL Error getting deviceName for deviceID $deviceID: ${e.message}", e)
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
 }

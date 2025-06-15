@@ -25,4 +25,11 @@
     <color name="lightOrange">#FFF3E0</color>
 
     <color name="inactive_stroke">#d6d6d6</color>
+
+    <!-- New: Material Design Blue shades -->
+    <color name="blue_500">#2196F3</color> <!-- Standard Material Blue -->
+    <color name="blue_200">#90CAF9</color> <!-- Lighter Material Blue -->
+    
+    <!-- New: Material Design Green shade -->
+    <color name="green_500">#4CAF50</color> <!-- Standard Material Green -->
 </resources>

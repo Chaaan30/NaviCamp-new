@@ -10,16 +10,21 @@
  * Hardware: ESP32 with UART2 TX (GPIO17) → Wi-Fi ESP32 RX (GPIO16)
  */
 
+// Fix for RingbufferType_t compilation error in ESP32 BLE library v2.0.11
+#include "esp32-hal.h"
+
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
-#include <BLEAdvertising.h> // Include the advertising library
+#include <BLEAdvertising.h>
+#include <BLEServer.h>
+#include <BLE2902.h>
 #include <map>
 #include <cmath>
 
-// UART2 configuration for Wi-Fi ESP32 communication
-HardwareSerial Link(2);  // TX=GPIO17, RX=GPIO16
+// New: HardwareSerial for inter-ESP32 communication (remapped UART1)
+HardwareSerial Esp32WifiSerial(1); // UART1 will be remapped: RX=GPIO27, TX=GPIO25
 
 // --- Broadcaster Configuration ---
 BLEAdvertising *pAdvertising;
@@ -29,8 +34,14 @@ const long broadcastInterval = 3000;      // Broadcast every 3 seconds
 const long broadcastDuration = 500;       // Broadcast for 500ms
 bool isBroadcasting = false;
 
-// --- Scanner Configuration ---
-const char TARGET_SERVICE_UUID[] = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+// --- New: BLE GATT Server Configuration for Line Follower Control ---
+BLEServer* pServer = NULL;
+BLECharacteristic* pLineFollowerCharacteristic = NULL;
+bool deviceConnected = false; // Tracks if a BLE client (Android app) is connected
+
+// New: Define Service and Characteristic UUIDs for Line Follower Control
+#define SERVICE_UUID        "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // Existing Service UUID
+#define LF_COMMAND_UUID     "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" // New Characteristic UUID
 
 // RSSI calibration parameters - AI Auto-Calibration System
 float RSSI_AT_1M_CLEAR = -75.0f;
@@ -214,30 +225,80 @@ void transmitStrongestBeacon() {
     }
   }
   
-  Link.printf("%s,%d,%.1f\n", strongest.name.c_str(), strongest.rssi, strongest.distance);
-  Link.flush();
+  // Transmit strongest beacon data to ESP32 WiFi via remapped UART1
+  Esp32WifiSerial.printf("%s,%d,%.1f\n", strongest.name.c_str(), strongest.rssi, strongest.distance);
+  Esp32WifiSerial.flush();
   
   Serial.printf("TX → %s | %d dBm | %.1fm (strongest of %d beacons)\n",
-                strongest.name.c_str(), strongest.rssi, strongest.distance, // *** FIX 1: Corrected c_c_str() to c_str() ***
+                strongest.name.c_str(), strongest.rssi, strongest.distance,
                 detectedBeacons.size());
 }
 
+// New: Callback class for handling BLE server events
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+      Serial.println("BLE Client Connected for Line Follower Control!");
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+      Serial.println("BLE Client Disconnected from Line Follower Control.");
+      // Restart advertising to allow reconnection
+      pAdvertising->start();
+    }
+};
+
+// New: Callback class for handling characteristic write events
+class MyCharacteristicCallbacks: public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic *pCharacteristic) {
+      std::string value = pCharacteristic->getValue().c_str();
+      if (value.length() > 0) {
+        Serial.print("Received BLE command: ");
+        Serial.println(value.c_str());
+
+        // Forward command to Arduino Mega via UART2
+        Serial2.println(value.c_str());
+      }
+    }
+};
+
 void setup() {
-  Serial.begin(115200);
-  Link.begin(115200, SERIAL_8N1, 16, 17);
+  Serial.begin(115200); // For USB/debugging (UART0)
+  Serial2.begin(115200, SERIAL_8N1, 16, 17); // For communication to Arduino Mega (UART2)
+  Esp32WifiSerial.begin(115200, SERIAL_8N1, 27, 25); // For communication to ESP32 WiFi (remapped UART1)
+
+  Serial.println("=== Professional BLE Scanner & Broadcaster with GATT Server ===");
   
-  Serial.println("=== Professional BLE Scanner & Broadcaster ===");
+  // --- Initialize BLE Stack and GATT Server ---
+  BLEDevice::init(BROADCAST_NAME); // Initialize BLE with the device name
   
-  // *** FIX 2: Initialize BLE stack with the broadcast name ***
-  BLEDevice::init(BROADCAST_NAME);
-  
-  // --- Configure the Broadcaster ---
-  pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(TARGET_SERVICE_UUID);
+  // Create the BLE Server
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  // Create the BLE Service
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  // Create a BLE Characteristic for Line Follower Commands - FIXED PROPERTIES
+  pLineFollowerCharacteristic = pService->createCharacteristic(
+                                   LF_COMMAND_UUID,
+                                   BLECharacteristic::PROPERTY_WRITE | // Fixed: Use PROPERTY_WRITE instead of PROPERTY_WRITE_NO_RSP
+                                   BLECharacteristic::PROPERTY_READ
+                                 );
+  pLineFollowerCharacteristic->setCallbacks(new MyCharacteristicCallbacks());
+
+  // Start the service
+  pService->start();
+
+  // Set up advertising for the server (will advertise the service)
+  pAdvertising = pServer->getAdvertising(); // Use pServer->getAdvertising() for server
+  pAdvertising->addServiceUUID(SERVICE_UUID); // Advertise the new service UUID
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
-  Serial.printf("Broadcasting as: %s\n", BROADCAST_NAME);
+  Serial.printf("Broadcasting as: %s with Service UUID: %s\n", BROADCAST_NAME, SERVICE_UUID);
+  pAdvertising->start(); // Start advertising immediately
 
   // --- Configure the Scanner ---
   scanner = BLEDevice::getScan();
@@ -252,29 +313,16 @@ void setup() {
 }
 
 void manageBroadcaster() {
-  unsigned long currentTime = millis();
-
-  // State 1: We are currently broadcasting, check if it's time to stop.
-  if (isBroadcasting) {
-    if (currentTime - lastBroadcastTime > broadcastDuration) {
-      pAdvertising->stop();
-      isBroadcasting = false;
-      //Serial.println("...broadcast stopped.");
-    }
-  }
-  // State 2: We are not broadcasting, check if it's time to start.
-  else {
-    if (currentTime - lastBroadcastTime > broadcastInterval) {
-      lastBroadcastTime = currentTime;
+  // Simplified broadcaster management - removed isAdvertising() check
+  if (!deviceConnected) {
+      // If no client is connected, ensure advertising is running
+      // Note: Removed isAdvertising() check due to library compatibility
       pAdvertising->start();
-      isBroadcasting = true;
-      Serial.printf(">>> Broadcasting '%s'...\n", BROADCAST_NAME);
-    }
   }
 }
 
 void loop() {
-  // Handle the periodic broadcasting state machine
+  // Simplified broadcaster management
   manageBroadcaster();
 
   // Process the collected scan data every ~1.1 seconds
@@ -284,5 +332,5 @@ void loop() {
   }
   
   // A small delay to yield to other tasks and prevent watchdog timeouts
-  delay(10); 
+  delay(10);
 }
