@@ -2544,4 +2544,66 @@ object MySQLHelper {
         return null
     }
 
+    suspend fun updateUserFCMToken(userID: String, newToken: String?): Boolean = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return@withContext try {
+            connection = getConnection()
+            if (connection == null) {
+                Log.e("MySQLHelper", "Database connection failed for updateUserFCMToken.")
+                return@withContext false
+            }
+
+            val query = "UPDATE user_table SET fcm_token = ? WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, newToken) // Set token (can be null)
+            statement.setString(2, userID)
+
+            val rowsAffected = statement.executeUpdate()
+            Log.d("MySQLHelper", "Updated FCM token for userID $userID: $rowsAffected rows affected.")
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "SQL Error updating FCM token for userID $userID: ${e.message}", e)
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    suspend fun clearUserFCMToken(userID: String): Boolean = withContext(Dispatchers.IO) {
+        // Reusing updateUserFCMToken to set the token to null
+        updateUserFCMToken(userID, null)
+    }
+
+    suspend fun clearFCMTokenFromOtherUsers(fcmToken: String, currentUserID: String): Boolean = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return@withContext try {
+            connection = getConnection()
+            if (connection == null) {
+                Log.e("MySQLHelper", "Database connection failed for clearFCMTokenFromOtherUsers.")
+                return@withContext false
+            }
+
+            // Find any other user with this FCM token and set their token to NULL
+            val query = "UPDATE user_table SET fcm_token = NULL WHERE fcm_token = ? AND userID != ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, fcmToken)
+            statement.setString(2, currentUserID)
+
+            val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                Log.d("MySQLHelper", "Cleared FCM token for $rowsAffected other user(s) with token ending in ...${fcmToken.takeLast(5)}")
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "SQL Error clearing FCM token from other users: ${e.message}", e)
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
 }
