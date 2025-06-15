@@ -132,8 +132,21 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     // Clear SharedPreferences
                     val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
                     val editor = sharedPreferences.edit()
+                    val loggedOutUserID = sharedPreferences.getString("userID", null)
                     editor.clear()
                     editor.apply()
+
+                    // Clear FCM token from database asynchronously
+                    if (loggedOutUserID != null) {
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                MySQLHelper.clearUserFCMToken(loggedOutUserID)
+                                Log.d("LocomotorDisability", "FCM token cleared for user: $loggedOutUserID on logout")
+                            } catch (e: Exception) {
+                                Log.e("LocomotorDisability", "Error clearing FCM token on logout: ${e.message}", e)
+                            }
+                        }
+                    }
 
                     // Navigate to MainActivity
                     val intent = Intent(this, MainActivity::class.java)
@@ -236,17 +249,27 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     val token = task.result
                     Log.d("LocomotorDisability", "FCM Token: $token")
 
-                    // Update token in database
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        try {
-                            val success = MySQLHelper.updateUserFCMToken(currentUserID!!, token)
-                            if (success) {
-                                Log.d("LocomotorDisability", "FCM token updated successfully for user: $currentUserID")
-                            } else {
-                                Log.e("LocomotorDisability", "Failed to update FCM token for user: $currentUserID")
+                    // Capture currentUserID in an immutable variable
+                    val userIdToUse = currentUserID
+
+                    if (userIdToUse != null && token != null) {
+                        // Before updating the current user's token, clear this token from any other users
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            MySQLHelper.clearFCMTokenFromOtherUsers(token, userIdToUse)
+                        }
+
+                        // Update token in database
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                val success = MySQLHelper.updateUserFCMToken(userIdToUse, token)
+                                if (success) {
+                                    Log.d("LocomotorDisability", "FCM token updated successfully for user: $userIdToUse")
+                                } else {
+                                    Log.e("LocomotorDisability", "Failed to update FCM token for user: $userIdToUse")
+                                }
+                            } catch (e: Exception) {
+                                Log.e("LocomotorDisability", "Error updating FCM token: ${e.message}", e)
                             }
-                        } catch (e: Exception) {
-                            Log.e("LocomotorDisability", "Error updating FCM token: ${e.message}", e)
                         }
                     }
                 }
