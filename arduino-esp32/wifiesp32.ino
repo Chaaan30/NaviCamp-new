@@ -29,7 +29,7 @@ const char* SENSOR_URL = "https://sd7slrvf6g.execute-api.ap-southeast-1.amazonaw
 const uint32_t UPLOAD_INTERVAL = 7000;  // Upload every 7 seconds
 
 // ============ HARDWARE INTERFACES ============
-HardwareSerial Link(2);  // UART2: RX=GPIO16 (from BLE scanner), TX=GPIO17 (unused)
+// Removed: HardwareSerial Link(2); (now using Serial for ESP32 Scanner communication)
 HardwareSerial GPS(1);   // UART1: RX=GPIO4 (from GPS), TX=not used
 TinyGPSPlus gps;
 
@@ -159,17 +159,15 @@ void processBeaconData(const String& line) {
   }
 }
 
-
 void setup() {
-  Serial.begin(115200);
-  Link.begin(115200, SERIAL_8N1, 16, 17);
+  Serial.begin(115200); // For communication from ESP32 Scanner/Broadcaster (UART0)
   GPS.begin(9600, SERIAL_8N1, 4, -1);
 
   pinMode(LED_WIFI, OUTPUT);
   digitalWrite(LED_WIFI, LOW);
 
   Serial.println("=== Professional Wi-Fi Communication Hub ===");
-  Serial.println("Listening for strongest beacon data on UART2...");
+  Serial.println("Listening for strongest beacon data on UART0...");
 
   establishWiFiConnection();
   synchronizeSystemTime();
@@ -178,8 +176,9 @@ void setup() {
 }
 
 void loop() {
-  if (Link.available()) {
-    String line = Link.readStringUntil('\n');
+  // Read incoming data from ESP32 Scanner/Broadcaster via UART0 (Serial)
+  if (Serial.available()) {
+    String line = Serial.readStringUntil('\n');
     line.trim();
     processBeaconData(line);
   }
@@ -193,7 +192,6 @@ void loop() {
     longitude = gps.location.lng();
     Serial.printf("📍 Lat: %.6f | Lng: %.6f\n", latitude, longitude);
   }
-
 
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Reconnecting Wi-Fi...");
