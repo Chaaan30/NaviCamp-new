@@ -141,39 +141,6 @@
 
             </LinearLayout>
 
-            <!-- New: BLE Line Follower Control UI Elements -->
-            <TextView
-                android:id="@+id/ble_status_textview"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="BLE Status: Not connected" 
-                android:layout_marginTop="24dp"
-                android:textSize="16sp"
-                android:textColor="@android:color/black"
-                android:layout_gravity="center_horizontal"/>
-
-            <Button
-                android:id="@+id/line_follower_connect_button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Connect Line Follower"
-                android:layout_marginTop="8dp"
-                android:padding="16dp"
-                android:textSize="18sp"
-                android:backgroundTint="@color/green_500"
-                android:enabled="false" /> <!-- Initially disabled -->
-
-            <ToggleButton
-                android:id="@+id/line_follower_toggle_button"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textOn="Line Follower ON"
-                android:textOff="Line Follower OFF"
-                android:layout_marginTop="8dp"
-                android:padding="16dp"
-                android:textSize="18sp"
-                android:enabled="false" /> <!-- Initially disabled -->
-
         </LinearLayout>
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>

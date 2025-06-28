@@ -1,28 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.capstone.navicamp">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />    
-
-    <!-- Background activity permissions for FCM -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-
-    <!-- Android 12+ specific permissions for BLE -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
     <application
         android:name=".ForceTheme"
@@ -38,34 +32,46 @@
         <activity
             android:name=".DisplayRegisteredUsersActivity"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MyApp" />
         <activity
             android:name=".IncidentLog"
             android:exported="false"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.MyApp" />
         <activity
             android:name=".IncidentLogNew"
             android:exported="false"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MyApp" />
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.MyApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity android:name=".SetupActivity" 
-            android:screenOrientation="portrait" />
-        <activity android:name=".SecurityOfficerActivity" />
-        <activity android:name=".WheelchairManagementActivity" />
-        <activity android:name=".LocomotorDisabilityActivity" />
-        <activity android:name=".UserFeedbackActivity" />
-        <activity android:name=".AssistanceActivity" />
-        <activity android:name=".AccountSettingsActivity" />
-        <activity android:name=".OfficerAccountSettingsActivity" />
-        <activity android:name=".MapActivity" />
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".SecurityOfficerActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".WheelchairManagementActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".LocomotorDisabilityActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".UserFeedbackActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".AssistanceActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".AccountSettingsActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".OfficerAccountSettingsActivity"
+            android:theme="@style/Theme.MyApp" />
+        <activity android:name=".MapActivity"
+            android:theme="@style/Theme.MyApp" />
         <!-- Declare the library's CaptureActivity and force portrait mode -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
@@ -95,13 +101,26 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.capstone.navicamp.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/navicamp_logo" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/primaryColor" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="default_channel" />
+
     </application>
 
 </manifest>
