@@ -128,7 +128,8 @@ object MySQLHelper {
                     l.latitude,
                     l.longitude,
                     l.dateTime,
-                    i.officerResponded
+                    i.officerResponded,
+                    i.alertDescription
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
@@ -139,6 +140,13 @@ object MySQLHelper {
             resultSet = statement.executeQuery()
 
             while (resultSet.next()) {
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    "FALL_DETECTION"
+                } else {
+                    "MANUAL"
+                }
+                
                 val locationItem = LocationItem(
                     resultSet.getString("locationID") ?: "",
                     resultSet.getString("userID") ?: "",
@@ -149,7 +157,8 @@ object MySQLHelper {
                     resultSet.getDouble("longitude"),
                     resultSet.getString("dateTime") ?: "",
                     resultSet.getString("officerResponded") ?: "",
-                    resultSet.getString("deviceID") ?: ""
+                    resultSet.getString("deviceID") ?: "",
+                    assistanceType
                 )
                 pendingItems.add(locationItem)
             }
@@ -1167,7 +1176,8 @@ object MySQLHelper {
                     l.latitude,
                     l.longitude,
                     l.dateTime,
-                    i.officerResponded
+                    i.officerResponded,
+                    i.alertDescription
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
@@ -1180,6 +1190,13 @@ object MySQLHelper {
 
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    "FALL_DETECTION"
+                } else {
+                    "MANUAL"
+                }
+                
                 LocationItem(
                     locationID = resultSet.getString("locationID") ?: "",
                     userID = resultSet.getString("userID") ?: "",
@@ -1190,7 +1207,8 @@ object MySQLHelper {
                     latitude = resultSet.getDouble("latitude"),
                     longitude = resultSet.getDouble("longitude"),
                     dateTime = resultSet.getString("dateTime") ?: "",
-                    officerName = resultSet.getString("officerResponded") ?: ""
+                    officerName = resultSet.getString("officerResponded") ?: "",
+                    assistanceType = assistanceType
                 )
             } else {
                 throw SQLException("Location item not found.")
@@ -1906,14 +1924,36 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT locationID, userID, deviceID, fullName, floorLevel, status, latitude, longitude, dateTime, officerResponded 
-            FROM location_table WHERE locationID = ?
+            SELECT 
+                l.locationID, 
+                l.userID, 
+                l.deviceID, 
+                l.fullName, 
+                l.floorLevel, 
+                i.status, 
+                l.latitude, 
+                l.longitude, 
+                l.dateTime, 
+                i.officerResponded,
+                i.alertDescription
+            FROM location_table l 
+            LEFT JOIN incident_logs_table i ON l.locationID = i.locationID
+            WHERE l.locationID = ?
+            ORDER BY i.alertDateTime DESC
+            LIMIT 1
         """
             statement = connection?.prepareStatement(query)
             statement?.setString(1, locationId)
 
             resultSet = statement?.executeQuery()
             if (resultSet?.next() == true) {
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    "FALL_DETECTION"
+                } else {
+                    "MANUAL"
+                }
+                
                 LocationItem(
                     locationID = resultSet.getString("locationID"),
                     userID = resultSet.getString("userID"),
@@ -1924,7 +1964,8 @@ object MySQLHelper {
                     latitude = resultSet.getDouble("latitude"),
                     longitude = resultSet.getDouble("longitude"),
                     dateTime = resultSet.getString("dateTime"),
-                    officerName = resultSet.getString("officerResponded") ?: ""
+                    officerName = resultSet.getString("officerResponded") ?: "",
+                    assistanceType = assistanceType
                 )
             } else {
                 null

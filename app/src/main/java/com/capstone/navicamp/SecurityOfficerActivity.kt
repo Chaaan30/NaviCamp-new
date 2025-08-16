@@ -672,8 +672,21 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
         val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
         val respondButton = cardView.findViewById<Button>(R.id.respond_button)
+        val assistanceTypeBadge = cardView.findViewById<TextView>(R.id.assistance_type_badge)
 
         fullNameTextView.text = item.fullName
+
+        // Configure assistance type badge
+        when (item.assistanceType) {
+            "FALL_DETECTION" -> {
+                assistanceTypeBadge.text = "FALL ALERT"
+                assistanceTypeBadge.setBackgroundResource(R.drawable.badge_fall_detection)
+            }
+            else -> {
+                assistanceTypeBadge.text = "MANUAL"
+                assistanceTypeBadge.setBackgroundResource(R.drawable.badge_manual_assistance)
+            }
+        }
 
         val date = inputFormat.parse(item.dateTime)
         val formattedDate = date?.let { dateFormat.format(it) } ?: item.dateTime
