@@ -27,22 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
-import android.Manifest // New: For Bluetooth permissions
-import android.bluetooth.BluetoothAdapter // New: For Bluetooth operations
-import android.bluetooth.BluetoothManager // New: For Bluetooth operations
-import android.bluetooth.BluetoothGatt // New: For GATT connection
-import android.bluetooth.BluetoothGattCallback // New: For GATT callbacks
-import android.bluetooth.BluetoothProfile // New: For GATT connection state
-import android.bluetooth.le.ScanCallback // New: For BLE scanning
-import android.bluetooth.le.ScanResult // New: For BLE scanning results
-import android.content.pm.PackageManager // New: For permission checks
-import android.os.Build // New: For API level checks
-import java.util.UUID // New: For BLE UUIDs
-import androidx.activity.result.contract.ActivityResultContracts // New: For permission launcher
-import androidx.core.app.ActivityCompat // New: For permission checks
-import androidx.core.content.ContextCompat // New: For permission checks
-import android.widget.ToggleButton // New: Import ToggleButton
-import android.widget.CompoundButton // New: Import for OnCheckedChangeListener
+
 
 class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -52,20 +37,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var assistanceConnectButton: Button
     private lateinit var connectionStatusTextView: TextView
 
-    // New: UI elements for Line Follower Control
-    private lateinit var lineFollowerConnectButton: Button
-    private lateinit var lineFollowerToggleButton: ToggleButton
-    private lateinit var bleStatusTextView: TextView
 
-    // New: BLE related variables
-    private var bluetoothAdapter: BluetoothAdapter? = null
-    private var bluetoothGatt: BluetoothGatt? = null
-    private var lineFollowerCharacteristicUuid: UUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
-    private var bleConnectedToLineFollower: Boolean = false
-    private var targetDeviceName: String = "WC_202501" // Main wheelchair device name
-
-    // New: Define BLE Service UUID
-    private val SERVICE_UUID: String = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 
     private var connectedDeviceID: String? = null
     private var connectionTimer: CountDownTimer? = null
@@ -73,24 +45,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private var connectionExpiryTimeMillis: Long? = null
     private var isRestoringConnection = false // Flag to prevent multiple restoration attempts
 
-    // New: Request code for enabling Bluetooth
-    private val REQUEST_ENABLE_BT = 1
 
-    // New: Permission request launcher
-    private val requestBluetoothPermissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.entries.all { it.value }
-        if (allGranted) {
-            Log.d("BLE", "All required Bluetooth permissions granted.")
-            // Permissions granted, can now try to enable BT or start scan
-            ensureBluetoothEnabled()
-        } else {
-            Log.w("BLE", "Not all Bluetooth permissions granted. BLE functionality may be limited.")
-            Toast.makeText(this, "Bluetooth permissions denied. Cannot use line follower control.", Toast.LENGTH_LONG).show()
-            updateBleStatusUI("Permissions denied")
-        }
-    }
 
     private var currentUserID: String? = null
     private var currentUserFullName: String? = null
@@ -134,98 +89,9 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             .show()
     }
 
-    // New: BLE Scan Callback
-    private val bleScanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult?) {
-            super.onScanResult(callbackType, result)
-            result?.device?.let { device ->
-                if (device.name == targetDeviceName) {
-                    Log.d("BLE_Scan", "Found target device: ${device.name} (${device.address})")
-                    stopBleScan() // Stop scanning once found
-                    connectToLineFollowerBle(device.address) // Connect to the device
-                }
-            }
-        }
 
-        override fun onBatchScanResults(results: MutableList<ScanResult>?) {
-            super.onBatchScanResults(results)
-            // Handle batch results if needed, for now just individual scan results
-        }
 
-        override fun onScanFailed(errorCode: Int) {
-            super.onScanFailed(errorCode)
-            Log.e("BLE_Scan", "BLE scan failed with error code: $errorCode")
-            Toast.makeText(this@LocomotorDisabilityActivity, "BLE scan failed. Code: $errorCode", Toast.LENGTH_LONG).show()
-            updateBleStatusUI("Scan failed")
-            lineFollowerConnectButton.isEnabled = true
-        }
-    }
 
-    // New: BLE GATT Callback
-    private val gattCallback = object : BluetoothGattCallback() {
-        override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
-            super.onConnectionStateChange(gatt, status, newState)
-            val deviceAddress = gatt?.device?.address ?: "Unknown Device"
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.d("BLE_GATT", "Successfully connected to GATT client: $deviceAddress")
-                    bluetoothGatt = gatt
-                    runOnUiThread { updateBleStatusUI("Connected to: $targetDeviceName") }
-                    // Discover services after successful connection
-                    gatt?.discoverServices()
-                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Log.d("BLE_GATT", "Disconnected from GATT client: $deviceAddress")
-                    runOnUiThread { disconnectBleLineFollower() }
-                }
-            } else {
-                Log.e("BLE_GATT", "GATT connection failed with status: $status for device: $deviceAddress")
-                runOnUiThread { disconnectBleLineFollower(showToast = true) }
-            }
-        }
-
-        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-            super.onServicesDiscovered(gatt, status)
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE_GATT", "Services discovered for ${gatt?.device?.address}")
-                val service = gatt?.getService(UUID.fromString(SERVICE_UUID))
-                val serviceUuidString = SERVICE_UUID.lowercase(Locale.ROOT)
-                Log.d("BLE_GATT", "Looking for service with UUID: $serviceUuidString")
-
-                gatt?.services?.forEach { s ->
-                    Log.d("BLE_GATT", "Found service: ${s.uuid.toString().lowercase(Locale.ROOT)}")
-                }
-
-                if (service != null) {
-                    val characteristic = service.getCharacteristic(lineFollowerCharacteristicUuid)
-                    if (characteristic != null) {
-                        Log.d("BLE_GATT", "Found Line Follower Characteristic: ${lineFollowerCharacteristicUuid}")
-                        bleConnectedToLineFollower = true
-                        runOnUiThread { lineFollowerToggleButton.isEnabled = true }
-                        runOnUiThread { Toast.makeText(this@LocomotorDisabilityActivity, "Line Follower control ready!", Toast.LENGTH_SHORT).show() }
-                    } else {
-                        Log.e("BLE_GATT", "Line Follower Characteristic not found for UUID: ${lineFollowerCharacteristicUuid}")
-                        runOnUiThread { disconnectBleLineFollower(showToast = true); updateBleStatusUI("Char not found") }
-                    }
-                } else {
-                    Log.e("BLE_GATT", "Service with UUID ${SERVICE_UUID} not found.")
-                    runOnUiThread { disconnectBleLineFollower(showToast = true); updateBleStatusUI("Service not found") }
-                }
-            } else {
-                Log.e("BLE_GATT", "onServicesDiscovered received status: $status")
-                runOnUiThread { disconnectBleLineFollower(showToast = true); updateBleStatusUI("Service discovery failed") }
-            }
-        }
-
-        override fun onCharacteristicWrite(gatt: BluetoothGatt?, characteristic: android.bluetooth.BluetoothGattCharacteristic?, status: Int) {
-            super.onCharacteristicWrite(gatt, characteristic, status)
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d("BLE_GATT", "Characteristic write successful: ${characteristic?.uuid}")
-            } else {
-                Log.e("BLE_GATT", "Characteristic write failed: ${characteristic?.uuid}, Status: $status")
-                runOnUiThread { Toast.makeText(this@LocomotorDisabilityActivity, "Failed to send command.", Toast.LENGTH_SHORT).show() }
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -253,13 +119,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         assistanceConnectButton = findViewById(R.id.assistance_connect_button)
 
         // New: Initialize Line Follower UI elements with explicit types
-        lineFollowerConnectButton = findViewById<Button>(R.id.line_follower_connect_button)
-        lineFollowerToggleButton = findViewById<ToggleButton>(R.id.line_follower_toggle_button)
-        bleStatusTextView = findViewById<TextView>(R.id.ble_status_textview)
 
-        // New: Initialize BluetoothAdapter
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -387,41 +247,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             }
         }
 
-        // New: Set up the Line Follower Connect Button
-        lineFollowerConnectButton.setOnClickListener { 
-            if (connectedDeviceID == null) {
-                Toast.makeText(this, "Please connect to a wheelchair via QR Code first.", Toast.LENGTH_LONG).show()
-                Log.w("BLE", "Cannot connect BLE, no database connection to wheelchair.")
-                return@setOnClickListener
-            }
 
-            // Request BLE permissions and enable Bluetooth only when the button is clicked
-            checkBlePermissions()
-
-            if (!bleConnectedToLineFollower) {
-                // Attempt to connect to BLE Line Follower
-                Log.d("BLE", "Attempting to connect to Line Follower BLE...")
-                lineFollowerConnectButton.isEnabled = false // Disable while connecting
-                updateBleStatusUI("Scanning...")
-                startBleScan()
-            } else {
-                // Disconnect BLE Line Follower
-                Log.d("BLE", "Disconnecting from Line Follower BLE...")
-                disconnectBleLineFollower()
-            }
-        }
-
-        // New: Set up the Line Follower Toggle Button
-        lineFollowerToggleButton.setOnCheckedChangeListener { _: CompoundButton, isChecked: Boolean ->
-            if (bleConnectedToLineFollower) {
-                val command = if (isChecked) "LF_ON" else "LF_OFF"
-                writeBleCommand(command)
-                Log.d("BLE", "Sending command: $command")
-            } else {
-                Toast.makeText(this, "Not connected to Line Follower BLE.", Toast.LENGTH_SHORT).show()
-                lineFollowerToggleButton.isChecked = false // Revert toggle state
-            }
-        }
     }
 
     private fun registerFCMToken() {
@@ -533,18 +359,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             if (success) {
                 connectedDeviceID = deviceID
 
-                // Fetch deviceName from database and update targetDeviceName
-                val fetchedDeviceName = withContext(Dispatchers.IO) {
-                    MySQLHelper.getDeviceNameById(deviceID)
-                }
 
-                if (fetchedDeviceName != null) {
-                    targetDeviceName = fetchedDeviceName
-                    Log.d("DeviceConnect", "Updated targetDeviceName to: $targetDeviceName for BLE scan.")
-                } else {
-                    Log.w("DeviceConnect", "Could not retrieve deviceName for $deviceID from DB. Using default: $targetDeviceName")
-                    // Keep the hardcoded default if DB lookup fails, but log a warning
-                }
 
                 val durationMinutes = currentConnectionDurationMs / (60 * 1000)
                 Toast.makeText(this@LocomotorDisabilityActivity, "Successfully connected to wheelchair: $deviceID for $durationMinutes mins", Toast.LENGTH_LONG).show()
@@ -552,9 +367,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 startConnectionTimer(currentConnectionDurationMs) // Start timer with the chosen/active duration
                 updateConnectionStatusUI()
 
-                // After successful DB connection and getting deviceName, check BLE permissions and status
-                // This will enable the lineFollowerConnectButton if everything is ready
-                checkBlePermissions()
+
 
             } else {
                 Toast.makeText(this@LocomotorDisabilityActivity, "Failed to connect to wheelchair $deviceID. It might be in use or an error occurred.", Toast.LENGTH_LONG).show()
@@ -571,8 +384,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         connectedDeviceID = null
         connectionExpiryTimeMillis = null // Clear expiry time
 
-        // Also disconnect BLE line follower if connected
-        disconnectBleLineFollower(showToast = false)
+
 
         if (previouslyConnectedDeviceID != null) {
             lifecycleScope.launch {
@@ -755,9 +567,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                  MySQLHelper.updateDeviceConnectionStatus(connectedDeviceID!!, null, null)
              }
         }
-        // New: Close BluetoothGatt connection on activity destroy
-        bluetoothGatt?.close()
-        bluetoothGatt = null
+
     }
 
     private fun startDeviceSetup() {
@@ -843,17 +653,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                         connectedDeviceID = activeConnection.deviceID
                         connectionExpiryTimeMillis = activeConnection.connectedUntilMillis
 
-                        // New: Also restore targetDeviceName for BLE if a connection is found
-                        val fetchedDeviceName = withContext(Dispatchers.IO) {
-                            MySQLHelper.getDeviceNameById(activeConnection.deviceID)
-                        }
 
-                        if (fetchedDeviceName != null) {
-                            targetDeviceName = fetchedDeviceName
-                            Log.d("LocomotorDisability", "Restored targetDeviceName to: $targetDeviceName for BLE scan.")
-                        } else {
-                            Log.w("LocomotorDisability", "Could not retrieve deviceName for ${activeConnection.deviceID} during restore. Using default: $targetDeviceName")
-                        }
                         
                         val remainingDurationMs = activeConnection.connectedUntilMillis - currentTimeMillis
                         val remainingMinutes = remainingDurationMs / (60 * 1000)
@@ -876,8 +676,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                             "Reconnected to wheelchair: ${activeConnection.deviceID} (${remainingMinutes}m ${remainingSeconds}s left)", 
                             Toast.LENGTH_LONG).show()
 
-                        // After restoring DB connection, ensure BLE permissions and status are checked
-                        checkBlePermissions()
+
 
                     } else {
                         // Connection expired while app was not running, clean it up
@@ -933,236 +732,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
     }
 
-    // New: Function to check and request BLE permissions
-    private fun checkBlePermissions() {
-        val permissions = mutableListOf<String>()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12 (API 31) and above
-            permissions.add(Manifest.permission.BLUETOOTH_SCAN)
-            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-            permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE) // Optional, but good to have if advertising is ever needed
-        } else {
-            // Android 11 (API 30) and below, location permission is needed for BLE scans
-            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
 
-        // Check if all permissions are already granted
-        val allGranted = permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
-
-        if (!allGranted) {
-            // Request permissions if not all are granted
-            requestBluetoothPermissionsLauncher.launch(permissions.toTypedArray())
-        } else {
-            Log.d("BLE", "All required Bluetooth permissions already granted.")
-            ensureBluetoothEnabled()
-        }
-    }
-
-    // New: Function to ensure Bluetooth is enabled
-    private fun ensureBluetoothEnabled() {
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth not supported on this device.", Toast.LENGTH_LONG).show()
-            updateBleStatusUI("Bluetooth not supported")
-            return
-        }
-
-        if (!bluetoothAdapter!!.isEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
-            Log.d("BLE", "Prompting user to enable Bluetooth.")
-        } else {
-            Log.d("BLE", "Bluetooth is already enabled.")
-            updateBleStatusUI("Ready to connect")
-            // Enable the line follower connect button here, after permissions and BT are ready
-            lineFollowerConnectButton.isEnabled = true
-        }
-    }
-
-    // New: Override onActivityResult to handle Bluetooth enable request result
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_ENABLE_BT) {
-            if (resultCode == RESULT_OK) {
-                Log.d("BLE", "Bluetooth enabled by user.")
-                updateBleStatusUI("Ready to connect")
-                lineFollowerConnectButton.isEnabled = true
-            } else {
-                Log.w("BLE", "Bluetooth not enabled by user.")
-                Toast.makeText(this, "Bluetooth must be enabled to use line follower control.", Toast.LENGTH_LONG).show()
-                updateBleStatusUI("Bluetooth disabled")
-                lineFollowerConnectButton.isEnabled = false
-            }
-        }
-    }
-
-    // New: Function to update BLE status UI
-    private fun updateBleStatusUI(status: String) {
-        bleStatusTextView.text = "BLE Status: $status"
-        if (!bleConnectedToLineFollower) {
-            lineFollowerToggleButton.isEnabled = false
-            lineFollowerToggleButton.isChecked = false
-        }
-    }
-
-    // New: Function to disconnect BLE Line Follower
-    private fun disconnectBleLineFollower(showToast: Boolean = true) {
-        bluetoothGatt?.close()
-        bluetoothGatt = null
-        bleConnectedToLineFollower = false
-        updateBleStatusUI("Disconnected")
-        lineFollowerToggleButton.isChecked = false
-        lineFollowerToggleButton.isEnabled = false
-        lineFollowerConnectButton.text = "Connect Line Follower"
-        lineFollowerConnectButton.isEnabled = true
-        if (showToast) {
-            Toast.makeText(this, "Line Follower BLE disconnected.", Toast.LENGTH_SHORT).show()
-        }
-        Log.d("BLE", "Line Follower BLE disconnected.")
-    }
-
-    // New: Function to start BLE scan
-    private fun startBleScan() {
-        if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
-            ensureBluetoothEnabled()
-            return // Will re-attempt scan after BT is enabled
-        }
-
-        // Check for permissions again before scanning (redundant but safe)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                checkBlePermissions() // Request permissions if missing
-                return
-            }
-        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            checkBlePermissions() // Request permissions if missing
-            return
-        }
-
-        val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
-        if (bluetoothLeScanner == null) {
-            Log.e("BLE_Scan", "Bluetooth LE Scanner not available.")
-            Toast.makeText(this, "Bluetooth LE not available on device.", Toast.LENGTH_LONG).show()
-            updateBleStatusUI("Scanner not available")
-            lineFollowerConnectButton.isEnabled = true
-            return
-        }
-
-        // Define Scan Settings (e.g., low latency)
-        val scanSettings = android.bluetooth.le.ScanSettings.Builder()
-            .setScanMode(android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-
-        // Define Scan Filters (e.g., by device name)
-        val scanFilter = android.bluetooth.le.ScanFilter.Builder()
-            .setDeviceName(targetDeviceName)
-            .build()
-
-        val filters = listOf(scanFilter)
-
-        bluetoothLeScanner.startScan(filters, scanSettings, bleScanCallback)
-        Log.d("BLE_Scan", "Started BLE scan for device: $targetDeviceName")
-        updateBleStatusUI("Scanning for $targetDeviceName...")
-    }
-
-    // New: Function to stop BLE scan
-    private fun stopBleScan() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                Log.w("BLE_Scan", "Cannot stop scan, BLUETOOTH_SCAN permission missing.")
-                return
-            }
-        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            Log.w("BLE_Scan", "Cannot stop scan, ACCESS_FINE_LOCATION permission missing.")
-            return
-        }
-
-        bluetoothAdapter?.bluetoothLeScanner?.stopScan(bleScanCallback)
-        Log.d("BLE_Scan", "Stopped BLE scan.")
-    }
-
-    // New: Function to connect to a BLE device
-    private fun connectToLineFollowerBle(address: String) {
-        if (bluetoothAdapter == null || !bluetoothAdapter!!.isEnabled) {
-            Log.w("BLE_GATT", "BluetoothAdapter not initialized or not enabled.")
-            updateBleStatusUI("BT not ready")
-            lineFollowerConnectButton.isEnabled = true
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                Log.w("BLE_GATT", "Cannot connect, BLUETOOTH_CONNECT permission missing.")
-                checkBlePermissions()
-                return
-            }
-        }
-
-        val device = bluetoothAdapter?.getRemoteDevice(address)
-        if (device == null) {
-            Log.w("BLE_GATT", "Device not found. Unable to connect.")
-            Toast.makeText(this, "BLE Device not found.", Toast.LENGTH_LONG).show()
-            updateBleStatusUI("Device not found")
-            lineFollowerConnectButton.isEnabled = true
-            return
-        }
-
-        // Connect to the GATT server hosted on the BLE device
-        bluetoothGatt = device.connectGatt(this, false, gattCallback)
-        Log.d("BLE_GATT", "Attempting to connect to GATT: $address")
-        updateBleStatusUI("Connecting to $targetDeviceName...")
-    }
-
-    // Corrected writeBleCommand function
-    private fun writeBleCommand(command: String) {
-        if (bluetoothGatt == null) {
-            Log.e("BLE_GATT", "BluetoothGatt not initialized.")
-            Toast.makeText(this, "BLE not connected.", Toast.LENGTH_SHORT).show()
-            lineFollowerToggleButton.isChecked = false
-            return
-        }
-
-        val service = bluetoothGatt?.getService(UUID.fromString(SERVICE_UUID))
-        if (service == null) {
-            Log.e("BLE_GATT", "Service not found for UUID: ${SERVICE_UUID}")
-            Toast.makeText(this, "BLE Service not found.", Toast.LENGTH_SHORT).show()
-            lineFollowerToggleButton.isChecked = false
-            return
-        }
-
-        val characteristic = service.getCharacteristic(lineFollowerCharacteristicUuid)
-        if (characteristic == null) {
-            Log.e("BLE_GATT", "Characteristic not found for UUID: ${lineFollowerCharacteristicUuid}")
-            Toast.makeText(this, "BLE Characteristic not found.", Toast.LENGTH_SHORT).show()
-            lineFollowerToggleButton.isChecked = false
-            return
-        }
-
-        // --- THIS IS THE FIX ---
-        // Explicitly set the write type to match the ESP32's PROPERTY_WRITE.
-        // WRITE_TYPE_DEFAULT is an alias for "Write with Response".
-        characteristic.writeType = android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-
-        // Now, set the value and write the characteristic
-        characteristic.setValue(command.toByteArray(Charsets.UTF_8))
-
-        // Permission check for Android 12+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                Log.w("BLE_GATT", "Cannot write, BLUETOOTH_CONNECT permission missing.")
-                Toast.makeText(this, "BLE permissions missing to send command.", Toast.LENGTH_SHORT).show()
-                lineFollowerToggleButton.isChecked = false
-                return
-            }
-        }
-
-        val success = bluetoothGatt?.writeCharacteristic(characteristic)
-        if (success == true) {
-            Log.d("BLE_GATT", "Attempted to write: $command with WRITE_TYPE_DEFAULT")
-        } else {
-            Log.e("BLE_GATT", "Failed to initiate characteristic write: $command")
-            Toast.makeText(this, "Failed to send command.", Toast.LENGTH_SHORT).show()
-            lineFollowerToggleButton.isChecked = false
-        }
-    }
 }

@@ -19,6 +19,8 @@ class SmartPollingManager private constructor() {    private val TAG = "SmartPol
     
     // Data change tracking
     private var lastAssistanceCount = -1
+    // Signature of assistance list contents to detect field changes (status/officerResponded)
+    private var lastAssistanceSignature: String? = null
     private var lastVerificationCount = -1
     private var lastUserCount = -1
     private var lastDeviceCount = -1
@@ -78,15 +80,23 @@ class SmartPollingManager private constructor() {    private val TAG = "SmartPol
                 
                 // Check for changes
                 val assistanceChanged = assistanceRequests.size != lastAssistanceCount
+                // Build a stable signature to capture content changes even when count is the same
+                val assistanceSignature = assistanceRequests
+                    .sortedBy { it.locationID }
+                    .joinToString(separator = "|") { item ->
+                        "${item.locationID}:${item.status}:${item.officerName ?: ""}"
+                    }
+                val assistanceContentChanged = assistanceSignature != lastAssistanceSignature
                 val verificationChanged = verificationRequests.size != lastVerificationCount
                 val userCountChanged = userCount != lastUserCount
                 val deviceCountChanged = deviceCount != lastDeviceCount
                 
-                val hasChanges = assistanceChanged || verificationChanged || 
-                               userCountChanged || deviceCountChanged
+                val hasChanges = assistanceChanged || assistanceContentChanged ||
+                               verificationChanged || userCountChanged || deviceCountChanged
                 
                 // Update last known values
                 lastAssistanceCount = assistanceRequests.size
+                lastAssistanceSignature = assistanceSignature
                 lastVerificationCount = verificationRequests.size
                 lastUserCount = userCount
                 lastDeviceCount = deviceCount
