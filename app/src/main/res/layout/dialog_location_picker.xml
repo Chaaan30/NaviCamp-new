@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="16dp"
+    android:backgroundTint="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="24dp"
+            android:gravity="center_vertical"
+            android:background="@drawable/modal_header_gradient">
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_location"
+                android:padding="8dp"
+                android:background="@drawable/circle_white_bg"
+                app:tint="@color/primaryColor" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/dialog_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Location Update"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:fontFamily="@font/inter_bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="User relocated to:"
+                    android:textSize="14sp"
+                    android:textColor="@color/white"
+                    android:alpha="0.9"
+                    android:fontFamily="@font/inter" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Content Section with constrained height -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/content_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="vertical"
+            android:fadeScrollbars="false">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <!-- Building Selection -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Building:"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/darkGray"
+                    android:fontFamily="@font/inter_bold"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.flexbox.FlexboxLayout
+                    android:id="@+id/building_chips_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:flexWrap="wrap"
+                    app:alignItems="flex_start"
+                    app:justifyContent="flex_start">
+
+                    <!-- Building chips will be added programmatically -->
+
+                </com.google.android.flexbox.FlexboxLayout>
+
+                <!-- Floor Selection -->
+                <LinearLayout
+                    android:id="@+id/floor_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Floor:"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/darkGray"
+                        android:fontFamily="@font/inter_bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/floor_chips_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        app:flexWrap="wrap"
+                        app:alignItems="flex_start"
+                        app:justifyContent="flex_start">
+
+                        <!-- Floor chips will be added programmatically -->
+
+                    </com.google.android.flexbox.FlexboxLayout>
+
+                </LinearLayout>
+
+                <!-- Room Selection -->
+                <LinearLayout
+                    android:id="@+id/room_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Room:"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/darkGray"
+                        android:fontFamily="@font/inter_bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/room_chips_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:flexWrap="wrap"
+                        app:alignItems="flex_start"
+                        app:justifyContent="flex_start">
+
+                        <!-- Room chips will be added programmatically -->
+
+                    </com.google.android.flexbox.FlexboxLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Action Button - Always visible at bottom -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="24dp"
+            android:background="@color/white"
+            android:elevation="4dp">
+
+            <Button
+                android:id="@+id/done_button"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Done"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:enabled="false"
+                android:background="@drawable/button_primary_gradient"
+                android:fontFamily="@font/inter_bold" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

@@ -76,6 +76,8 @@ class IncidentCardAdapter(
         private val userId: TextView = itemView.findViewById(R.id.user_id)
         private val deviceId: TextView = itemView.findViewById(R.id.device_id)
         private val detailedLocation: TextView = itemView.findViewById(R.id.detailed_location)
+        private val relocatedToLayout: LinearLayout = itemView.findViewById(R.id.relocated_to_layout)
+        private val relocatedTo: TextView = itemView.findViewById(R.id.relocated_to)
         private val latitude: TextView = itemView.findViewById(R.id.latitude)
         private val longitude: TextView = itemView.findViewById(R.id.longitude)
         private val createdAt: TextView = itemView.findViewById(R.id.created_at)
@@ -88,7 +90,10 @@ class IncidentCardAdapter(
             // Set collapsed view data
             alertId.text = incident.alertId
             userName.text = incident.userName
-            locationSummary.text = "📍 ${incident.floorLevel} ${getShortDescription(incident.incidentDescription)}"
+            
+            // Show only floor level from wheelchair in summary (not relocated location)
+            val relocatedLocationText = incident.incidentDescription.trim()
+            locationSummary.text = "📍 ${incident.floorLevel}"
             
             // Set status and colors
             setStatus(incident.status)
@@ -100,6 +105,14 @@ class IncidentCardAdapter(
             userId.text = incident.userId
             deviceId.text = incident.deviceId
             detailedLocation.text = incident.floorLevel
+            
+            // Handle relocated location (show only if it's not empty)
+            if (relocatedLocationText.isNotEmpty()) {
+                relocatedToLayout.visibility = View.VISIBLE
+                relocatedTo.text = relocatedLocationText
+            } else {
+                relocatedToLayout.visibility = View.GONE
+            }
             
             // Parse coordinates
             val coords = formatCoordinates(incident.coordinates)
