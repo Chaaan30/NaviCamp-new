@@ -242,6 +242,35 @@
 
                     </LinearLayout>
 
+                    <!-- Row 2.5: Relocated To (only shown when resolved) -->
+                    <LinearLayout
+                        android:id="@+id/relocated_to_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Relocated To"
+                            android:textSize="10sp"
+                            android:textColor="@color/green"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/relocated_to"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Einstein Building - Fifth Floor - E515"
+                            android:textSize="12sp"
+                            android:textColor="@color/darkGray"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
                     <!-- Row 3: Coordinates -->
                     <LinearLayout
                         android:layout_width="match_parent"

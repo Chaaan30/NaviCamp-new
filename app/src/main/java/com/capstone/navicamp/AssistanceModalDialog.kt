@@ -10,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
-import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -35,16 +34,19 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var resolveButton: Button
     private lateinit var respondProgress: ProgressBar
     private lateinit var falseAlarmButton: Button
-    private lateinit var falseAlarmReason: EditText
-    private lateinit var falseAlarmReasonLayout: com.google.android.material.textfield.TextInputLayout
-    private lateinit var submitFalseAlarmButton: Button
     private lateinit var officerStatusCard: MaterialCardView
     private lateinit var officerStatusText: TextView
     private lateinit var loadingProgress: ProgressBar
+    private lateinit var selectedLocationCard: MaterialCardView
+    private lateinit var selectedLocationText: TextView
+    private lateinit var submitFalseAlarmButton: Button
+    private lateinit var cancelFalseAlarmButton: Button
     private var locationID: String? = null
     private var loadingDialog: AlertDialog? = null
     private var alertID: String? = null
     private var hasOfficerResponded = false
+    private var selectedRelocatedLocation: String? = null
+    private var isFalseAlarmMode = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -85,12 +87,13 @@ class AssistanceModalDialog : DialogFragment() {
         resolveButton = view.findViewById(R.id.resolve_button)
         respondProgress = view.findViewById(R.id.respond_progress)
         falseAlarmButton = view.findViewById(R.id.false_alarm_button)
-        falseAlarmReason = view.findViewById(R.id.false_alarm_reason)
-        falseAlarmReasonLayout = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.false_alarm_reason_layout)
         submitFalseAlarmButton = view.findViewById(R.id.submit_false_alarm_button)
+        cancelFalseAlarmButton = view.findViewById(R.id.cancel_false_alarm_button)
         officerStatusCard = view.findViewById(R.id.officer_status_card)
         officerStatusText = view.findViewById(R.id.officer_status_text)
         loadingProgress = view.findViewById(R.id.respond_progress)
+        selectedLocationCard = view.findViewById(R.id.selected_location_card)
+        selectedLocationText = view.findViewById(R.id.selected_location_text)
     }
 
     private fun populateViewData(view: View) {
@@ -203,6 +206,7 @@ class AssistanceModalDialog : DialogFragment() {
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
         submitFalseAlarmButton.visibility = View.GONE
+        cancelFalseAlarmButton.visibility = View.GONE
     }
 
     private fun showRespondButton() {
@@ -210,6 +214,7 @@ class AssistanceModalDialog : DialogFragment() {
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
         submitFalseAlarmButton.visibility = View.GONE
+        cancelFalseAlarmButton.visibility = View.GONE
     }
     
     private fun showLoadingState() {
@@ -218,6 +223,7 @@ class AssistanceModalDialog : DialogFragment() {
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
         submitFalseAlarmButton.visibility = View.GONE
+        cancelFalseAlarmButton.visibility = View.GONE
     }
     
     private fun hideLoadingState() {
@@ -230,21 +236,73 @@ class AssistanceModalDialog : DialogFragment() {
         }
 
         resolveButton.setOnClickListener {
-            resolveAssistance("resolved")
+            showLocationPicker(false)
         }
 
         falseAlarmButton.setOnClickListener {
-            toggleFalseAlarmInput()
+            enterFalseAlarmMode()
         }
         
         submitFalseAlarmButton.setOnClickListener {
             submitFalseAlarm()
         }
         
+        cancelFalseAlarmButton.setOnClickListener {
+            exitFalseAlarmMode()
+        }
+        
+        // Selected location card click to change location
+        selectedLocationCard.setOnClickListener {
+            showLocationPicker(isFalseAlarmMode)
+        }
+        
         // Close button
         view?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
             dismiss()
         }
+    }
+    
+    private fun showLocationPicker(forFalseAlarm: Boolean) {
+        val title = if (forFalseAlarm) "User Relocated To" else "Location Update"
+        val dialog = LocationPickerDialog.newInstance(title)
+        dialog.setOnLocationSelectedListener { location ->
+            selectedRelocatedLocation = location
+            selectedLocationText.text = location
+            selectedLocationCard.visibility = View.VISIBLE
+            
+            if (forFalseAlarm) {
+                // For false alarm: show submit and cancel buttons
+                submitFalseAlarmButton.visibility = View.VISIBLE
+                cancelFalseAlarmButton.visibility = View.VISIBLE
+            } else {
+                // For resolve: submit immediately after selection
+                resolveAssistance("resolved", location)
+            }
+        }
+        dialog.show(parentFragmentManager, "LocationPickerDialog")
+    }
+    
+    private fun enterFalseAlarmMode() {
+        isFalseAlarmMode = true
+        // Hide resolve and false alarm buttons
+        resolveButton.visibility = View.GONE
+        falseAlarmButton.visibility = View.GONE
+        // Show cancel button immediately
+        cancelFalseAlarmButton.visibility = View.VISIBLE
+        // Show location picker
+        showLocationPicker(true)
+    }
+    
+    private fun exitFalseAlarmMode() {
+        isFalseAlarmMode = false
+        // Hide false alarm buttons and selected location
+        submitFalseAlarmButton.visibility = View.GONE
+        cancelFalseAlarmButton.visibility = View.GONE
+        selectedLocationCard.visibility = View.GONE
+        selectedRelocatedLocation = null
+        // Show resolve and false alarm buttons again
+        resolveButton.visibility = View.VISIBLE
+        falseAlarmButton.visibility = View.VISIBLE
     }
 
     private fun respondToAssistance() {
@@ -304,40 +362,16 @@ class AssistanceModalDialog : DialogFragment() {
         }
     }
 
-    private fun toggleFalseAlarmInput() {
-        if (falseAlarmReasonLayout.visibility == View.VISIBLE) {
-            // Hide the input and reset button
-            falseAlarmReasonLayout.visibility = View.GONE
-            submitFalseAlarmButton.visibility = View.GONE
-            falseAlarmReason.text?.clear()
-            falseAlarmButton.text = "False Alarm"
-            falseAlarmButton.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_warning, 0, 0, 0)
-        } else {
-            // Show the input and change button
-            falseAlarmReasonLayout.visibility = View.VISIBLE
-            submitFalseAlarmButton.visibility = View.VISIBLE
-            falseAlarmButton.text = "Cancel"
-            falseAlarmButton.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_close, 0, 0, 0)
-            
-            // Focus and show keyboard
-            falseAlarmReason.requestFocus()
-            
-            // Show keyboard automatically
-            val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            imm.showSoftInput(falseAlarmReason, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-        }
-    }
-    
     private fun submitFalseAlarm() {
-        val reason = falseAlarmReason.text.toString().trim()
+        val location = selectedRelocatedLocation
         
-        if (reason.isEmpty()) {
-            Toast.makeText(requireContext(), "Please provide a reason for marking this as false alarm", Toast.LENGTH_LONG).show()
-            falseAlarmReason.requestFocus()
+        if (location.isNullOrEmpty()) {
+            Toast.makeText(requireContext(), "Please select a location for the false alarm", Toast.LENGTH_LONG).show()
+            showLocationPicker(true)
             return
         }
         
-        resolveAssistance("false alarm", reason)
+        resolveAssistance("false alarm", location)
     }
 
     private fun showSuccessAnimation() {

@@ -184,6 +184,9 @@ dependencies {
 
     // For creating Excel files - lightweight and Android compatible
     implementation("com.github.ozlerhakan:poiji:4.1.2")
+    
+    // FlexboxLayout for chip-based selection UI
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

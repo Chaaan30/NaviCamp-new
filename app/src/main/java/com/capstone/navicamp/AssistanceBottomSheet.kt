@@ -143,12 +143,12 @@ class AssistanceBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun updateStatus(locationID: String?, newStatus: String, alertDescription: String? = null) {
+    private fun updateStatus(locationID: String?, newStatus: String, relocatedLocation: String? = null) {
         if (locationID != null) {
             val officerName = UserSingleton.fullName ?: "Unknown Officer"
 
             CoroutineScope(Dispatchers.IO).launch {
-                val success = MySQLHelper.resolveIncident(locationID, newStatus, officerName, alertDescription)
+                val success = MySQLHelper.resolveIncident(locationID, newStatus, officerName, relocatedLocation)
                 withContext(Dispatchers.Main) {
                     respondProgress.visibility = View.GONE
                     if (success) {

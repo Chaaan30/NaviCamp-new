@@ -129,7 +129,7 @@ object MySQLHelper {
                     l.longitude,
                     l.dateTime,
                     i.officerResponded,
-                    i.alertDescription
+                    i.relocatedLocation
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
@@ -140,8 +140,8 @@ object MySQLHelper {
             resultSet = statement.executeQuery()
 
             while (resultSet.next()) {
-                val alertDescription = resultSet.getString("alertDescription") ?: ""
-                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val assistanceType = if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
                     "FALL_DETECTION"
                 } else {
                     "MANUAL"
@@ -493,11 +493,16 @@ object MySQLHelper {
         }
     }
 
+    /**
+     * Resolves an incident with optional relocated location.
+     * @param relocatedLocation User's new location in format: "Building - Floor - Room"
+     *                          Example: "Einstein Building - Fifth Floor - E515"
+     */
     suspend fun resolveIncident(
         locationID: String,
         status: String,
         officerName: String,
-        alertDescription: String? = null
+        relocatedLocation: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -508,16 +513,17 @@ object MySQLHelper {
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
-            val query = if (alertDescription != null) {
-                "UPDATE incident_logs_table SET status = ?, officerResponded = ?, alertDescription = ?, resolvedOn = ? WHERE locationID = ?"
+            // Update with relocated location
+            val query = if (relocatedLocation != null) {
+                "UPDATE incident_logs_table SET status = ?, officerResponded = ?, relocatedLocation = ?, resolvedOn = ? WHERE locationID = ?"
             } else {
                 "UPDATE incident_logs_table SET status = ?, officerResponded = ?, resolvedOn = ? WHERE locationID = ?"
             }
             statement = connection.prepareStatement(query)
             statement.setString(1, status)
             statement.setString(2, officerName)
-            if (alertDescription != null) {
-                statement.setString(3, alertDescription)
+            if (relocatedLocation != null) {
+                statement.setString(3, relocatedLocation)
                 statement.setString(4, currentDateTime)
                 statement.setString(5, locationID)
             } else {
@@ -529,7 +535,7 @@ object MySQLHelper {
                 SmartPollingManager.getInstance().triggerFastUpdate()
                 
                 // Send FCM notification about assistance resolution
-                sendAssistanceResolvedNotification(locationID, status, officerName, alertDescription)
+                sendAssistanceResolvedNotification(locationID, status, officerName, relocatedLocation)
             }
             rowsAffected > 0
         } catch (e: SQLException) {
@@ -1177,7 +1183,7 @@ object MySQLHelper {
                     l.longitude,
                     l.dateTime,
                     i.officerResponded,
-                    i.alertDescription
+                    i.relocatedLocation
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
@@ -1190,8 +1196,8 @@ object MySQLHelper {
 
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
-                val alertDescription = resultSet.getString("alertDescription") ?: ""
-                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val assistanceType = if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
                     "FALL_DETECTION"
                 } else {
                     "MANUAL"
@@ -1392,7 +1398,7 @@ object MySQLHelper {
 
             val insertQuery = """
                 INSERT INTO incident_logs_table
-                (alertID, userID, deviceID, locationID, alertDateTime, status, alertDescription, officerResponded, resolvedOn)
+                (alertID, userID, deviceID, locationID, alertDateTime, status, relocatedLocation, officerResponded, resolvedOn)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
 
@@ -1411,7 +1417,7 @@ object MySQLHelper {
                 insertStmt.setString(4, locationID)
                 insertStmt.setTimestamp(5, alertDateTime)
                 insertStmt.setString(6, "pending") // default status
-                insertStmt.setNull(7, java.sql.Types.VARCHAR) // alertDescription NULL
+                insertStmt.setNull(7, java.sql.Types.VARCHAR) // relocatedLocation NULL
                 insertStmt.setNull(8, java.sql.Types.VARCHAR) // officerResponded NULL
                 insertStmt.setNull(9, java.sql.Types.TIMESTAMP) // resolvedOn NULL
 
@@ -1458,7 +1464,7 @@ object MySQLHelper {
                     i.alertDateTime,
                     i.resolvedOn,
                     i.officerResponded,
-                    i.alertDescription
+                    i.relocatedLocation
                 FROM incident_logs_table i
                 JOIN user_table u ON i.userID = u.userID
                 JOIN location_table l ON i.locationID = l.locationID
@@ -1479,7 +1485,7 @@ object MySQLHelper {
                     resultSet.getString("alertDateTime") ?: "",
                     resultSet.getString("resolvedOn") ?: "",
                     resultSet.getString("officerResponded") ?: "",
-                    resultSet.getString("alertDescription") ?: ""
+                    resultSet.getString("relocatedLocation") ?: ""
                 )
                 data.add(row)
             }
@@ -1935,7 +1941,7 @@ object MySQLHelper {
                 l.longitude, 
                 l.dateTime, 
                 i.officerResponded,
-                i.alertDescription
+                i.relocatedLocation
             FROM location_table l 
             LEFT JOIN incident_logs_table i ON l.locationID = i.locationID
             WHERE l.locationID = ?
@@ -1947,8 +1953,8 @@ object MySQLHelper {
 
             resultSet = statement?.executeQuery()
             if (resultSet?.next() == true) {
-                val alertDescription = resultSet.getString("alertDescription") ?: ""
-                val assistanceType = if (alertDescription.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val assistanceType = if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
                     "FALL_DETECTION"
                 } else {
                     "MANUAL"
@@ -2157,7 +2163,7 @@ object MySQLHelper {
         }
     }
     
-    private fun sendAssistanceResolvedNotification(locationID: String, status: String, officerName: String, alertDescription: String? = null) {
+    private fun sendAssistanceResolvedNotification(locationID: String, status: String, officerName: String, relocatedLocation: String? = null) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val assistanceUserID = getUserIDByLocationID(locationID)
@@ -2168,24 +2174,25 @@ object MySQLHelper {
                     val client = OkHttpClient()
                     
                     val jsonBody = if (status == "false alarm") {
-                        // Send false alarm notification
+                        // Send false alarm notification with relocated location
                         """
                             {
                                 "notificationType": "false_alarm",
                                 "locationID": "$locationID",
                                 "userID": "$assistanceUserID",
                                 "officerID": "$officerUserID",
-                                "reason": "${alertDescription ?: ""}"
+                                "relocatedLocation": "${relocatedLocation ?: ""}"
                             }
                         """.trimIndent()
                     } else if (status == "resolved") {
-                        // Send resolved notification
+                        // Send resolved notification with relocated location
                         """
                             {
                                 "notificationType": "assistance_resolved",
                                 "locationID": "$locationID",
                                 "userID": "$assistanceUserID",
-                                "officerID": "$officerUserID"
+                                "officerID": "$officerUserID",
+                                "relocatedLocation": "${relocatedLocation ?: ""}"
                             }
                         """.trimIndent()
                     } else {

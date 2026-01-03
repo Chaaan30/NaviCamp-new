@@ -194,40 +194,78 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- False Alarm Reason Input -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/false_alarm_reason_layout"
+            <!-- Selected Location Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/selected_location_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                app:boxCornerRadiusBottomEnd="12dp"
-                app:boxCornerRadiusBottomStart="12dp"
-                app:boxCornerRadiusTopEnd="12dp"
-                app:boxCornerRadiusTopStart="12dp"
-                app:boxStrokeColor="@color/primaryColor"
-                app:hintTextColor="@color/primaryColor">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="1.5dp"
+                app:strokeColor="@color/primaryColor"
+                app:cardBackgroundColor="@color/lightBlue"
+                android:clickable="true"
+                android:focusable="true">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/false_alarm_reason"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Reason for false alarm (required)"
-                    android:minLines="3"
-                    android:maxLines="5"
-                    android:gravity="top|start"
-                    android:inputType="textMultiLine|textCapSentences"
-                    android:scrollbars="vertical"
-                    android:fontFamily="@font/inter" />
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-            </com.google.android.material.textfield.TextInputLayout>
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_location"
+                        android:layout_marginEnd="12dp"
+                        app:tint="@color/primaryColor" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Relocated to:"
+                            android:textSize="12sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter" />
+
+                        <TextView
+                            android:id="@+id/selected_location_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Select location..."
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primaryColor"
+                            android:fontFamily="@font/inter_bold" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_edit"
+                        app:tint="@color/primaryColor" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Submit False Alarm Button -->
             <Button
                 android:id="@+id/submit_false_alarm_button"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginBottom="16dp"
+                android:layout_height="48dp"
+                android:layout_marginBottom="12dp"
                 android:text="Submit False Alarm"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -238,6 +276,22 @@
                 app:icon="@drawable/ic_warning"
                 app:iconGravity="textStart"
                 app:iconTint="@color/white" />
+
+            <!-- Cancel False Alarm Button (centered) -->
+            <Button
+                android:id="@+id/cancel_false_alarm_button"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:minWidth="100dp"
+                android:text="Cancel"
+                android:textSize="12sp"
+                android:textColor="@color/gray"
+                android:background="@drawable/button_gray_outline"
+                android:visibility="gone"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center" />
 
             <!-- Action Buttons -->
             <LinearLayout
