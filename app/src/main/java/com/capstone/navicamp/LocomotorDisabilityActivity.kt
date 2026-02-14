@@ -14,8 +14,16 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 
+import android.animation.ValueAnimator
+import android.os.Handler
+import android.os.Looper
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationView
 import com.google.firebase.messaging.FirebaseMessaging
 import com.journeyapps.barcodescanner.ScanContract
@@ -29,12 +37,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 
+
 class LocomotorDisabilityActivity : AppCompatActivity() {
-    private lateinit var drawerLayout: DrawerLayout
-    private lateinit var toggle: ActionBarDrawerToggle
-    private lateinit var navigationView: NavigationView
-    private lateinit var assistanceButton: Button
-    private lateinit var assistanceConnectButton: Button
     private lateinit var connectionStatusTextView: TextView
 
 
@@ -45,7 +49,24 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private var connectionExpiryTimeMillis: Long? = null
     private var isRestoringConnection = false // Flag to prevent multiple restoration attempts
 
+    //assistant button counter
+    private lateinit var assistanceButton: Button
+    private var countDownTimer: CountDownTimer? = null
 
+    private val animationStages = listOf(
+        1 to 200,
+        2 to 220,
+        3 to 240,
+        4 to 260,
+        5 to 286,
+    )
+
+    enum class DeviceStatus {
+        AVAILABLE,
+        IN_USE,
+        MAINTENANCE,
+        UNKNOWN
+    }
 
     private var currentUserID: String? = null
     private var currentUserFullName: String? = null
@@ -65,189 +86,289 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
     }
 
+    private fun restoreConnectionState(deviceID: String, expiryTime: Long) {
+        Log.d("Connection", "Restoring state for device: $deviceID, Expiry: $expiryTime")
+
+        // Set the global connection variables
+        connectedDeviceID = deviceID
+        connectionExpiryTimeMillis = expiryTime
+
+        val remainingTime = expiryTime - System.currentTimeMillis()
+
+        if (remainingTime > 0) {
+            // If there's time left, start the timer and update the UI
+            startConnectionTimer(remainingTime)
+            updateConnectionStatusUI() // This function will now correctly update the text
+        } else {
+            // If time has already expired, log it and perform a disconnect
+            Log.w("Connection", "Restored connection for $deviceID had already expired. Disconnecting.")
+            disconnectFromDevice(showToast = false) // Disconnect without showing a toast
+        }
+    }
+
     private fun showDurationSelectionDialog(deviceID: String) {
-        Log.d("QRScan", "Showing duration selection dialog for device: $deviceID")
-        val durationOptions = arrayOf("15 minutes", "30 minutes", "45 minutes", "60 minutes")
-        // Values in milliseconds
-        val durationValuesMs = arrayOf(15 * 60 * 1000L, 30 * 60 * 1000L, 45 * 60 * 1000L, 60 * 60 * 1000L)
+        val durationOptions = arrayOf("30 minutes", "1 hour", "2 hours", "4 hours")
+        // Corresponding values in milliseconds
+        val durationValuesMs = longArrayOf(30 * 60 * 1000, 60 * 60 * 1000, 2 * 60 * 60 * 1000, 4 * 60 * 60 * 1000)
 
         AlertDialog.Builder(this)
             .setTitle("Select Connection Duration")
-            .setItems(durationOptions) { dialogInterface: android.content.DialogInterface, which: Int ->
+            .setItems(durationOptions) { dialog, which ->
                 val selectedDurationMs = durationValuesMs[which]
-                val selectedDurationMinutes = selectedDurationMs / (60 * 1000)
-                Log.d("QRScan", "User selected $selectedDurationMinutes minutes for device $deviceID")
-                connectToDevice(deviceID, selectedDurationMs) // Pass selected duration
-                dialogInterface.dismiss()
+                Log.d("LocomotorDisability", "User selected duration: ${durationOptions[which]} ($selectedDurationMs ms) for device $deviceID")
+                // Call your existing, powerful connectToDevice function
+                connectToDevice(deviceID, selectedDurationMs)
+                dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialogInterface: android.content.DialogInterface, _: Int ->
-                Log.d("QRScan", "User cancelled connection to device $deviceID")
-                dialogInterface.dismiss()
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
                 Toast.makeText(this, "Connection cancelled.", Toast.LENGTH_SHORT).show()
             }
-            .setCancelable(false) // User must choose or cancel
             .show()
     }
 
 
 
-
+    private lateinit var bottomNavigationView: BottomNavigationView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_locomotor_disability)
 
-        // Initialize SharedPreferences for user ID and full name
+        // --- GROUP 1: INITIALIZE VIEWS & DATA ---
+        bottomNavigationView = findViewById(R.id.bottom_navigation)
+        connectionStatusTextView = findViewById(R.id.connection_status_textview)
+        assistanceButton = findViewById(R.id.assistance_button)
+
+        resetRunnable = Runnable {
+            Log.d("LocomotorDisability", "30-minute timer elapsed. Forcing button reset.")
+            forceResetButtonState()
+        }
+
         val sharedPreferences = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         currentUserID = sharedPreferences.getString("userID", null)
         currentUserFullName = sharedPreferences.getString("fullName", "User")
 
-        Log.d("LocomotorDisability", "=== APP STARTING ===")
-        Log.d("LocomotorDisability", "Current User ID: $currentUserID")
-        Log.d("LocomotorDisability", "Connected Device ID (should be null): $connectedDeviceID")
-        Log.d("LocomotorDisability", "Connection Expiry Time (should be null): $connectionExpiryTimeMillis")
-
-        // Set UserSingleton values for FCM token management
         UserSingleton.userID = currentUserID
         UserSingleton.fullName = currentUserFullName
 
+        Log.d("LocomotorDisability", "=== APP STARTING | User: $currentUserID ===")
 
-        // Initialize navigationView
-        navigationView = findViewById(R.id.navigation_view)
-        connectionStatusTextView = findViewById(R.id.connection_status_textview)
-        assistanceButton = findViewById(R.id.assistance_button)
-        assistanceConnectButton = findViewById(R.id.assistance_connect_button)
+        // --- GROUP 2: SET UP LISTENERS & NON-DB UI ---
+        setupHoldToActivateButton()
+        initializeUserName() // Assuming this function only sets text from variables
 
-        // New: Initialize Line Follower UI elements with explicit types
-
-
-        // Set up the Toolbar as the Action Bar
-        val toolbar: Toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.title = "Main Menu"
-
-        // Set up the DrawerLayout and ActionBarDrawerToggle
-        drawerLayout = findViewById(R.id.drawer_layout)
-        toggle = ActionBarDrawerToggle(
-            this,
-            drawerLayout,
-            toolbar,
-            R.string.navigation_drawer_open,
-            R.string.navigation_drawer_close
-        )
-        drawerLayout.addDrawerListener(toggle)
-        toggle.syncState()
-
-        navigationView.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_logout -> {
-                    // Clear SharedPreferences
-                    val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-                    val editor = sharedPreferences.edit()
-                    val loggedOutUserID = sharedPreferences.getString("userID", null)
-                    editor.clear()
-                    editor.apply()
-
-                    // Clear FCM token from database asynchronously
-                    if (loggedOutUserID != null) {
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            try {
-                                MySQLHelper.clearUserFCMToken(loggedOutUserID)
-                                Log.d("LocomotorDisability", "FCM token cleared for user: $loggedOutUserID on logout")
-                            } catch (e: Exception) {
-                                Log.e("LocomotorDisability", "Error clearing FCM token on logout: ${e.message}", e)
-                            }
-                        }
-                    }
-
-                    // Navigate to MainActivity
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
                     true
                 }
-                R.id.nav_item1 -> {
-                    // Navigate to AccountSettingsActivity
+                R.id.nav_scan_qr -> {
+                    if (connectedDeviceID == null) {
+                        launchQrScanner()
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setTitle("Disconnect Wheelchair")
+                            .setMessage("Do you want to disconnect from $connectedDeviceID?")
+                            .setPositiveButton("Yes") { _, _ -> disconnectFromDevice() }
+                            .setNegativeButton("No", null)
+                            .show()
+                    }
+                    true
+                }
+                R.id.nav_notifications -> {
+                    true
+                }
+                R.id.nav_settings -> {
                     val intent = Intent(this, AccountSettingsActivity::class.java)
                     startActivity(intent)
-                    true
-                }
-                R.id.nav_item2 -> {
-                    // Navigate to LocomotorDisabilityActivity and clear the activity stack
-                    val intent = Intent(this, LocomotorDisabilityActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    true
-                }
-
-                R.id.nav_device_setup -> {
-                    // Start device setup
-                    startDeviceSetup()
                     true
                 }
                 else -> false
             }
         }
 
-        // Don't update connection status UI immediately - wait for database restoration
-        // updateConnectionStatusUI()
-        
-        // Show loading state while checking for existing connections
-        connectionStatusTextView.text = "Checking for active wheelchair connection..."
-        assistanceConnectButton.text = "Checking..."
-        assistanceConnectButton.isEnabled = false
+        // --- GROUP 3: ASYNCHRONOUS DATABASE OPERATIONS ---
+        val userId = currentUserID
+        if (userId != null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                MySQLHelper.awaitInitialized()
+                Log.d("LocomotorDisability", "MySQLHelper is initialized. Proceeding with DB operations.")
 
-        // Register FCM token for this user
+                val connectionInfo: ActiveConnectionInfo? = MySQLHelper.getActiveConnectionForUser(userId)
+
+                withContext(Dispatchers.Main) {
+                    if (connectionInfo != null) {
+                        Log.d("Connection", "Restoring active connection for device: ${connectionInfo.deviceID}")
+                        restoreConnectionState(connectionInfo.deviceID, connectionInfo.expiryTime)
+                    }
+                    else {
+                        Log.d("Connection", "No active connection found for user $userId.")
+                        updateConnectionStatusUI()
+                    }
+                }
+
+                val cleanedUp = MySQLHelper.cleanupExpiredConnections()
+                if (cleanedUp > 0) {
+                    Log.d("LocomotorDisability", "Cleaned up $cleanedUp expired connections.")
+                }
+            }
+        } else {
+            Log.e("LocomotorDisability", "Cannot perform DB operations: UserID is null.")
+        }
+
+        // Registering for FCM does not depend on the DB, so it can be here.
         registerFCMToken()
-        
-        // Initialize user name display
-        initializeUserName()
-        
-        // ALWAYS check for active connections from database and restore state
-        // This ensures connection is restored even when activity is started from push notifications
-        restoreConnectionFromDatabase()
-        
-        // Clean up any expired connections in the database
-        lifecycleScope.launch(Dispatchers.IO) {
-            val cleanedUp = MySQLHelper.cleanupExpiredConnections()
-            if (cleanedUp > 0) {
-                Log.d("LocomotorDisability", "Cleaned up $cleanedUp expired device connections on activity start")
+    }
+
+
+    private var isAlertSent = false
+    private var alertTimestamp = 0L
+
+    private val resetHandler = Handler(Looper.getMainLooper())
+    private lateinit var resetRunnable: Runnable
+
+    private fun onPushNotificationReceived(action: String) {
+        if (action == "incident_resolved") {
+            runOnUiThread {
+                Log.d("Locomotor Disability", "Incident resolved externally. Resetting button.")
+                forceResetButtonState()
             }
         }
+    }
 
-        // Set up the Ask for assistance button
-        assistanceButton.setOnClickListener {
-            if (connectedDeviceID != null && currentUserID != null && currentUserFullName != null) {
-                requestAssistanceWithDevice(connectedDeviceID!!, currentUserID!!, currentUserFullName!!)
-            } else if (connectedDeviceID == null) {
-                Toast.makeText(this, "Please connect to a wheelchair first.", Toast.LENGTH_LONG).show()
-            } else {
-                 // Fallback to old assistance activity if not connected to a device or user details are missing
-                Log.w("Assistance", "User ID or Full Name is null, or not connected to a device. Fallback to AssistanceActivity.")
-                 val intent = Intent(this, AssistanceActivity::class.java)
-                 startActivity(intent)
+    private fun launchQrScanner() {
+        val options = ScanOptions()
+        options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+        options.setPrompt("Scan QR Code on Wheelchair")
+        options.setCameraId(0)
+        options.setBeepEnabled(true)
+        options.setBarcodeImageEnabled(true)
+        options.setOrientationLocked(true)
+        qrCodeScannerLauncher.launch(options)
+    }
+
+
+    private fun setupHoldToActivateButton() {
+        assistanceButton.setOnTouchListener { _,  event ->
+            if (isAlertSent) return@setOnTouchListener true
+
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startHoldAnimation()
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    cancelHoldAnimation()
+                    true // Changed to true to indicate the event was handled
+                }
+                else -> false
             }
         }
+    }
 
-        assistanceConnectButton.setOnClickListener {
-            if (connectedDeviceID == null) {
-                val options = ScanOptions()
-                options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                options.setPrompt("Scan QR Code on Wheelchair")
-                options.setCameraId(0) // Use a specific camera of the device
-                options.setBeepEnabled(true)
-                options.setBarcodeImageEnabled(true)
-                options.setOrientationLocked(true) // Lock to portrait
-                // options.captureActivity = PortraitCaptureActivity::class.java // Use custom activity for portrait
-                qrCodeScannerLauncher.launch(options)
-            } else {
-                // Already connected, so disconnect
-                disconnectFromDevice()
+    private fun startHoldAnimation() {
+        countDownTimer = object : CountDownTimer(5100, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val secondsPassed = 5 - (millisUntilFinished / 1000)
+                if (secondsPassed in 1..animationStages.size) {
+                    val (count, sizeDp) = animationStages[secondsPassed.toInt() - 1]
+                    assistanceButton.text = count.toString()
+                    animateButtonSize(dpToPx(sizeDp))
+                }
             }
+
+            override fun onFinish() {
+                isAlertSent = true
+                assistanceButton.text = "5"
+                animateButtonSize(dpToPx(animationStages.last().second))
+                sendEmergencyAlert()
+                playSuccessAnimation()
+
+                alertTimestamp = System.currentTimeMillis()
+
+                resetHandler.postDelayed(resetRunnable, 30 * 60 * 1000)
+            }
+        }.start()
+    }
+
+    private fun cancelHoldAnimation() {
+        if (!isAlertSent) {
+            countDownTimer?.cancel()
+            resetToInitialState()
         }
+    }
 
+    private fun forceResetButtonState() {
+        resetHandler.removeCallbacks(resetRunnable)
+        assistanceButton.clearAnimation()
+        assistanceButton.scaleX = 1.0f
+        assistanceButton.scaleY = 1.0f
 
+        isAlertSent = false
+        alertTimestamp = 0L
+        assistanceButton.text = "SOS"
+        assistanceButton.textSize = 34f
+        animateButtonSize(dpToPx(174))
+
+        Toast.makeText(this, "Assistance button has been reset.", Toast.LENGTH_LONG).show()
+    }
+    private fun resetToInitialState() {
+        animateButtonSize(dpToPx(174))
+        val currentCount = assistanceButton.text.toString().toIntOrNull() ?: 1
+        val resetDuration = (currentCount * 150).toLong()
+
+        object : CountDownTimer(resetDuration, 150) {
+            override fun onTick(millisUntilFinished: Long) {
+                val count = (millisUntilFinished /150).toInt()
+                if (count > 0) {
+                    assistanceButton.text = count.toString()
+                }
+            }
+
+            override fun onFinish() {
+                assistanceButton.text = "SOS"
+            }
+        }.start()
+    }
+
+    private fun playSuccessAnimation() {
+        val animator = ValueAnimator.ofFloat(1.0f, 1.05f)
+        animator.duration = 800
+        animator.repeatMode = ValueAnimator.REVERSE
+        animator.repeatCount = ValueAnimator.INFINITE
+
+        animator.addUpdateListener { animation ->
+            val scale = animation.animatedValue as Float
+            assistanceButton.scaleX = scale
+            assistanceButton.scaleY = scale
+        }
+        assistanceButton.text = "Help is on the way"
+        assistanceButton.textSize = 24f
+        animator.start()
+    }
+
+    private fun animateButtonSize(newSizePx: Int) {
+        val button = assistanceButton
+        val animator = ValueAnimator.ofInt(button.width, newSizePx)
+        animator.duration = 200
+
+        animator.addUpdateListener {animation ->
+            val value = animation.animatedValue as Int
+            val layoutParams: ViewGroup.LayoutParams = button.layoutParams
+            layoutParams.width = value
+            layoutParams.height = value
+            button.layoutParams = layoutParams
+        }
+        animator.start()
+    }
+
+    private fun sendEmergencyAlert() {
+        Toast.makeText(this, "Emergency alert sent!", Toast.LENGTH_LONG).show()
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 
     private fun registerFCMToken() {
@@ -298,7 +419,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         Log.d("LocomotorDisability", "Device ID: $deviceID")
         Log.d("LocomotorDisability", "Duration: ${durationMs / (60 * 1000)} minutes")
         Log.d("LocomotorDisability", "Current User ID: $currentUserID")
-        
+
         if (currentUserID == null) {
             Toast.makeText(this, "User not logged in. Cannot connect.", Toast.LENGTH_LONG).show()
             Log.e("DeviceConnect", "CurrentUserID is null. Cannot connect.")
@@ -311,27 +432,29 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             val isAvailable = withContext(Dispatchers.IO) {
                 MySQLHelper.isDeviceAvailable(deviceID)
             }
-            
+
             Log.d("LocomotorDisability", "=== DEVICE AVAILABILITY CHECK ===")
             Log.d("LocomotorDisability", "Device $deviceID is available: $isAvailable")
-            
+
             if (!isAvailable) {
                 // Check if device is under maintenance for specific error message
-                val deviceStatus: String? = withContext(Dispatchers.IO) {
+                // In connectToDevice()
+                val deviceStatus: DeviceStatus = withContext(Dispatchers.IO) {
                     MySQLHelper.getDeviceStatus(deviceID)
                 }
-                
-                val errorMessage = when (deviceStatus?.lowercase()) {
-                    "maintenance" -> "Wheelchair $deviceID is currently under maintenance and cannot be used. Please contact support or try another wheelchair."
-                    "in_use" -> "Wheelchair $deviceID is currently in use by another user. Please try again later."
-                    else -> "Wheelchair $deviceID is currently unavailable. Please try again later."
+
+                val errorMessage = when (deviceStatus) {
+                    DeviceStatus.MAINTENANCE -> "Wheelchair $deviceID is currently under maintenance..."
+                    DeviceStatus.IN_USE -> "Wheelchair $deviceID is currently in use by another user..."
+                    else -> "Wheelchair $deviceID is currently unavailable..."
                 }
-                
+
+
                 Toast.makeText(this@LocomotorDisabilityActivity, errorMessage, Toast.LENGTH_LONG).show()
                 Log.w("DeviceConnect", "Device $deviceID is not available for connection - Status: $deviceStatus")
                 return@launch
             }
-            
+
             val currentTimeMillis = System.currentTimeMillis()
             connectionExpiryTimeMillis = currentTimeMillis + currentConnectionDurationMs // Store actual expiry time
 
@@ -378,36 +501,41 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     }
 
     private fun disconnectFromDevice(showToast: Boolean = true) {
+        val deviceToDisconnect = connectedDeviceID
+        if (deviceToDisconnect == null) {
+            Log.w("DeviceConnect", "Nothing to disconnect.")
+            return
+        }
+
+        // 1. Stop the countdown timer
         connectionTimer?.cancel()
         connectionTimer = null
-        val previouslyConnectedDeviceID = connectedDeviceID
-        connectedDeviceID = null
-        connectionExpiryTimeMillis = null // Clear expiry time
 
+        // 2. Update the Database
+        lifecycleScope.launch(Dispatchers.IO) {
+            // We pass null for UserID and null for Expiry to reset the wheelchair to "available"
+            val success = MySQLHelper.updateDeviceConnectionStatus(deviceToDisconnect, null, null)
 
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    // 3. Clear local state only after DB confirms success
+                    connectedDeviceID = null
+                    connectionExpiryTimeMillis = null
 
-        if (previouslyConnectedDeviceID != null) {
-            lifecycleScope.launch {
-                val disconnectSuccess = withContext(Dispatchers.IO) {
-                    MySQLHelper.updateDeviceConnectionStatus(previouslyConnectedDeviceID, null, null)
-                }
-                if (disconnectSuccess) {
-                    Log.d("DeviceConnect", "Successfully updated DB for disconnection from device: $previouslyConnectedDeviceID")
+                    // 4. Update the UI (This resets the Bottom Nav text to "Scan QR")
+                    updateConnectionStatusUI()
+
+                    if (showToast) {
+                        Toast.makeText(this@LocomotorDisabilityActivity, "Disconnected from wheelchair.", Toast.LENGTH_SHORT).show()
+                    }
+                    Log.d("DeviceConnect", "Successfully disconnected device: $deviceToDisconnect")
                 } else {
-                    Log.e("DeviceConnect", "Failed to update DB for disconnection from device: $previouslyConnectedDeviceID")
-                    // Optionally, show a different toast or handle the error if DB update fails
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Disconnection processed. DB update issue.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LocomotorDisabilityActivity, "Disconnection failed on server.", Toast.LENGTH_LONG).show()
+                    Log.e("DeviceConnect", "Database update failed for disconnect.")
                 }
-
-                if (showToast) {
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Disconnected from wheelchair: $previouslyConnectedDeviceID", Toast.LENGTH_LONG).show()
-                }
-                Log.d("DeviceConnect", "Local state disconnected from device: $previouslyConnectedDeviceID")
             }
         }
-        updateConnectionStatusUI()
     }
-
 
     private fun startConnectionTimer(durationMs: Long) {
         connectionTimer?.cancel() // Cancel any existing timer
@@ -433,17 +561,24 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     }
 
     private fun updateConnectionStatusUI() {
+        if (!::bottomNavigationView.isInitialized) return
+        // 1. Get the menu item from the bottom navigation
+        val scanItem = bottomNavigationView.menu.findItem(R.id.nav_scan_qr)
+
         if (connectedDeviceID != null) {
+            // State: CONNECTED
             connectionStatusTextView.text = "Connected to Wheelchair: $connectedDeviceID"
-            assistanceConnectButton.text = "Disconnect"
-            assistanceConnectButton.isEnabled = true
-            // Make the original assistance button more prominent or change its text if needed
-            // assistanceButton.text = "Ask Assistance (Wheelchair)"
+            connectionStatusTextView.setTextColor(android.graphics.Color.parseColor("#4CAF50")) // Green
+
+            // 2. Change the 2nd icon's text to "Disconnect"
+            scanItem.title = "Disconnect"
         } else {
-            connectionStatusTextView.text = "Not connected to a wheelchair"
-            assistanceConnectButton.text = "Connect to Wheelchair"
-            assistanceConnectButton.isEnabled = true
-            // assistanceButton.text = "Ask for assistance" // Revert if changed
+            // State: NOT CONNECTED
+            connectionStatusTextView.text = "Not connected to a wheelchair."
+            connectionStatusTextView.setTextColor(android.graphics.Color.parseColor("#8C8C8C")) // Gray
+
+            // 3. Change the 2nd icon's text back to "Scan QR"
+            scanItem.title = "Scan QR"
         }
     }
 
@@ -463,49 +598,52 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             Log.d("LocomotorDisability", "Using fullName: '$userFullName' for userID: $userID")
 
             // Get device location data from devices_table based on deviceID
-            val deviceLocation = withContext(Dispatchers.IO) {
+            val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) {
                 MySQLHelper.getDeviceLastLocation(deviceID)
             }
 
             if (deviceLocation != null) {
-                val latitude = deviceLocation.first
-                val longitude = deviceLocation.second
-                val floorLevelFromDb = deviceLocation.third // This can be null
-                
-                // Provide a default if floorLevelFromDb is null
-                val floorLevelToInsert = floorLevelFromDb ?: "Unknown"
+                val latitude = deviceLocation.latitude
+                val longitude = deviceLocation.longitude
 
-                Log.d("LocomotorDisability", "Device location: lat=$latitude, lng=$longitude, floor=$floorLevelToInsert")
+                if (latitude != null && longitude != null) {
+                    val floorLevelToInsert = deviceLocation.floorLevel ?: "Unknown"
 
-                val success = withContext(Dispatchers.IO) {
-                    MySQLHelper.insertAssistanceRequestFromDevice(
-                        this@LocomotorDisabilityActivity,
-                        userID,
-                        userFullName, // Use fullName from user_table or fallback
-                        deviceID,
-                        latitude,
-                        longitude,
-                        floorLevelToInsert
-                    )
-                }
-                if (success) {
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Assistance requested using wheelchair location!", Toast.LENGTH_LONG).show()
-                    // Optionally, navigate to AssistanceActivity or show a confirmation
-                    // val intent = Intent(this@LocomotorDisabilityActivity, AssistanceActivity::class.java)
-                    // startActivity(intent)
+                    Log.d("LocomotorDisability", "Device location: lat=$latitude, lng=$longitude, floor=$floorLevelToInsert")
+
+                    val success = withContext(Dispatchers.IO) {
+                        MySQLHelper.insertAssistanceRequestFromDevice(
+                            this@LocomotorDisabilityActivity,
+                            userID,
+                            userFullName,
+                            deviceID,
+                            latitude,     // Correctly typed as Double
+                            longitude,    // Correctly typed as Double
+                            floorLevelToInsert
+                        )
+                    }
+
+                    if (success) {
+                        Toast.makeText(this@LocomotorDisabilityActivity, "Assistance requested using wheelchair location!", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this@LocomotorDisabilityActivity, "Failed to send assistance request.", Toast.LENGTH_LONG).show()
+                    }
                 } else {
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Failed to send assistance request.", Toast.LENGTH_LONG).show()
+                    // Handle the case where the device exists but has no valid location data
+                    Log.w("LocomotorDisability", "Device $deviceID found, but has no location data.")
+                    Toast.makeText(this@LocomotorDisabilityActivity, "Could not retrieve wheelchair's current location.", Toast.LENGTH_LONG).show()
                 }
             } else {
                 Toast.makeText(this@LocomotorDisabilityActivity, "Could not retrieve wheelchair location. Please try again.", Toast.LENGTH_LONG).show()
             }
+
         }
     }
 
 
     override fun onPause() {
         super.onPause()
-        
+
         // Save last activity for navigation purposes
         val lastActivityPreferences = getSharedPreferences("LastActivity", MODE_PRIVATE)
         val editor = lastActivityPreferences.edit()
@@ -515,10 +653,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        
+
         Log.d("LocomotorDisability", "=== ON RESUME CALLED ===")
         Log.d("LocomotorDisability", "Connected Device ID: $connectedDeviceID")
-        
+
         // Update name in nav header upon resume
         val fullName = if (UserSingleton.fullName.isNullOrBlank()) {
             val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
@@ -530,7 +668,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
 
         findViewById<TextView>(R.id.user_fullname)?.text = fullName
-        
+
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
@@ -540,20 +678,20 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         // ALWAYS restore connection from database on resume
         // This ensures connection state is maintained across app lifecycle events
         Log.d("LocomotorDisability", "Restoring connection from database on resume")
-        
+
         // Show loading state while restoring connection
         if (!isRestoringConnection) {
             connectionStatusTextView.text = "Checking for active wheelchair connection..."
-            assistanceConnectButton.text = "Checking..."
-            assistanceConnectButton.isEnabled = false
         }
-        
+
         restoreConnectionFromDatabase()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         connectionTimer?.cancel()
+
+        resetHandler.removeCallbacks(resetRunnable)
         // It's good practice to ensure disconnection if the activity is destroyed while connected.
         // However, if the app is killed, this might not run.
         // The server-side 'connectedUntil' field is the ultimate arbiter.
@@ -580,16 +718,16 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private fun initializeUserName() {
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val fullName = sharedPreferences.getString("fullName", "User")
-        
+
         // Ensure UserSingleton is properly set
         UserSingleton.fullName = fullName
-        
+
         // Log for debugging
         Log.d("LocomotorDisability", "Initializing name: $fullName")
-        
+
         // Update UI elements with the name
-        findViewById<TextView>(R.id.user_fullname)?.text = fullName
-        
+        findViewById<TextView>(R.id.user_fullname)?.text = "$fullName!"
+
         val navigationView = findViewById<NavigationView>(R.id.navigation_view)
         navigationView?.let {
             val headerView = it.getHeaderView(0)
@@ -597,83 +735,101 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
     }
 
+    private fun showDeviceLocationOnMap(deviceID: String) {
+        lifecycleScope.launch {
+            val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) { // <-- Use the data class
+                MySQLHelper.getDeviceLastLocation(deviceID)
+            }
+
+            if (deviceLocation?.latitude != null && deviceLocation.longitude != null) { // <-- Safe check
+                val intent = Intent(this@LocomotorDisabilityActivity, MapActivity::class.java).apply {
+                    putExtra("EXTRA_LATITUDE", deviceLocation.latitude)
+                    putExtra("EXTRA_LONGITUDE", deviceLocation.longitude)
+                    putExtra("EXTRA_DEVICE_NAME", deviceLocation.name ?: "Wheelchair Location")
+                }
+                startActivity(intent)
+            } else {
+                Toast.makeText(this@LocomotorDisabilityActivity, "Wheelchair location is not available.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
     private fun restoreConnectionFromDatabase() {
         if (currentUserID == null) {
             Log.w("LocomotorDisability", "Cannot restore connection - currentUserID is null")
             return
         }
-        
+
         if (isRestoringConnection) {
             Log.d("LocomotorDisability", "Connection restoration already in progress, skipping")
             return
         }
-        
+
         isRestoringConnection = true
-        
+
         Log.d("LocomotorDisability", "=== ATTEMPTING DATABASE RESTORATION ===")
         Log.d("LocomotorDisability", "Attempting to restore connection from database for user: $currentUserID")
         Log.d("LocomotorDisability", "Current local state - connectedDeviceID: $connectedDeviceID, timer: ${if (connectionTimer != null) "running" else "null"}")
-        
+
         lifecycleScope.launch {
             try {
                 // First, let's check what's actually in the database for debugging
                 withContext(Dispatchers.IO) {
-                    val deviceStatus: String? = MySQLHelper.getDeviceStatus("202501")
+                    val deviceStatus: DeviceStatus = MySQLHelper.getDeviceStatus("202501")
                     Log.d("LocomotorDisability", "Device 202501 current status: $deviceStatus")
-                    
+
                     // Monitor for 'active' status
                     MySQLHelper.monitorDeviceStatusChanges("202501")
                 }
-                
+
                 val activeConnection = withContext(Dispatchers.IO) {
                     MySQLHelper.getActiveConnectionForUser(currentUserID!!)
                 }
-                
+
                 Log.d("LocomotorDisability", "=== DATABASE QUERY RESULT ===")
                 Log.d("LocomotorDisability", "Database query result: ${if (activeConnection != null) "Found connection to ${activeConnection.deviceID}" else "No active connection found"}")
-                
+
                 if (activeConnection != null) {
                     val currentTimeMillis = System.currentTimeMillis()
-                    
+
                     Log.d("LocomotorDisability", "=== CONNECTION DETAILS ===")
                     Log.d("LocomotorDisability", "Device ID: ${activeConnection.deviceID}")
                     Log.d("LocomotorDisability", "Current time: $currentTimeMillis")
-                    Log.d("LocomotorDisability", "Connection expires: ${activeConnection.connectedUntilMillis}")
-                    Log.d("LocomotorDisability", "Time difference: ${activeConnection.connectedUntilMillis - currentTimeMillis}ms")
-                    
-                    if (activeConnection.connectedUntilMillis > currentTimeMillis) {
+                    Log.d("LocomotorDisability", "Connection expires: ${activeConnection.expiryTime}")
+                    Log.d("LocomotorDisability", "Time difference: ${activeConnection.expiryTime - currentTimeMillis}ms")
+
+                    if (activeConnection.expiryTime > currentTimeMillis) {
                         // Connection is still valid, restore it
                         Log.d("LocomotorDisability", "=== RESTORING CONNECTION ===")
-                        
+
                         // Cancel any existing timer to prevent duplicates
                         connectionTimer?.cancel()
                         connectionTimer = null
-                        
+
                         // Restore connection state
                         connectedDeviceID = activeConnection.deviceID
-                        connectionExpiryTimeMillis = activeConnection.connectedUntilMillis
+                        connectionExpiryTimeMillis = activeConnection.expiryTime
 
 
-                        
-                        val remainingDurationMs = activeConnection.connectedUntilMillis - currentTimeMillis
+
+                        val remainingDurationMs = activeConnection.expiryTime - currentTimeMillis
                         val remainingMinutes = remainingDurationMs / (60 * 1000)
                         val remainingSeconds = (remainingDurationMs % (60 * 1000)) / 1000
-                        
+
                         Log.d("LocomotorDisability", "=== TIMING DETAILS ===")
-                        Log.d("LocomotorDisability", "Database expiry time: ${activeConnection.connectedUntilMillis}")
+                        Log.d("LocomotorDisability", "Database expiry time: ${activeConnection.expiryTime}")
                         Log.d("LocomotorDisability", "Current system time: $currentTimeMillis")
                         Log.d("LocomotorDisability", "Calculated remaining: ${remainingDurationMs}ms")
                         Log.d("LocomotorDisability", "Remaining time: ${remainingMinutes}m ${remainingSeconds}s")
                         Log.d("LocomotorDisability", "Starting timer with duration: ${remainingDurationMs}ms")
-                        
+
                         Log.d("LocomotorDisability", "Restored connection to device ${activeConnection.deviceID} with ${remainingMinutes}m ${remainingSeconds}s remaining")
-                        
+
                         // Start the timer with remaining time
                         startConnectionTimer(remainingDurationMs)
                         updateConnectionStatusUI()
-                        
-                        Toast.makeText(this@LocomotorDisabilityActivity, 
-                            "Reconnected to wheelchair: ${activeConnection.deviceID} (${remainingMinutes}m ${remainingSeconds}s left)", 
+
+                        Toast.makeText(this@LocomotorDisabilityActivity,
+                            "Reconnected to wheelchair: ${activeConnection.deviceID} (${remainingMinutes}m ${remainingSeconds}s left)",
                             Toast.LENGTH_LONG).show()
 
 
@@ -682,28 +838,28 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                         // Connection expired while app was not running, clean it up
                         Log.d("LocomotorDisability", "=== CONNECTION EXPIRED - CLEANING UP ===")
                         Log.d("LocomotorDisability", "Found expired connection for device ${activeConnection.deviceID}, cleaning up")
-                        
+
                         // Clean up local state
                         connectionTimer?.cancel()
                         connectionTimer = null
                         connectedDeviceID = null
                         connectionExpiryTimeMillis = null
-                        
+
                         // Clean up database
                         withContext(Dispatchers.IO) {
                             MySQLHelper.updateDeviceConnectionStatus(activeConnection.deviceID, null, null)
                         }
-                        
+
                         updateConnectionStatusUI()
-                        
-                        Toast.makeText(this@LocomotorDisabilityActivity, 
-                            "Previous wheelchair connection expired", 
+
+                        Toast.makeText(this@LocomotorDisabilityActivity,
+                            "Previous wheelchair connection expired",
                             Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     Log.d("LocomotorDisability", "=== NO CONNECTION FOUND ===")
                     Log.d("LocomotorDisability", "No active connection found in database for user $currentUserID")
-                    
+
                     // Clean up local state if no database connection exists
                     if (connectedDeviceID != null) {
                         Log.d("LocomotorDisability", "Cleaning up orphaned local connection state")
@@ -712,19 +868,19 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                         connectedDeviceID = null
                         connectionExpiryTimeMillis = null
                     }
-                    
+
                     // Update UI to show not connected state
                     updateConnectionStatusUI()
                 }
             } catch (e: Exception) {
                 Log.e("LocomotorDisability", "=== ERROR IN DATABASE RESTORATION ===")
                 Log.e("LocomotorDisability", "Error restoring connection from database: ${e.message}", e)
-                
+
                 // Update UI to show not connected state on error
                 updateConnectionStatusUI()
-                
-                Toast.makeText(this@LocomotorDisabilityActivity, 
-                    "Error checking wheelchair connection status", 
+
+                Toast.makeText(this@LocomotorDisabilityActivity,
+                    "Error checking wheelchair connection status",
                     Toast.LENGTH_SHORT).show()
             } finally {
                 isRestoringConnection = false
