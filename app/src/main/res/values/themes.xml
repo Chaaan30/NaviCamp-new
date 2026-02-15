@@ -16,4 +16,8 @@
         <!-- Status bar color -->
         <item name="android:statusBarColor">@color/primaryColor</item>
     </style>
+    <!-- Profile picture rounded -->
+    <style name="CircleImage">
+        <item name="cornerSize">50%</item>
+    </style>
 </resources>

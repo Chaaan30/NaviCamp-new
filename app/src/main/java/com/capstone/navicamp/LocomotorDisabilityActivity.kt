@@ -180,7 +180,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_settings -> {
-                    val intent = Intent(this, AccountSettingsActivity::class.java)
+                    val intent = Intent(this, SettingsActivity::class.java)
                     startActivity(intent)
                     true
                 }
@@ -364,7 +364,23 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     }
 
     private fun sendEmergencyAlert() {
-        Toast.makeText(this, "Emergency alert sent!", Toast.LENGTH_LONG).show()
+        val uid = currentUserID
+        val name = currentUserFullName
+        val devId = connectedDeviceID
+
+        if (uid != null && name != null) {
+            if (devId != null) {
+                // This triggers the actual database insertion
+                requestAssistanceWithDevice(devId, uid, name)
+            } else {
+                // DISCUSSION: User is NOT connected to wheelchair.
+                // For now, we show a message. You can add phone GPS logic here later.
+                Toast.makeText(this, "Emergency alert sent using phone location!", Toast.LENGTH_LONG).show()
+                Log.d("Assistance", "Manual SOS triggered without wheelchair connection.")
+            }
+        } else {
+            Toast.makeText(this, "Error: User details missing. Please log in again.", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun dpToPx(dp: Int): Int {
@@ -584,59 +600,49 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     private fun requestAssistanceWithDevice(deviceID: String, userID: String, fullName: String) {
         lifecycleScope.launch {
-            // Get user's full name from user_table based on userID
-            // If it fails, we'll use the fullName parameter as fallback
+            // 1. Get user's full name from DB as a safety check
             val userFullName = withContext(Dispatchers.IO) {
                 try {
                     MySQLHelper.getUserFullNameByUserID(userID)
-                } catch (e: Exception) {
-                    Log.e("LocomotorDisability", "Failed to get fullName from database: ${e.message}")
-                    null
-                }
-            } ?: fullName // Fallback to current fullName if DB query fails
+                } catch (e: Exception) { null }
+            } ?: fullName
 
-            Log.d("LocomotorDisability", "Using fullName: '$userFullName' for userID: $userID")
-
-            // Get device location data from devices_table based on deviceID
+            // 2. Get the wheelchair's last known location
             val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) {
                 MySQLHelper.getDeviceLastLocation(deviceID)
             }
 
             if (deviceLocation != null) {
-                val latitude = deviceLocation.latitude
-                val longitude = deviceLocation.longitude
+                val lat = deviceLocation.latitude
+                val lng = deviceLocation.longitude
+                val floor = deviceLocation.floorLevel ?: "Unknown"
 
-                if (latitude != null && longitude != null) {
-                    val floorLevelToInsert = deviceLocation.floorLevel ?: "Unknown"
-
-                    Log.d("LocomotorDisability", "Device location: lat=$latitude, lng=$longitude, floor=$floorLevelToInsert")
-
+                if (lat != null && lng != null) {
+                    // 3. Insert the record into incident_logs_table
                     val success = withContext(Dispatchers.IO) {
                         MySQLHelper.insertAssistanceRequestFromDevice(
                             this@LocomotorDisabilityActivity,
                             userID,
                             userFullName,
                             deviceID,
-                            latitude,     // Correctly typed as Double
-                            longitude,    // Correctly typed as Double
-                            floorLevelToInsert
+                            lat,
+                            lng,
+                            floor
                         )
                     }
 
                     if (success) {
-                        Toast.makeText(this@LocomotorDisabilityActivity, "Assistance requested using wheelchair location!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@LocomotorDisabilityActivity, "Help is on the way!", Toast.LENGTH_LONG).show()
+                        Log.d("Assistance", "Database insertion successful for alert.")
                     } else {
-                        Toast.makeText(this@LocomotorDisabilityActivity, "Failed to send assistance request.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@LocomotorDisabilityActivity, "Failed to reach safety officers.", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    // Handle the case where the device exists but has no valid location data
-                    Log.w("LocomotorDisability", "Device $deviceID found, but has no location data.")
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Could not retrieve wheelchair's current location.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@LocomotorDisabilityActivity, "Wheelchair GPS signal lost.", Toast.LENGTH_LONG).show()
                 }
             } else {
-                Toast.makeText(this@LocomotorDisabilityActivity, "Could not retrieve wheelchair location. Please try again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LocomotorDisabilityActivity, "Wheelchair data not found.", Toast.LENGTH_LONG).show()
             }
-
         }
     }
 
