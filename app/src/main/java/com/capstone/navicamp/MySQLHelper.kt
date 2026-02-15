@@ -2804,32 +2804,35 @@ object MySQLHelper {
 
     @JvmStatic
     fun getDeviceLastLocation(deviceID: String): DeviceLocation? {
-        val sql = "SELECT device_name, last_latitude, last_longitude, floor_level FROM devices_table WHERE device_id = ?"
+        // UPDATED: Changed column names to match your other working functions
+        val sql = "SELECT deviceName, latitude, longitude, floorLevel FROM devices_table WHERE deviceID = ?"
         var connection: Connection? = null
         var pstmt: PreparedStatement? = null
         var rs: ResultSet? = null
 
         try {
             connection = getConnection()
-            pstmt = connection?.prepareStatement(sql)
-            pstmt?.setString(1, deviceID) // Added ?. here
-            rs = pstmt?.executeQuery()    // Added ?. here
+            if (connection == null) return null
 
-            if (rs?.next() == true) { // Added ?. here
-                val deviceName = rs.getString("device_name")
-                val latitude = rs.getDouble("last_latitude")
-                val longitude = rs.getDouble("last_longitude")
-                val floor = rs.getString("floor_level") // Get the value from the result set
+            pstmt = connection.prepareStatement(sql)
+            pstmt.setString(1, deviceID)
+            rs = pstmt.executeQuery()
+
+            if (rs.next()) {
+                val name = rs.getString("deviceName")
+                val lat = rs.getDouble("latitude")
+                val lng = rs.getDouble("longitude")
+                val floor = rs.getString("floorLevel")
 
                 return DeviceLocation(
-                    name = deviceName,
-                    latitude = if(rs.wasNull()) null else latitude,
-                    longitude = if (rs.wasNull()) null else longitude,
-                    floorLevel = floor // Use the 'floor' variable extracted above
+                    name = name,
+                    latitude = if (rs.wasNull()) null else lat,
+                    longitude = if (rs.wasNull()) null else lng,
+                    floorLevel = floor
                 )
             }
         } catch (e: Exception) {
-            Log.e("MySQLHelper", "Error getting device location: ${e.message}", e)
+            Log.e("MySQLHelper", "SQL Error in getDeviceLastLocation: ${e.message}")
         } finally {
             rs?.close()
             pstmt?.close()

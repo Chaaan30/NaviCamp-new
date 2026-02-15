@@ -600,48 +600,38 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     private fun requestAssistanceWithDevice(deviceID: String, userID: String, fullName: String) {
         lifecycleScope.launch {
-            // 1. Get user's full name from DB as a safety check
             val userFullName = withContext(Dispatchers.IO) {
-                try {
-                    MySQLHelper.getUserFullNameByUserID(userID)
-                } catch (e: Exception) { null }
+                try { MySQLHelper.getUserFullNameByUserID(userID) } catch (e: Exception) { null }
             } ?: fullName
 
-            // 2. Get the wheelchair's last known location
             val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) {
                 MySQLHelper.getDeviceLastLocation(deviceID)
             }
 
-            if (deviceLocation != null) {
-                val lat = deviceLocation.latitude
-                val lng = deviceLocation.longitude
-                val floor = deviceLocation.floorLevel ?: "Unknown"
+            // FALLBACK LOGIC:
+            // Even if deviceLocation is null, we define default values so the SOS still goes through
+            val lat = deviceLocation?.latitude ?: 0.0
+            val lng = deviceLocation?.longitude ?: 0.0
+            val floor = deviceLocation?.floorLevel ?: "Location Unknown"
 
-                if (lat != null && lng != null) {
-                    // 3. Insert the record into incident_logs_table
-                    val success = withContext(Dispatchers.IO) {
-                        MySQLHelper.insertAssistanceRequestFromDevice(
-                            this@LocomotorDisabilityActivity,
-                            userID,
-                            userFullName,
-                            deviceID,
-                            lat,
-                            lng,
-                            floor
-                        )
-                    }
+            Log.d("LocomotorDisability", "Sending Alert for $userFullName. Device info found: ${deviceLocation != null}")
 
-                    if (success) {
-                        Toast.makeText(this@LocomotorDisabilityActivity, "Help is on the way!", Toast.LENGTH_LONG).show()
-                        Log.d("Assistance", "Database insertion successful for alert.")
-                    } else {
-                        Toast.makeText(this@LocomotorDisabilityActivity, "Failed to reach safety officers.", Toast.LENGTH_LONG).show()
-                    }
-                } else {
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Wheelchair GPS signal lost.", Toast.LENGTH_LONG).show()
-                }
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.insertAssistanceRequestFromDevice(
+                    this@LocomotorDisabilityActivity,
+                    userID,
+                    userFullName,
+                    deviceID,
+                    lat,
+                    lng,
+                    floor
+                )
+            }
+
+            if (success) {
+                Toast.makeText(this@LocomotorDisabilityActivity, "SOS Sent! Help is on the way.", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this@LocomotorDisabilityActivity, "Wheelchair data not found.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LocomotorDisabilityActivity, "Server Error: Could not send alert.", Toast.LENGTH_LONG).show()
             }
         }
     }
