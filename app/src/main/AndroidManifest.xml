@@ -62,14 +62,6 @@
             android:theme="@style/Theme.MyApp" />
         <activity android:name=".LocomotorDisabilityActivity"
             android:theme="@style/Theme.MyApp" />
-        <activity
-            android:name=".VerificationQrGeneratorActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.MyApp" />
-        <activity
-            android:name=".VerificationRequiredActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.MyApp" />
         <activity android:name=".UserFeedbackActivity"
             android:theme="@style/Theme.MyApp" />
         <activity android:name=".AssistanceActivity"
