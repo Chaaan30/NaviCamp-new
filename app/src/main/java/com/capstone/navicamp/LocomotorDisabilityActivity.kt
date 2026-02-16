@@ -21,6 +21,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.Build
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -174,9 +177,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                             .setNegativeButton("No", null)
                             .show()
                     }
-                    true
-                }
-                R.id.nav_notifications -> {
                     true
                 }
                 R.id.nav_settings -> {
@@ -383,6 +383,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
     }
 
+    private fun triggerSuccessVibration() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.EFFECT_HEAVY_CLICK))
+        }
+    }
     private fun dpToPx(dp: Int): Int {
         return (dp * resources.displayMetrics.density).toInt()
     }
@@ -629,7 +635,9 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
             }
 
             if (success) {
+                triggerSuccessVibration()
                 Toast.makeText(this@LocomotorDisabilityActivity, "SOS Sent! Help is on the way.", Toast.LENGTH_LONG).show()
+                Log.d("Assistance", "SOS successful. Haptic feedback triggered.")
             } else {
                 Toast.makeText(this@LocomotorDisabilityActivity, "Server Error: Could not send alert.", Toast.LENGTH_LONG).show()
             }

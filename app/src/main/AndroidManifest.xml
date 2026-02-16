@@ -68,6 +68,8 @@
             android:theme="@style/Theme.MyApp" />
         <activity android:name=".AccountSettingsActivity"
             android:theme="@style/Theme.MyApp" />
+        <activity android:name=".SettingsActivity"
+            android:theme="@style/Theme.MyApp" />
         <activity android:name=".OfficerAccountSettingsActivity"
             android:theme="@style/Theme.MyApp" />
         <activity android:name=".MapActivity"

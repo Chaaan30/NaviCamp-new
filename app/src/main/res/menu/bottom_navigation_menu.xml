@@ -12,11 +12,6 @@
     android:title="Scan QR" />
 
     <item
-        android:id="@+id/nav_notifications"
-        android:icon="@drawable/ic_bot_notifications"
-    android:title="Notifications" />
-
-    <item
         android:id="@+id/nav_settings"
         android:icon="@drawable/ic_bot_settings"
     android:title="Settings" />
