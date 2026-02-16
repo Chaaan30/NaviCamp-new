@@ -157,6 +157,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         Log.d("LocomotorDisability", "=== APP STARTING | User: $currentUserID ===")
 
+
         // --- GROUP 2: SET UP LISTENERS & NON-DB UI ---
         setupHoldToActivateButton()
         initializeUserName() // Assuming this function only sets text from variables
@@ -186,6 +187,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 }
                 else -> false
             }
+        }
+
+        //Gemini's block
+        if (intent.getBooleanExtra("TRIGGER_SCAN", false)) {
+            val bottomNav: BottomNavigationView = findViewById(R.id.bottom_navigation)
+            bottomNav.selectedItemId = R.id.nav_scan_qr
         }
 
         // --- GROUP 3: ASYNCHRONOUS DATABASE OPERATIONS ---
