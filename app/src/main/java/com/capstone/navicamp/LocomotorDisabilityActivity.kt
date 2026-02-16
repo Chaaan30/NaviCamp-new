@@ -668,6 +668,8 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         Log.d("LocomotorDisability", "=== ON RESUME CALLED ===")
         Log.d("LocomotorDisability", "Connected Device ID: $connectedDeviceID")
 
+        bottomNavigationView.selectedItemId = R.id.nav_home
+
         // Update name in nav header upon resume
         val fullName = if (UserSingleton.fullName.isNullOrBlank()) {
             val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)

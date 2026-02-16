@@ -64,7 +64,6 @@ class SettingsActivity : AppCompatActivity() {
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    startActivity(Intent(this, LocomotorDisabilityActivity::class.java))
                     finish()
                     true
                 }
