@@ -1,14 +1,11 @@
 package com.capstone.navicamp
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,8 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import com.amazonaws.services.s3.model.PutObjectRequest
 import com.google.firebase.messaging.FirebaseMessaging
 
 class LoginBottomSheet : BottomSheetDialogFragment() {
@@ -31,10 +26,6 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     private lateinit var passwordEditText: EditText
     private lateinit var progressBar: ProgressBar
     private lateinit var forgotPasswordTextView: TextView
-
-    private val PICK_IMAGE_REQUEST = 1
-    private var selectedImageUri: Uri? = null
-    private var dialogView: View? = null // Store dialog view reference
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -96,6 +87,10 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                 }
 
                 if (userData != null) {
+                    val systemRole = withContext(Dispatchers.IO) {
+                        MySQLHelper.getSystemRoleByUserID(userData.userID)
+                    }
+
                     when (userData.verified) {
                         1 -> {
                             UserSingleton.fullName = userData.fullName
@@ -108,6 +103,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                                 putString("contactNumber", userData.contactNumber)
                                 putString("createdOn", userData.createdOn)
                                 putString("updatedOn", userData.updatedOn)
+                                putString("systemRole", systemRole)
                                 putBoolean("isLoggedIn", true)
                                 apply()
                             }
@@ -115,9 +111,13 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                             // Register FCM token for all users
                                 registerFCMToken(userData.userID)
 
-                            val intent = when (userData.userType) {
-                                "Student", "Personnel", "Visitor" -> Intent(context, LocomotorDisabilityActivity::class.java)
-                                "Security Officer" -> Intent(context, SecurityOfficerActivity::class.java)
+                            val intent = when {
+                                isSafetyOfficerRole(systemRole) -> Intent(context, SecurityOfficerActivity::class.java)
+                                isDisabledRole(systemRole) -> Intent(context, LocomotorDisabilityActivity::class.java)
+                                userData.userType == "Safety Officer" || userData.userType == "Security Officer" ->
+                                    Intent(context, SecurityOfficerActivity::class.java)
+                                userData.userType == "Temporarily Disabled" || userData.userType == "Permanently Disabled" ->
+                                    Intent(context, LocomotorDisabilityActivity::class.java)
                                 else -> null
                             }
                             intent?.let {
@@ -126,14 +126,33 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                             }
                         }
                         0 -> {
-                            if (userData.userType == "Security Officer") {
-                                Toast.makeText(context, "Your account has not yet been verified by the admin.", Toast.LENGTH_LONG).show()
+                            if (systemRole == null) {
+                                Toast.makeText(
+                                    context,
+                                    "No system role found for this account. Please contact support.",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             } else {
-                                Toast.makeText(context, "Your account is not verified yet.", Toast.LENGTH_LONG).show()
+                                val verificationIntent = Intent(context, VerificationRequiredActivity::class.java).apply {
+                                    putExtra(VerificationRequiredActivity.EXTRA_USER_ID, userData.userID)
+                                    putExtra(VerificationRequiredActivity.EXTRA_SYSTEM_ROLE, systemRole)
+                                    putExtra(VerificationRequiredActivity.EXTRA_FULL_NAME, userData.fullName)
+                                    putExtra(VerificationRequiredActivity.EXTRA_CAMPUS_AFFILIATION, userData.userType)
+                                    putExtra(VerificationRequiredActivity.EXTRA_EMAIL, userData.email)
+                                    putExtra(VerificationRequiredActivity.EXTRA_CONTACT_NUMBER, userData.contactNumber)
+                                    putExtra(VerificationRequiredActivity.EXTRA_CREATED_ON, userData.createdOn)
+                                    putExtra(VerificationRequiredActivity.EXTRA_UPDATED_ON, userData.updatedOn)
+                                }
+                                startActivity(verificationIntent)
+                                dismiss()
                             }
                         }
                         2 -> {
-                            showReuploadProofDialog()
+                            Toast.makeText(
+                                context,
+                                "Your account is currently declined. Please contact support for assistance.",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 } else {
@@ -152,130 +171,16 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    private fun showReuploadProofDialog() {
-        CoroutineScope(Dispatchers.Main).launch {
-            dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_reupload_proof, null)
-            val dialog = AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .setCancelable(false)
-                .create()
-            dialog.show()
-
-            val uploadProofButton = dialogView!!.findViewById<Button>(R.id.upload_proof_button)
-            val infoButton = dialogView!!.findViewById<ImageButton>(R.id.info_button_login)
-            val selectedImageName = dialogView!!.findViewById<TextView>(R.id.selected_image_name)
-            val removeImageButton = dialogView!!.findViewById<ImageButton>(R.id.remove_image_button)
-            val confirmUploadButton = dialogView!!.findViewById<Button>(R.id.confirm_upload_button)
-
-            uploadProofButton.setOnClickListener {
-                openImagePicker()
-            }
-
-            infoButton.setOnClickListener {
-                val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_info, null)
-                val dialog = AlertDialog.Builder(requireContext())
-                    .setView(dialogView)
-                    .setPositiveButton("OK", null)
-                    .create()
-                dialog.show()
-            }
-
-            removeImageButton.setOnClickListener {
-                selectedImageUri = null
-                selectedImageName.text = "No file selected"
-            }
-
-            confirmUploadButton.setOnClickListener {
-                if (selectedImageUri == null) {
-                    Toast.makeText(requireContext(), "Please select an image", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                val loadingDialog = showLoadingDialog()
-                CoroutineScope(Dispatchers.Main).launch {
-                    val email = emailEditText.text.toString()
-                    
-                    val userID = withContext(Dispatchers.IO) {
-                        MySQLHelper.getUserIDByEmail(email)
-                    }
-                    
-                    if (userID != null) {
-                        try {
-                            // First upload the image to S3
-                            val uploadedImageName = withContext(Dispatchers.IO) {
-                                uploadImageToS3(requireContext(), selectedImageUri!!)
-                            }
-
-                            // Then update the database with the S3 path
-                            val isUpdated = withContext(Dispatchers.IO) {
-                                MySQLHelper.updateProofPicture(userID.toInt(), uploadedImageName) &&
-                                        MySQLHelper.updateUserVerificationStatus(userID, 0)
-                            }
-
-                            if (isUpdated) {
-                                Toast.makeText(requireContext(), "Proof uploaded successfully", Toast.LENGTH_SHORT).show()
-                                dialog.dismiss()
-                            } else {
-                                Toast.makeText(requireContext(), "Failed to update database", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            Log.e("LoginBottomSheet", "Error uploading image", e)
-                            Toast.makeText(requireContext(), "Failed to upload image: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        Toast.makeText(requireContext(), "User not found", Toast.LENGTH_SHORT).show()
-                    }
-                    loadingDialog.dismiss()
-                }
-            }
-        }
+    private fun isSafetyOfficerRole(role: String?): Boolean {
+        if (role.isNullOrBlank()) return false
+        val normalized = role.trim().lowercase()
+        return normalized.contains("safety") || normalized.contains("security") || normalized.contains("officer")
     }
 
-    private suspend fun uploadImageToS3(context: Context, imageUri: Uri): String {
-        AwsUtils.initialize(context)
-        val s3Client = AwsUtils.s3Client
-        val bucketName = "navicampbucket"
-
-        val filePath = getPathFromUri(imageUri)
-        val file = File(filePath)
-        val fileName = "proof_of_disability/${file.name}"
-
-        val putObjectRequest = PutObjectRequest(bucketName, fileName, file)
-
-        return withContext(Dispatchers.IO) {
-            s3Client.putObject(putObjectRequest)
-            fileName
-        }
-    }
-
-
-    private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, PICK_IMAGE_REQUEST)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null && data.data != null) {
-            selectedImageUri = data.data
-            selectedImageUri?.let {
-                val selectedImageName = dialogView!!.findViewById<TextView>(R.id.selected_image_name)
-                selectedImageName.text = File(getPathFromUri(it)).name
-            }
-        }
-    }
-
-    private fun getPathFromUri(uri: Uri): String {
-        var path: String? = null
-        val projection = arrayOf(MediaStore.Images.Media.DATA)
-        val cursor = requireContext().contentResolver.query(uri, projection, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val columnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-                path = it.getString(columnIndex)
-            }
-        }
-        return path ?: ""
+    private fun isDisabledRole(role: String?): Boolean {
+        if (role.isNullOrBlank()) return false
+        val normalized = role.trim().lowercase()
+        return normalized.contains("disabled")
     }
 
     private fun registerFCMToken(userID: String) {

@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val isLoggedIn = userPrefs.getBoolean("isLoggedIn", false)
         val fullName = userPrefs.getString("fullName", null)
+        val systemRole = userPrefs.getString("systemRole", null)
         val userType = userPrefs.getString("userType", null)
 
         if (isLoggedIn && fullName != null && userType != null) {
@@ -34,14 +35,19 @@ class MainActivity : AppCompatActivity() {
             UserSingleton.fullName = fullName
 
             // Navigate to the appropriate activity based on userType
-            val intent = when (userType) {
-                "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
-                "Personnel", "Student", "Visitor" -> Intent(
-                    this,
-                    LocomotorDisabilityActivity::class.java
-                )
-
-                else -> null
+            val normalizedRole = systemRole?.trim()?.lowercase()
+            val intent = when {
+                normalizedRole?.contains("safety") == true ||
+                    normalizedRole?.contains("security") == true ||
+                    normalizedRole?.contains("officer") == true ->
+                    Intent(this, SecurityOfficerActivity::class.java)
+                normalizedRole?.contains("disabled") == true ->
+                    Intent(this, LocomotorDisabilityActivity::class.java)
+                else -> when (userType) {
+                    "Safety Officer", "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
+                    "Temporarily Disabled", "Permanently Disabled" -> Intent(this, LocomotorDisabilityActivity::class.java)
+                    else -> null
+                }
             }
             intent?.let {
                 startActivity(it)
