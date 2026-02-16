@@ -1,11 +1,13 @@
 package com.capstone.navicamp
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class SettingsActivity : AppCompatActivity() {
@@ -15,7 +17,8 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
 
         val txtName: TextView = findViewById(R.id.txt_full_name)
-        val btnGoToAccount: ImageButton = findViewById(R.id.btn_go_to_account)
+        val btnGoToAccount: ConstraintLayout = findViewById(R.id.profile_section)
+        val btnTermsAndConditions: TextView = findViewById(R.id.btn_privacy )
         val btnLogout: TextView = findViewById(R.id.btn_logout)
         val btnDeviceSetup: TextView = findViewById(R.id.btn_device_setup)
         val bottomNav: BottomNavigationView = findViewById(R.id.bottom_navigation)
@@ -24,7 +27,9 @@ class SettingsActivity : AppCompatActivity() {
         val sharedPrefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         txtName.text = sharedPrefs.getString("fullName", "User Name")
 
-        // 2. Navigation to Account Settings (The Arrow Button)
+        // 2. Navigation to Account Settings
+        // Set a single listener on the entire section.
+        // Clicks on the arrow button will propagate up to this container.
         btnGoToAccount.setOnClickListener {
             val intent = Intent(this, AccountSettingsActivity::class.java)
             startActivity(intent)
@@ -36,6 +41,16 @@ class SettingsActivity : AppCompatActivity() {
             val intent = Intent(this, MainActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
+        }
+
+        // 4. Terms & Conditions
+        btnTermsAndConditions.setOnClickListener {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_terms_conditions, null)
+
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("OK", null) // 'null' just closes it by default
+                .show()
         }
 
         // 4. Device Setup Logic

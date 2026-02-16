@@ -11,62 +11,72 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="24dp"
-        android:layout_marginTop="30dp"
-        android:fontFamily="sans-serif-black"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="46dp"
+        android:layout_marginBottom="20dp"
         android:text="Settings"
         android:textColor="#333D41"
-        android:textSize="24sp" />
+        android:textSize="24sp"
+        android:textStyle="bold"/>
 
     <!-- User Profile Section -->
+    <!-- User Profile Section -->
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/profile_section"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#F2F2F2"
+        android:clickable="true"
         android:padding="16dp">
 
+        <!-- This LinearLayout holds the text on the left -->
         <LinearLayout
+            android:id="@+id/user_info_layout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
             android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btn_go_to_account"
-            tools:layout_editor_absoluteY="18dp">
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <!-- 1. Full Name TextView -->
+            <TextView
+                android:id="@+id/txt_full_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Firstname Lastname"
+                android:textColor="#333D41"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <!-- 2. Account Details TextView -->
+            <TextView
+                android:id="@+id/txt_account_details_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Account Details"
+                android:textColor="#8C8C8C"
+                android:textSize="14sp" />
 
         </LinearLayout>
 
+        <!-- Arrow Button on the right, now outside the LinearLayout -->
         <ImageButton
             android:id="@+id/btn_go_to_account"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginEnd="24dp"
             android:background="@drawable/rounded_button_gray"
+            android:contentDescription="Go to account details"
             android:src="@drawable/ic_chevron_right"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="1.0" />
-
-        <TextView
-            android:id="@+id/txt_full_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-black"
-            android:text="Firstname Lastname"
-            android:textColor="#333D41"
-            android:textSize="20sp"
-            tools:layout_editor_absoluteX="6dp"
-            tools:layout_editor_absoluteY="-5dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Account Details"
-            android:textColor="#8C8C8C"
-            android:textSize="14sp"
-            tools:layout_editor_absoluteX="6dp"
-            tools:layout_editor_absoluteY="32dp" />
+            android:clickable="false"
+            android:focusable="false"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <View
         android:layout_width="match_parent"
@@ -78,8 +88,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:background="#F2F2F2"
         android:orientation="vertical">
 
         <TextView
@@ -107,8 +115,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:background="#F2F2F2"
         android:orientation="vertical">
 
         <TextView
