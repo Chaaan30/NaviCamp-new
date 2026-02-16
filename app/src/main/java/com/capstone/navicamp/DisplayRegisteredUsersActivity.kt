@@ -116,7 +116,7 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
     }
 
     private fun setupFilters() {
-        val filterOptions = arrayOf("All", "Student", "Personnel", "Visitor")
+        val filterOptions = arrayOf("All", "Temporarily Disabled", "Permanently Disabled")
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, filterOptions)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         userTypeSpinner.adapter = adapter
@@ -220,17 +220,13 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
 
         // Set user type badge and indicator colors based on type
         when (user.userType.lowercase()) {
-            "student" -> {
+            "temporarily disabled" -> {
                 userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_blue_dark))
                 userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_blue_dark))
             }
-            "personnel" -> {
+            "permanently disabled" -> {
                 userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_green_dark))
                 userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_green_dark))
-            }
-            "visitor" -> {
-                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_orange_dark))
-                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_orange_dark))
             }
             else -> {
                 userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.darker_gray))

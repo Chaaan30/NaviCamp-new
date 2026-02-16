@@ -450,6 +450,64 @@ object MySQLHelper {
         }
     }
 
+    fun getDisabilityTypeByUserID(userID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT disabilityType FROM pwd_profiles_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, userID)
+
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("disabilityType")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun doesUserIDExist(userID: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val userIDInt = userID.toIntOrNull() ?: return false
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "SELECT COUNT(*) AS count FROM user_table WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, userIDInt)
+            resultSet = statement.executeQuery()
+            resultSet.next() && resultSet.getInt("count") > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun getUserFullNameByUserID(userID: String): String? {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -902,6 +960,155 @@ object MySQLHelper {
         }
     }
 
+    fun insertUserWithPwdProfile(
+        userID: String,
+        fullName: String,
+        campusAffiliation: String,
+        email: String,
+        contactNumber: String,
+        password: String,
+        disabilityType: String
+    ): Boolean {
+        var connection: Connection? = null
+        var checkStatement: PreparedStatement? = null
+        var userStatement: PreparedStatement? = null
+        var pwdProfileStatement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            connection.autoCommit = false
+
+            val checkQuery = "SELECT COUNT(*) AS count FROM user_table WHERE email = ?"
+            checkStatement = connection.prepareStatement(checkQuery)
+            checkStatement.setString(1, email)
+            resultSet = checkStatement.executeQuery()
+            if (resultSet.next() && resultSet.getInt("count") > 0) {
+                println("Email already exists.")
+                connection.rollback()
+                return false
+            }
+
+            val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            val insertUserQuery = """
+                INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofPicture, createdOn)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent()
+            userStatement = connection.prepareStatement(insertUserQuery)
+            userStatement.setString(1, userID)
+            userStatement.setString(2, fullName)
+            userStatement.setString(3, campusAffiliation)
+            userStatement.setString(4, email)
+            userStatement.setString(5, contactNumber)
+            userStatement.setString(6, password)
+            userStatement.setString(7, null)
+            userStatement.setString(8, currentDateTime)
+            val userRowsAffected = userStatement.executeUpdate()
+            if (userRowsAffected <= 0) {
+                connection.rollback()
+                return false
+            }
+
+            val resolvedDisabilityType = resolveDisabilityTypeForDatabase(connection, disabilityType)
+            if (resolvedDisabilityType == null) {
+                Log.e(
+                    "MySQLHelper",
+                    "Unable to map disability type '$disabilityType' to pwd_profiles_table ENUM values."
+                )
+                connection.rollback()
+                return false
+            }
+
+            val insertPwdProfileQuery = """
+                INSERT INTO pwd_profiles_table (userID, disabilityType)
+                VALUES (?, ?)
+            """.trimIndent()
+            pwdProfileStatement = connection.prepareStatement(insertPwdProfileQuery)
+            pwdProfileStatement.setString(1, userID)
+            pwdProfileStatement.setString(2, resolvedDisabilityType)
+            val profileRowsAffected = pwdProfileStatement.executeUpdate()
+            if (profileRowsAffected <= 0) {
+                connection.rollback()
+                return false
+            }
+
+            connection.commit()
+            true
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            try {
+                connection?.rollback()
+            } catch (rollbackException: SQLException) {
+                rollbackException.printStackTrace()
+            }
+            false
+        } finally {
+            resultSet?.close()
+            checkStatement?.close()
+            userStatement?.close()
+            pwdProfileStatement?.close()
+            try {
+                connection?.autoCommit = true
+            } catch (e: SQLException) {
+                e.printStackTrace()
+            }
+            connection?.close()
+        }
+    }
+
+    private fun resolveDisabilityTypeForDatabase(connection: Connection, selectedType: String): String? {
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            statement = connection.prepareStatement("SHOW COLUMNS FROM pwd_profiles_table LIKE 'disabilityType'")
+            resultSet = statement.executeQuery()
+            if (!resultSet.next()) {
+                return selectedType
+            }
+
+            val typeDefinition = resultSet.getString("Type") ?: return selectedType
+            val enumValues = Regex("'((?:\\\\'|[^'])*)'")
+                .findAll(typeDefinition)
+                .map { it.groupValues[1].replace("\\'", "'") }
+                .toList()
+
+            if (enumValues.isEmpty()) {
+                return selectedType
+            }
+
+            enumValues.firstOrNull { it.equals(selectedType, ignoreCase = true) }?.let { return it }
+
+            val normalizedSelected = selectedType.trim().lowercase()
+            val keyword = when {
+                normalizedSelected.contains("tempor") -> "tempor"
+                normalizedSelected.contains("perman") -> "perman"
+                normalizedSelected.contains("safety") ||
+                    normalizedSelected.contains("security") ||
+                    normalizedSelected.contains("officer") -> "officer"
+                else -> null
+            }
+
+            if (keyword != null) {
+                enumValues.firstOrNull { it.lowercase().contains(keyword) }?.let { return it }
+            }
+
+            null
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+        }
+    }
+
     // Update user with userID
     suspend fun updateUserWithUserID(
         newFullName: String,
@@ -1038,7 +1245,7 @@ object MySQLHelper {
             }
 
             val query =
-                "SELECT COUNT(*) AS count FROM user_table WHERE userType = 'Student' AND userID IS NOT NULL AND userID != ''"
+                "SELECT COUNT(*) AS count FROM user_table WHERE userType IN ('Temporarily Disabled', 'Permanently Disabled') AND userID IS NOT NULL AND userID != ''"
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
@@ -1653,6 +1860,86 @@ object MySQLHelper {
         }
     }
 
+    suspend fun approveUserVerificationWithProfileAudit(userID: String, staffUserID: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var userStatement: PreparedStatement? = null
+            var profileStatement: PreparedStatement? = null
+            var checkStatement: PreparedStatement? = null
+            try {
+                val userIDInt = userID.toIntOrNull() ?: return@withContext false
+                val staffUserIDInt = staffUserID.toIntOrNull() ?: return@withContext false
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                connection.autoCommit = false
+
+                val checkQuery = "SELECT COUNT(*) AS count FROM user_table WHERE userID = ?"
+                checkStatement = connection.prepareStatement(checkQuery)
+                checkStatement.setInt(1, staffUserIDInt)
+                val checkResult = checkStatement.executeQuery()
+                val staffExists = checkResult.next() && checkResult.getInt("count") > 0
+                checkResult.close()
+                if (!staffExists) {
+                    Log.e("MySQLHelper", "Staff userID $staffUserIDInt does not exist for verification audit.")
+                    connection.rollback()
+                    return@withContext false
+                }
+
+                val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                val userQuery = "UPDATE user_table SET verified = 1 WHERE userID = ?"
+                userStatement = connection.prepareStatement(userQuery)
+                userStatement.setInt(1, userIDInt)
+                val userUpdated = userStatement.executeUpdate() > 0
+                if (!userUpdated) {
+                    connection.rollback()
+                    return@withContext false
+                }
+
+                val profileQuery = """
+                    UPDATE pwd_profiles_table
+                    SET verifiedBy = ?, verificationDate = ?
+                    WHERE userID = ?
+                """.trimIndent()
+                profileStatement = connection.prepareStatement(profileQuery)
+                profileStatement.setInt(1, staffUserIDInt)
+                profileStatement.setString(2, now)
+                profileStatement.setInt(3, userIDInt)
+                val profileUpdated = profileStatement.executeUpdate() > 0
+                if (!profileUpdated) {
+                    connection.rollback()
+                    return@withContext false
+                }
+
+                connection.commit()
+                true
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                try {
+                    connection?.rollback()
+                } catch (rollbackException: SQLException) {
+                    rollbackException.printStackTrace()
+                }
+                false
+            } finally {
+                checkStatement?.close()
+                userStatement?.close()
+                profileStatement?.close()
+                try {
+                    connection?.autoCommit = true
+                } catch (e: SQLException) {
+                    e.printStackTrace()
+                }
+                connection?.close()
+            }
+        }
+    }
+
     fun getAllWheelchairs(): List<WheelchairDevice> {
         val wheelchairs = mutableListOf<WheelchairDevice>()
         var connection: Connection? = null
@@ -1698,32 +1985,6 @@ object MySQLHelper {
             wheelchairs
         } finally {
             resultSet?.close()
-            statement?.close()
-            connection?.close()
-        }
-    }
-
-    fun updateProofPicture(userID: Int, proofPicture: String): Boolean {
-        var connection: Connection? = null
-        var statement: PreparedStatement? = null
-        return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return false
-            }
-
-            val query = "UPDATE user_table SET proofPicture = ? WHERE userID = ?"
-            statement = connection?.prepareStatement(query)
-            statement?.setString(1, proofPicture)
-            statement?.setInt(2, userID) // Ensure userID is set as an integer
-
-            val rowsAffected = statement?.executeUpdate() ?: 0
-            rowsAffected > 0
-        } catch (e: SQLException) {
-            e.printStackTrace()
-            false
-        } finally {
             statement?.close()
             connection?.close()
         }
@@ -1893,7 +2154,7 @@ object MySQLHelper {
 
             val query = """
                 SELECT fcm_token FROM user_table 
-                WHERE userType = 'Security Officer' 
+                WHERE userType IN ('Safety Officer', 'Security Officer') 
                 AND verified = 1 
                 AND fcm_token IS NOT NULL 
                 AND fcm_token != ''
@@ -2009,7 +2270,7 @@ object MySQLHelper {
             if (userType != null && userType != "All") {
                 query.append(" AND userType = ?")
             } else {
-                query.append(" AND userType IN ('Student', 'Personnel', 'Visitor')")
+                query.append(" AND userType IN ('Temporarily Disabled', 'Permanently Disabled')")
             }
 
             statement = connection.prepareStatement(query.toString())
@@ -2055,7 +2316,7 @@ object MySQLHelper {
             val query = """
                 SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
                 FROM user_table
-                WHERE verified = 1 AND userType != 'Security Officer'
+                WHERE verified = 1 AND userType NOT IN ('Safety Officer', 'Security Officer')
                 ORDER BY createdOn DESC
             """
             

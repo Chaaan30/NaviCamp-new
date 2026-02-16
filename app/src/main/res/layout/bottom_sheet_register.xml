@@ -122,110 +122,30 @@
         android:singleLine="true" />
 
     <Spinner
-        android:id="@+id/user_type_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp" />
-
-    <LinearLayout
-        android:id="@+id/generalProofLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_gravity="center"
-        android:visibility="gone">
-
-        <ImageButton
-            android:id="@+id/info_button_general_proof"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/info"
-            android:contentDescription="Info for Proof"
-            android:scaleType="fitCenter"
-            android:layout_marginEnd="5dp"
-            android:adjustViewBounds="true" />
-
-        <Button
-            android:id="@+id/upload_general_proof_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Upload Proof"
-            android:fontFamily="@font/inter"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/officerProofLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_marginTop="8dp">
-
-        <ImageButton
-            android:id="@+id/info_button_upload_officer"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/info"
-            android:contentDescription="Info for Officer Proof"
-            android:scaleType="fitCenter"
-            android:layout_marginEnd="5dp"
-            android:adjustViewBounds="true" />
-
-        <Button
-            android:id="@+id/upload_proof_officer_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Upload Officer Proof"
-            android:fontFamily="@font/inter"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="8dp" />
-    </LinearLayout>
-
-    <!-- This container shows the selected image name and remove button, common for both uploads -->
-    <LinearLayout
-        android:id="@+id/image_container"
+        android:id="@+id/campus_affiliation_spinner"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        android:gravity="center_vertical"
+        android:layout_height="48dp"
+        android:layout_marginTop="6dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp">
+        android:background="@drawable/spinner_background_with_arrow"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:spinnerMode="dropdown"
+        android:popupBackground="@android:color/white" />
 
-        <TextView
-            android:id="@+id/selected_image_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Selected Image"
-            android:fontFamily="@font/inter"
-            android:ellipsize="end"
-            android:maxLines="1" />
-
-        <ImageButton
-            android:id="@+id/remove_image_button"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/close"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Remove"
-            android:scaleType="fitCenter"
-            android:adjustViewBounds="true" />
-    </LinearLayout>
+    <Spinner
+        android:id="@+id/user_type_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/spinner_background_with_arrow"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:spinnerMode="dropdown"
+        android:popupBackground="@android:color/white" />
 
     <LinearLayout
         android:layout_width="match_parent"
