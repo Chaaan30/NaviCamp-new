@@ -481,6 +481,49 @@ object MySQLHelper {
         }
     }
 
+    fun getSafetyOfficerPositionByUserID(userID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return null
+            }
+
+            val query = "SELECT position FROM safety_officer_profiles_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, userID)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                resultSet.getString("position")
+            } else {
+                null
+            }
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getSystemRoleByUserID(userID: String): String? {
+        val position = getSafetyOfficerPositionByUserID(userID)
+        if (!position.isNullOrBlank()) {
+            return "Safety Officer"
+        }
+        return getDisabilityTypeByUserID(userID)
+    }
+
+    fun isSafetyOfficerAdmin(userID: String): Boolean {
+        val position = getSafetyOfficerPositionByUserID(userID) ?: return false
+        return position.trim().equals("admin", ignoreCase = true)
+    }
+
     fun doesUserIDExist(userID: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -973,6 +1016,7 @@ object MySQLHelper {
         var checkStatement: PreparedStatement? = null
         var userStatement: PreparedStatement? = null
         var pwdProfileStatement: PreparedStatement? = null
+        var safetyProfileStatement: PreparedStatement? = null
         var resultSet: ResultSet? = null
 
         return try {
@@ -1016,27 +1060,47 @@ object MySQLHelper {
                 return false
             }
 
-            val resolvedDisabilityType = resolveDisabilityTypeForDatabase(connection, disabilityType)
-            if (resolvedDisabilityType == null) {
-                Log.e(
-                    "MySQLHelper",
-                    "Unable to map disability type '$disabilityType' to pwd_profiles_table ENUM values."
-                )
-                connection.rollback()
-                return false
-            }
+            val normalizedRole = disabilityType.trim().lowercase()
+            val isSafetyOfficerRole = normalizedRole.contains("safety") ||
+                normalizedRole.contains("security") ||
+                normalizedRole.contains("officer")
 
-            val insertPwdProfileQuery = """
-                INSERT INTO pwd_profiles_table (userID, disabilityType)
-                VALUES (?, ?)
-            """.trimIndent()
-            pwdProfileStatement = connection.prepareStatement(insertPwdProfileQuery)
-            pwdProfileStatement.setString(1, userID)
-            pwdProfileStatement.setString(2, resolvedDisabilityType)
-            val profileRowsAffected = pwdProfileStatement.executeUpdate()
-            if (profileRowsAffected <= 0) {
-                connection.rollback()
-                return false
+            if (isSafetyOfficerRole) {
+                val insertSafetyProfileQuery = """
+                    INSERT INTO safety_officer_profiles_table (userID, position)
+                    VALUES (?, ?)
+                """.trimIndent()
+                safetyProfileStatement = connection.prepareStatement(insertSafetyProfileQuery)
+                safetyProfileStatement.setString(1, userID)
+                safetyProfileStatement.setString(2, "safety officer")
+                val safetyRowsAffected = safetyProfileStatement.executeUpdate()
+                if (safetyRowsAffected <= 0) {
+                    connection.rollback()
+                    return false
+                }
+            } else {
+                val resolvedDisabilityType = resolveDisabilityTypeForDatabase(connection, disabilityType)
+                if (resolvedDisabilityType == null) {
+                    Log.e(
+                        "MySQLHelper",
+                        "Unable to map disability type '$disabilityType' to pwd_profiles_table ENUM values."
+                    )
+                    connection.rollback()
+                    return false
+                }
+
+                val insertPwdProfileQuery = """
+                    INSERT INTO pwd_profiles_table (userID, disabilityType)
+                    VALUES (?, ?)
+                """.trimIndent()
+                pwdProfileStatement = connection.prepareStatement(insertPwdProfileQuery)
+                pwdProfileStatement.setString(1, userID)
+                pwdProfileStatement.setString(2, resolvedDisabilityType)
+                val profileRowsAffected = pwdProfileStatement.executeUpdate()
+                if (profileRowsAffected <= 0) {
+                    connection.rollback()
+                    return false
+                }
             }
 
             connection.commit()
@@ -1054,6 +1118,7 @@ object MySQLHelper {
             checkStatement?.close()
             userStatement?.close()
             pwdProfileStatement?.close()
+            safetyProfileStatement?.close()
             try {
                 connection?.autoCommit = true
             } catch (e: SQLException) {
@@ -1912,8 +1977,19 @@ object MySQLHelper {
                 profileStatement.setInt(3, userIDInt)
                 val profileUpdated = profileStatement.executeUpdate() > 0
                 if (!profileUpdated) {
-                    connection.rollback()
-                    return@withContext false
+                    val hasSafetyProfileQuery = "SELECT COUNT(*) AS count FROM safety_officer_profiles_table WHERE userID = ?"
+                    checkStatement = connection.prepareStatement(hasSafetyProfileQuery)
+                    checkStatement.setInt(1, userIDInt)
+                    val safetyResult = checkStatement.executeQuery()
+                    val hasSafetyProfile = safetyResult.next() && safetyResult.getInt("count") > 0
+                    safetyResult.close()
+                    checkStatement?.close()
+                    checkStatement = null
+
+                    if (!hasSafetyProfile) {
+                        connection.rollback()
+                        return@withContext false
+                    }
                 }
 
                 connection.commit()

@@ -88,7 +88,7 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
 
                 if (userData != null) {
                     val systemRole = withContext(Dispatchers.IO) {
-                        MySQLHelper.getDisabilityTypeByUserID(userData.userID)
+                        MySQLHelper.getSystemRoleByUserID(userData.userID)
                     }
 
                     when (userData.verified) {

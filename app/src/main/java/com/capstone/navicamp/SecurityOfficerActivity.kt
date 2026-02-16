@@ -80,6 +80,19 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
+        val officerUserIDForMenu = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+            .getString("userID", null)
+            ?.trim()
+        if (!officerUserIDForMenu.isNullOrBlank()) {
+            lifecycleScope.launch {
+                val isAdmin = withContext(Dispatchers.IO) {
+                    MySQLHelper.isSafetyOfficerAdmin(officerUserIDForMenu)
+                }
+                navigationView.menu.findItem(R.id.nav_verification_qr)?.isVisible = isAdmin
+            }
+        } else {
+            navigationView.menu.findItem(R.id.nav_verification_qr)?.isVisible = false
+        }
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -143,8 +156,29 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_verification_qr -> {
-                    startActivity(Intent(this, VerificationQrGeneratorActivity::class.java))
-                    true
+                    val officerUserID = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                        .getString("userID", null)
+                        ?.trim()
+                    if (officerUserID.isNullOrBlank()) {
+                        Toast.makeText(this, "Unable to verify access. Please login again.", Toast.LENGTH_LONG).show()
+                        true
+                    } else {
+                        lifecycleScope.launch {
+                            val isAdmin = withContext(Dispatchers.IO) {
+                                MySQLHelper.isSafetyOfficerAdmin(officerUserID)
+                            }
+                            if (isAdmin) {
+                                startActivity(Intent(this@SecurityOfficerActivity, VerificationQrGeneratorActivity::class.java))
+                            } else {
+                                Toast.makeText(
+                                    this@SecurityOfficerActivity,
+                                    "Only admin safety officers can generate verification QR.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        true
+                    }
                 }
 
                 else -> false
