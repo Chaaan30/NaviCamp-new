@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:background="?android:attr/windowBackground"
-            app:menu="@menu/bottom_navigation_menu" />
+            app:menu="@menu/bottom_navigation_menu_pwd" />
 
 
 
@@ -34,7 +34,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/inter_bold"
+                android:fontFamily="@font/inter_medium"
                 android:layout_marginTop="30dp"
                 android:text="Hello,"
                 android:textColor="#47494A"
@@ -44,7 +44,7 @@
                 android:id="@+id/user_fullname"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/inter_bold"
+                android:fontFamily="@font/inter_semibold"
                 android:text="Full Name!"
                 android:textColor="#000000"
                 android:textSize="30sp" />
