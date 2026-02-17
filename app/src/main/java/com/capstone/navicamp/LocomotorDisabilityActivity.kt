@@ -164,10 +164,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_home -> {
+                R.id.nav_pwd_home -> {
                     true
                 }
-                R.id.nav_scan_qr -> {
+                R.id.nav_pwd_scan_qr -> {
                     if (connectedDeviceID == null) {
                         launchQrScanner()
                     } else {
@@ -180,7 +180,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                     }
                     true
                 }
-                R.id.nav_settings -> {
+                R.id.nav_pwd_settings -> {
                     val intent = Intent(this, SettingsActivity::class.java)
                     startActivity(intent)
                     true
@@ -192,7 +192,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         //Gemini's block
         if (intent.getBooleanExtra("TRIGGER_SCAN", false)) {
             val bottomNav: BottomNavigationView = findViewById(R.id.bottom_navigation)
-            bottomNav.selectedItemId = R.id.nav_scan_qr
+            bottomNav.selectedItemId = R.id.nav_pwd_scan_qr
         }
 
         // --- GROUP 3: ASYNCHRONOUS DATABASE OPERATIONS ---
@@ -592,7 +592,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     private fun updateConnectionStatusUI() {
         if (!::bottomNavigationView.isInitialized) return
         // 1. Get the menu item from the bottom navigation
-        val scanItem = bottomNavigationView.menu.findItem(R.id.nav_scan_qr)
+        val scanItem = bottomNavigationView.menu.findItem(R.id.nav_pwd_scan_qr)
 
         if (connectedDeviceID != null) {
             // State: CONNECTED
@@ -668,7 +668,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         Log.d("LocomotorDisability", "=== ON RESUME CALLED ===")
         Log.d("LocomotorDisability", "Connected Device ID: $connectedDeviceID")
 
-        bottomNavigationView.selectedItemId = R.id.nav_home
+        bottomNavigationView.selectedItemId = R.id.nav_pwd_home
 
         // Update name in nav header upon resume
         val fullName = if (UserSingleton.fullName.isNullOrBlank()) {

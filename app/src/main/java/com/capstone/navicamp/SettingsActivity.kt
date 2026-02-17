@@ -60,14 +60,14 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         // 5. Handle Bottom Navigation Highlighting
-        bottomNav.selectedItemId = R.id.nav_settings
+        bottomNav.selectedItemId = R.id.nav_pwd_settings
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_home -> {
+                R.id.nav_pwd_home -> {
                     finish()
                     true
                 }
-                R.id.nav_scan_qr -> {
+                R.id.nav_pwd_scan_qr -> {
                     // Logic to go back and trigger QR from home
                     val intent = Intent(this, LocomotorDisabilityActivity::class.java)
                     intent.putExtra("TRIGGER_SCAN", true)
