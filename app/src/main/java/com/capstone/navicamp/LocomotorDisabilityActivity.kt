@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 
 import android.animation.ValueAnimator
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
@@ -43,8 +45,11 @@ import java.util.TimeZone
 
 class LocomotorDisabilityActivity : AppCompatActivity() {
     private lateinit var connectionStatusTextView: TextView
-
-
+    private lateinit var assistanceButtonBackground: Button // The pinkish outer ring
+    private lateinit var expirySection: View
+    private lateinit var expiryDateText: TextView
+    private lateinit var expiryTitle: TextView
+    private lateinit var emergencyBanner: View
 
     private var connectedDeviceID: String? = null
     private var connectionTimer: CountDownTimer? = null
@@ -142,6 +147,11 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         bottomNavigationView = findViewById(R.id.bottom_navigation)
         connectionStatusTextView = findViewById(R.id.connection_status_textview)
         assistanceButton = findViewById(R.id.assistance_button)
+        assistanceButtonBackground = findViewById(R.id.assistance_button_background)
+        expirySection = findViewById(R.id.expiry_section)
+        expiryDateText = findViewById(R.id.expiry_date_text)
+        expiryTitle = findViewById(R.id.expiry_title)
+        emergencyBanner = findViewById(R.id.emergency_contact_banner)
 
         resetRunnable = Runnable {
             Log.d("LocomotorDisability", "30-minute timer elapsed. Forcing button reset.")
@@ -518,6 +528,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 Log.d("DeviceConnect", "Successfully connected to device $deviceID")
                 startConnectionTimer(currentConnectionDurationMs) // Start timer with the chosen/active duration
                 updateConnectionStatusUI()
+                checkUserAccessStatus()
 
 
 
@@ -530,37 +541,36 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
     }
 
     private fun disconnectFromDevice(showToast: Boolean = true) {
-        val deviceToDisconnect = connectedDeviceID
-        if (deviceToDisconnect == null) {
-            Log.w("DeviceConnect", "Nothing to disconnect.")
-            return
-        }
+        val deviceToDisconnect = connectedDeviceID ?: return
 
-        // 1. Stop the countdown timer
+        // 1. Stop local timer
         connectionTimer?.cancel()
         connectionTimer = null
 
-        // 2. Update the Database
+        // 2. Update Database (Reset wheelchair to available)
         lifecycleScope.launch(Dispatchers.IO) {
-            // We pass null for UserID and null for Expiry to reset the wheelchair to "available"
+            // Capture the result (success) from the database helper
             val success = MySQLHelper.updateDeviceConnectionStatus(deviceToDisconnect, null, null)
 
             withContext(Dispatchers.Main) {
+                // ONLY perform cleanup and UI updates IF the database update worked
                 if (success) {
-                    // 3. Clear local state only after DB confirms success
+                    // 3. Reset local variables
                     connectedDeviceID = null
                     connectionExpiryTimeMillis = null
 
-                    // 4. Update the UI (This resets the Bottom Nav text to "Scan QR")
+                    // 4. Update UI (This resets the Bottom Nav text)
                     updateConnectionStatusUI()
+
+                    // 5. Refresh the SOS button state (This grays it out because connectedDeviceID is now null)
+                    checkUserAccessStatus()
 
                     if (showToast) {
                         Toast.makeText(this@LocomotorDisabilityActivity, "Disconnected from wheelchair.", Toast.LENGTH_SHORT).show()
                     }
-                    Log.d("DeviceConnect", "Successfully disconnected device: $deviceToDisconnect")
                 } else {
-                    Toast.makeText(this@LocomotorDisabilityActivity, "Disconnection failed on server.", Toast.LENGTH_LONG).show()
-                    Log.e("DeviceConnect", "Database update failed for disconnect.")
+                    // If it failed, tell the user
+                    Toast.makeText(this@LocomotorDisabilityActivity, "Error: Could not disconnect from server.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -696,7 +706,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         if (!isRestoringConnection) {
             connectionStatusTextView.text = "Checking for active wheelchair connection..."
         }
-
+        checkUserAccessStatus()
         restoreConnectionFromDatabase()
     }
 
@@ -801,94 +811,101 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 Log.d("LocomotorDisability", "=== DATABASE QUERY RESULT ===")
                 Log.d("LocomotorDisability", "Database query result: ${if (activeConnection != null) "Found connection to ${activeConnection.deviceID}" else "No active connection found"}")
 
-                if (activeConnection != null) {
-                    val currentTimeMillis = System.currentTimeMillis()
+                withContext(Dispatchers.Main) {
+                    if (activeConnection != null) {
+                        val currentTimeMillis = System.currentTimeMillis()
 
-                    Log.d("LocomotorDisability", "=== CONNECTION DETAILS ===")
-                    Log.d("LocomotorDisability", "Device ID: ${activeConnection.deviceID}")
-                    Log.d("LocomotorDisability", "Current time: $currentTimeMillis")
-                    Log.d("LocomotorDisability", "Connection expires: ${activeConnection.expiryTime}")
-                    Log.d("LocomotorDisability", "Time difference: ${activeConnection.expiryTime - currentTimeMillis}ms")
+                        Log.d("LocomotorDisability", "=== CONNECTION DETAILS ===")
+                        Log.d("LocomotorDisability", "Device ID: ${activeConnection.deviceID}")
+                        Log.d("LocomotorDisability", "Current time: $currentTimeMillis")
+                        Log.d("LocomotorDisability", "Connection expires: ${activeConnection.expiryTime}")
+                        Log.d("LocomotorDisability", "Time difference: ${activeConnection.expiryTime - currentTimeMillis}ms")
 
-                    if (activeConnection.expiryTime > currentTimeMillis) {
-                        // Connection is still valid, restore it
-                        Log.d("LocomotorDisability", "=== RESTORING CONNECTION ===")
+                        if (activeConnection.expiryTime > currentTimeMillis) {
+                            // Connection is still valid, restore it
+                            Log.d("LocomotorDisability", "=== RESTORING CONNECTION ===")
 
-                        // Cancel any existing timer to prevent duplicates
-                        connectionTimer?.cancel()
-                        connectionTimer = null
+                            // Cancel any existing timer to prevent duplicates
+                            connectionTimer?.cancel()
+                            connectionTimer = null
 
-                        // Restore connection state
-                        connectedDeviceID = activeConnection.deviceID
-                        connectionExpiryTimeMillis = activeConnection.expiryTime
-
-
-
-                        val remainingDurationMs = activeConnection.expiryTime - currentTimeMillis
-                        val remainingMinutes = remainingDurationMs / (60 * 1000)
-                        val remainingSeconds = (remainingDurationMs % (60 * 1000)) / 1000
-
-                        Log.d("LocomotorDisability", "=== TIMING DETAILS ===")
-                        Log.d("LocomotorDisability", "Database expiry time: ${activeConnection.expiryTime}")
-                        Log.d("LocomotorDisability", "Current system time: $currentTimeMillis")
-                        Log.d("LocomotorDisability", "Calculated remaining: ${remainingDurationMs}ms")
-                        Log.d("LocomotorDisability", "Remaining time: ${remainingMinutes}m ${remainingSeconds}s")
-                        Log.d("LocomotorDisability", "Starting timer with duration: ${remainingDurationMs}ms")
-
-                        Log.d("LocomotorDisability", "Restored connection to device ${activeConnection.deviceID} with ${remainingMinutes}m ${remainingSeconds}s remaining")
-
-                        // Start the timer with remaining time
-                        startConnectionTimer(remainingDurationMs)
-                        updateConnectionStatusUI()
-
-                        Toast.makeText(this@LocomotorDisabilityActivity,
-                            "Reconnected to wheelchair: ${activeConnection.deviceID} (${remainingMinutes}m ${remainingSeconds}s left)",
-                            Toast.LENGTH_LONG).show()
+                            // Restore connection state
+                            connectedDeviceID = activeConnection.deviceID
+                            connectionExpiryTimeMillis = activeConnection.expiryTime
 
 
 
-                    } else {
-                        // Connection expired while app was not running, clean it up
-                        Log.d("LocomotorDisability", "=== CONNECTION EXPIRED - CLEANING UP ===")
-                        Log.d("LocomotorDisability", "Found expired connection for device ${activeConnection.deviceID}, cleaning up")
+                            val remainingDurationMs = activeConnection.expiryTime - currentTimeMillis
+                            val remainingMinutes = remainingDurationMs / (60 * 1000)
+                            val remainingSeconds = (remainingDurationMs % (60 * 1000)) / 1000
 
-                        // Clean up local state
-                        connectionTimer?.cancel()
-                        connectionTimer = null
-                        connectedDeviceID = null
-                        connectionExpiryTimeMillis = null
+                            Log.d("LocomotorDisability", "=== TIMING DETAILS ===")
+                            Log.d("LocomotorDisability", "Database expiry time: ${activeConnection.expiryTime}")
+                            Log.d("LocomotorDisability", "Current system time: $currentTimeMillis")
+                            Log.d("LocomotorDisability", "Calculated remaining: ${remainingDurationMs}ms")
+                            Log.d("LocomotorDisability", "Remaining time: ${remainingMinutes}m ${remainingSeconds}s")
+                            Log.d("LocomotorDisability", "Starting timer with duration: ${remainingDurationMs}ms")
 
-                        // Clean up database
-                        withContext(Dispatchers.IO) {
-                            MySQLHelper.updateDeviceConnectionStatus(activeConnection.deviceID, null, null)
+                            Log.d("LocomotorDisability", "Restored connection to device ${activeConnection.deviceID} with ${remainingMinutes}m ${remainingSeconds}s remaining")
+
+                            checkUserAccessStatus()
+
+                            startConnectionTimer(activeConnection.expiryTime - currentTimeMillis)
+                            updateConnectionStatusUI()
+
+                            Toast.makeText(this@LocomotorDisabilityActivity,
+                                "Reconnected to wheelchair: ${activeConnection.deviceID} (${remainingMinutes}m ${remainingSeconds}s left)",
+                                Toast.LENGTH_LONG).show()
+
+
+
+                        } else {
+                            // Connection expired while app was not running, clean it up
+                            Log.d("LocomotorDisability", "=== CONNECTION EXPIRED - CLEANING UP ===")
+                            Log.d("LocomotorDisability", "Found expired connection for device ${activeConnection.deviceID}, cleaning up")
+
+                            // Clean up local state
+                            connectionTimer?.cancel()
+                            connectionTimer = null
+                            connectedDeviceID = null
+                            connectionExpiryTimeMillis = null
+
+                            // Clean up database
+                            withContext(Dispatchers.IO) {
+                                MySQLHelper.updateDeviceConnectionStatus(activeConnection.deviceID, null, null)
+                            }
+
+                            connectedDeviceID = null
+                            checkUserAccessStatus() // Refresh to gray
+                            updateConnectionStatusUI()
+
+                            Toast.makeText(this@LocomotorDisabilityActivity,
+                                "Previous wheelchair connection expired",
+                                Toast.LENGTH_SHORT).show()
                         }
+                    } else {
+                        Log.d("LocomotorDisability", "=== NO CONNECTION FOUND ===")
+                        Log.d("LocomotorDisability", "No active connection found in database for user $currentUserID")
 
-                        updateConnectionStatusUI()
-
-                        Toast.makeText(this@LocomotorDisabilityActivity,
-                            "Previous wheelchair connection expired",
-                            Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Log.d("LocomotorDisability", "=== NO CONNECTION FOUND ===")
-                    Log.d("LocomotorDisability", "No active connection found in database for user $currentUserID")
-
-                    // Clean up local state if no database connection exists
-                    if (connectedDeviceID != null) {
-                        Log.d("LocomotorDisability", "Cleaning up orphaned local connection state")
-                        connectionTimer?.cancel()
-                        connectionTimer = null
+                        // Clean up local state if no database connection exists
+                        if (connectedDeviceID != null) {
+                            Log.d("LocomotorDisability", "Cleaning up orphaned local connection state")
+                            connectionTimer?.cancel()
+                            connectionTimer = null
+                            connectedDeviceID = null
+                            connectionExpiryTimeMillis = null
+                        }
                         connectedDeviceID = null
-                        connectionExpiryTimeMillis = null
+                        checkUserAccessStatus()
+                        // Update UI to show not connected state
+                        updateConnectionStatusUI()
                     }
-
-                    // Update UI to show not connected state
-                    updateConnectionStatusUI()
                 }
             } catch (e: Exception) {
                 Log.e("LocomotorDisability", "=== ERROR IN DATABASE RESTORATION ===")
                 Log.e("LocomotorDisability", "Error restoring connection from database: ${e.message}", e)
 
+                checkUserAccessStatus()
                 // Update UI to show not connected state on error
                 updateConnectionStatusUI()
 
@@ -901,6 +918,111 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkUserAccessStatus() {
+        val uid = currentUserID ?: return
 
+        lifecycleScope.launch(Dispatchers.IO) {
+            // 1. Fetch the latest profile data from MySQL
+            val profile = try {
+                MySQLHelper.getPwdProfileData(uid)
+            } catch (e: Exception) {
+                null
+            }
+
+            withContext(Dispatchers.Main) {
+                if (profile != null) {
+                    var accessIsExpired = false
+                    val isWheelchairConnected = (connectedDeviceID != null)
+
+                    // 2. Determine Expiry Status for Temporary Users
+                    if (profile.disabilityType == "Temporary") {
+                        expirySection.visibility = View.VISIBLE
+                        try {
+                            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val expiryDate = sdf.parse(profile.expiryDate ?: "")
+                            val today = Calendar.getInstance().time
+
+                            if (expiryDate != null && expiryDate.before(today)) {
+                                accessIsExpired = true
+                                expiryTitle.text = "Temporary Verification Expired"
+                                expiryDateText.text = "Please visit the CHSW (Clinic) with an updated medical certificate..."
+
+                                // --- ADD THIS BLOCK TO FORCE DISCONNECT ---
+                                if (connectedDeviceID != null) {
+                                    Log.d("AccessCheck", "Access expired while connected. Forcing disconnect.")
+                                    runOnUiThread {
+                                        Toast.makeText(this@LocomotorDisabilityActivity,
+                                            "Access expired. Disconnecting wheelchair.", Toast.LENGTH_LONG).show()
+                                        disconnectFromDevice(showToast = false)
+                                    }
+                                }
+                            } else {
+                                expiryTitle.text = "Access Expiry"
+                                expiryDateText.text = "Your temporary access expires on: ${profile.expiryDate}"
+                            }
+                        } catch (e: Exception) {
+                            accessIsExpired = false
+                        }
+                    } else {
+                        // Permanent users don't see the expiry section
+                        expirySection.visibility = View.GONE
+                    }
+
+                    // 3. APPLY SOS BUTTON LOGIC
+                    // Logic: Button is ONLY red/enabled if:
+                    // (NOT Expired) AND (Wheelchair is Connected)
+                    if (!accessIsExpired && isWheelchairConnected) {
+                        enableSOSButton()
+                    } else {
+                        // Determine the reason for disabling for the Toast message
+                        val reason = when {
+                            accessIsExpired -> "Verification Expired. Please visit the clinic."
+                            !isWheelchairConnected -> "Please connect to a wheelchair to use SOS."
+                            else -> "Emergency features unavailable."
+                        }
+                        disableSOSButton(reason)
+                    }
+
+                    // 4. Handle Red Warning Banner (Emergency Contact)
+                    if (profile.emergencyContactPerson.isNullOrBlank() || profile.emergencyContactNumber.isNullOrBlank()) {
+                        emergencyBanner.visibility = View.VISIBLE
+                    } else {
+                        emergencyBanner.visibility = View.GONE
+                    }
+                } else {
+                    // OPTIONAL: If profile is null, something is wrong with the DB connection.
+                    // You might want to hide everything or show a generic error.
+                    Log.e("StatusCheck", "Failed to fetch profile for UID: $uid")
+                }
+            }
+        }
+    }
+
+    private fun enableSOSButton() {
+        assistanceButton.isEnabled = true
+        assistanceButtonBackground.isEnabled = true
+
+        // Set to Red/Pink
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
+
+        // Ensure button has its original text/size
+        if (!isAlertSent) assistanceButton.text = "SOS"
+    }
+
+    private fun disableSOSButton(reason: String) {
+        assistanceButton.isEnabled = false
+        assistanceButtonBackground.isEnabled = false
+
+        // Set to Solid Gray
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#9E9E9E"))
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#D3D3D3"))
+
+        // Set a click listener on the background or container to show the reason
+        // (Since disabled buttons don't fire clicks, we can use a transparent overlay or the background)
+        assistanceButtonBackground.setOnClickListener {
+            Toast.makeText(this, reason, Toast.LENGTH_SHORT).show()
+        }
+    }
 
 }

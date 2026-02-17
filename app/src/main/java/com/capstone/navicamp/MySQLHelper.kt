@@ -34,8 +34,12 @@ data class ActiveConnectionInfo(
     val expiryTime: Long
 )
 
-
-
+data class PwdProfileData(
+    val disabilityType: String?,
+    val expiryDate: String?,
+    val emergencyContactPerson: String?,
+    val emergencyContactNumber: String?
+)
 
 object MySQLHelper {
 
@@ -2637,6 +2641,41 @@ object MySQLHelper {
         }
     }
 
+    suspend fun getPwdProfileData(userID: String): PwdProfileData? {
+        return withContext(Dispatchers.IO) {
+            var profile: PwdProfileData? = null
+            val query = "SELECT disabilityType, expiryDate, emergencyContactPerson, emergencyContactNumber " +
+                    "FROM pwd_profiles_table WHERE userID = ?"
+
+            try {
+                // Using the connection manager logic you likely already have in MySQLHelper
+                val connection = getConnection()
+                val statement = connection?.prepareStatement(query)
+                statement?.setString(1, userID)
+
+                val resultSet = statement?.executeQuery()
+
+                if (resultSet != null && resultSet.next()) {
+                    profile = PwdProfileData(
+                        disabilityType = resultSet.getString("disabilityType"),
+                        expiryDate = resultSet.getString("expiryDate"),
+                        emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
+                        emergencyContactNumber = resultSet.getString("emergencyContactNumber")
+                    )
+                }
+
+                resultSet?.close()
+                statement?.close()
+                // connection?.close() // Don't close if you use a persistent connection pool
+
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Error fetching PWD profile: ${e.message}")
+            }
+
+            profile
+        }
+    }
+
     // Check if a device is available for connection
     fun isDeviceAvailable(deviceID: String): Boolean {
         var connection: Connection? = null
@@ -3105,7 +3144,7 @@ object MySQLHelper {
     }
     @JvmStatic
     fun getDeviceStatus(deviceID: String): LocomotorDisabilityActivity.DeviceStatus { // Return type is now the Enum
-        val sql = "SELECT status FROM devices_table WHERE device_id = ?" // Use correct table name
+        val sql = "SELECT status FROM devices_table WHERE deviceID = ?" // Use correct table name
         var connection: Connection? = null
         var pstmt: PreparedStatement? = null
         var rs: ResultSet? = null
