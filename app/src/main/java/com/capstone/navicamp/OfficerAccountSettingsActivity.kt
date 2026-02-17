@@ -51,14 +51,12 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
         val fullNameText = findViewById<TextView>(R.id.full_name_text)
         val editFullName = findViewById<EditText>(R.id.edit_full_name)
-        val userIdText = findViewById<TextView>(R.id.user_id_text)
+        val userIdText = findViewById<TextView>(R.id.school_id_text)
         val userTypeText = findViewById<TextView>(R.id.user_type_text)
         val emailText = findViewById<TextView>(R.id.email_text)
         val contactNumberText = findViewById<TextView>(R.id.contact_number_text)
         val editContactNumber = findViewById<EditText>(R.id.edit_contact_number)
         val dateCreatedText = findViewById<TextView>(R.id.date_created_text)
-        val updatedOnCard = findViewById<View>(R.id.updated_on_card)
-        val updatedOnText = findViewById<TextView>(R.id.updated_on_text)
         val btnAction = findViewById<Button>(R.id.btnAction)
 
         // Load prefs
@@ -78,12 +76,6 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         emailText.text = "Email: $email"
         contactNumberText.text = "Contact Number: $contactNumber"
         dateCreatedText.text = "Date Created: $createdOn"
-        if (!updatedOn.isNullOrEmpty()) {
-            updatedOnText.text = "Updated On: $updatedOn"
-            updatedOnCard.visibility = View.VISIBLE
-        } else {
-            updatedOnCard.visibility = View.GONE
-        }
 
         // Hide edit fields initially
         editFullName.visibility = View.GONE
@@ -97,7 +89,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
             if (!isEditMode) {
                 // Enter edit
                 isEditMode = true
-                btnAction.text = "Save Changes"
+                btnAction.text = "SAVE CHANGES"
 
                 editFullName.visibility = View.VISIBLE
                 editFullName.setText(fullName)
@@ -151,7 +143,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                         editor.apply()
 
                         isEditMode = false
-                        btnAction.text = "Edit Account Details"
+                        btnAction.text = "EDIT ACCOUNT DETAILS"
 
                         editFullName.visibility = View.GONE
                         editEmail.visibility = View.GONE

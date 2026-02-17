@@ -51,274 +51,65 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Section: User Information -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/inter"
-                android:paddingBottom="8dp"
-                android:text="User Information"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+            <!-- NAME -->
+            <TextView style="@style/SettingLabel" android:text="NAME" />
+            <TextView android:id="@+id/full_name_text" style="@style/SettingValue" android:text="Firstname Lastname" />
+            <EditText android:id="@+id/edit_full_name" style="@style/SettingEdit" android:hint="Enter full name" />
+            <View style="@style/Divider" />
 
-            <!-- Full Name Card -->
-            <androidx.cardview.widget.CardView
+            <!-- SCHOOL ID -->
+            <TextView style="@style/SettingLabel" android:text="SCHOOL ID" />
+            <TextView android:id="@+id/school_id_text" style="@style/SettingValue" android:text="2020654321" />
+            <View style="@style/Divider" />
+
+            <!-- EMAIL & OTP SECTION -->
+            <TextView style="@style/SettingLabel" android:text="EMAIL" />
+            <TextView android:id="@+id/email_text" style="@style/SettingValue" android:text="user@email.com" />
+
+            <LinearLayout
+                android:id="@+id/email_edit_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                android:orientation="vertical"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/full_name_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Full Name: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-
-                    <EditText
-                        android:id="@+id/edit_full_name"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:fontFamily="@font/inter"
-                        android:hint="Edit Full Name"
-                        android:visibility="gone" />
+                    android:orientation="horizontal">
+                    <EditText android:id="@+id/edit_email" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="New email" />
+                    <Button android:id="@+id/send_otp_button" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Verify" style="@style/Widget.MaterialComponents.Button.TextButton" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- User ID Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
 
                 <LinearLayout
+                    android:id="@+id/otp_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/user_id_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="User ID: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/edit_otp" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="Enter OTP" android:inputType="number" />
+                    <Button android:id="@+id/confirm_otp_button" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Confirm OTP" style="@style/Widget.MaterialComponents.Button.TextButton" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </LinearLayout>
+            <View style="@style/Divider" />
 
-            <!-- User Type Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+            <!-- CONTACT NUMBER -->
+            <TextView style="@style/SettingLabel" android:text="CONTACT NUMBER" />
+            <TextView android:id="@+id/contact_number_text" style="@style/SettingValue" android:text="09123456789" />
+            <EditText android:id="@+id/edit_contact_number" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
+            <View style="@style/Divider" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
+            <!-- USER TYPE -->
+            <TextView style="@style/SettingLabel" android:text="USER TYPE" />
+            <TextView android:id="@+id/user_type_text" style="@style/SettingValue" android:text="Student/Employee" />
+            <View style="@style/Divider" />
+            <TextView android:id="@+id/employee_type_text" style="@style/SettingValue" android:text="Admin/Safety Officer" />
+            <View style="@style/Divider" />
 
-                    <TextView
-                        android:id="@+id/user_type_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="User Type: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Email Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/email_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Email: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <EditText
-                            android:id="@+id/edit_email"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="16dp"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/inter"
-                            android:hint="Edit Email"
-                            android:visibility="gone" />
-
-                        <Button
-                            android:id="@+id/send_otp_button"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:background="@drawable/button_outline"
-                            android:fontFamily="@font/inter"
-                            android:text="Send OTP"
-                            android:textColor="@color/custom_blue"
-                            android:visibility="gone" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <EditText
-                            android:id="@+id/edit_otp"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="16dp"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/inter"
-                            android:hint="Enter OTP"
-                            android:visibility="gone" />
-
-                        <Button
-                            android:id="@+id/confirm_otp_button"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:background="@drawable/button_outline"
-                            android:fontFamily="@font/inter"
-                            android:text="Confirm OTP"
-                            android:textColor="@color/custom_blue"
-                            android:visibility="gone" />
-                    </LinearLayout>
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Contact Number Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/contact_number_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Contact Number: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-
-                    <EditText
-                        android:id="@+id/edit_contact_number"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:fontFamily="@font/inter"
-                        android:hint="Edit Contact Number"
-                        android:inputType="number"
-                        android:maxLength="11"
-                        android:visibility="gone" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Date Created Card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/date_created_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Date Created: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Updated On Card -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/updated_on_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:padding="16dp"
-                android:visibility="gone"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:id="@+id/updated_on_text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginLeft="10dp"
-                        android:fontFamily="@font/inter"
-                        android:text="Updated On: "
-                        android:textColor="#000000"
-                        android:textSize="16sp" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            <!-- ACCOUNT CREATION DATE -->
+            <TextView style="@style/SettingLabel" android:text="ACCOUNT CREATION DATE" />
+            <TextView android:id="@+id/date_created_text" style="@style/SettingValue" android:text="January 1, 2024" />
+            <View style="@style/Divider" />
 
         </LinearLayout>
     </ScrollView>
@@ -330,7 +121,7 @@
         android:layout_margin="24dp"
         android:backgroundTint="#6C8EEF"
         android:fontFamily="@font/inter_bold"
-        android:text="Edit Account Details"
+        android:text="EDIT ACCOUNT DETAILS"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         app:cornerRadius="8dp"
