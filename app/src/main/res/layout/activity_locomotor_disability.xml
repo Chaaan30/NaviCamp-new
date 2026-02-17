@@ -68,7 +68,7 @@
                 android:layout_marginBottom="8dp"
                 android:fontFamily="@font/inter"
                 android:gravity="center"
-                android:text="Press and hold the button below for 3 seconds to alert a safety officer in the campus"
+                android:text="Press and hold the button below for 5 seconds to alert a safety officer in the campus"
                 android:textColor="#8C8C8C"
                 android:textSize="14sp" />
 

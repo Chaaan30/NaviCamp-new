@@ -563,16 +563,10 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         connectionTimer?.cancel() // Cancel any existing timer
         connectionTimer = object : CountDownTimer(durationMs, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                // Don't update connectionExpiryTimeMillis here - it should remain fixed
-                // connectionExpiryTimeMillis = System.currentTimeMillis() + millisUntilFinished
-
+                // Timer is running but we don't update the UI with connection status
                 val minutes = (millisUntilFinished / 1000) / 60
                 val seconds = (millisUntilFinished / 1000) % 60
                 Log.d("ConnectionTimer", "Time remaining: $minutes m $seconds s for device $connectedDeviceID")
-                // Update UI with remaining time
-                if (connectedDeviceID != null) { // Check to prevent crash if disconnected during tick
-                     connectionStatusTextView.text = "Connected to: $connectedDeviceID\nTime left: ${String.format("%02d:%02d", minutes, seconds)}"
-                }
             }
 
             override fun onFinish() {
@@ -584,22 +578,16 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
     private fun updateConnectionStatusUI() {
         if (!::bottomNavigationView.isInitialized) return
-        // 1. Get the menu item from the bottom navigation
+        // Get the menu item from the bottom navigation
         val scanItem = bottomNavigationView.menu.findItem(R.id.nav_scan_qr)
 
         if (connectedDeviceID != null) {
             // State: CONNECTED
-            connectionStatusTextView.text = "Connected to Wheelchair: $connectedDeviceID"
-            connectionStatusTextView.setTextColor(android.graphics.Color.parseColor("#4CAF50")) // Green
-
-            // 2. Change the 2nd icon's text to "Disconnect"
+            // Change the 2nd icon's text to "Disconnect"
             scanItem.title = "Disconnect"
         } else {
             // State: NOT CONNECTED
-            connectionStatusTextView.text = "Not connected to a wheelchair."
-            connectionStatusTextView.setTextColor(android.graphics.Color.parseColor("#8C8C8C")) // Gray
-
-            // 3. Change the 2nd icon's text back to "Scan QR"
+            // Change the 2nd icon's text back to "Scan QR"
             scanItem.title = "Scan QR"
         }
     }
@@ -682,11 +670,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         // ALWAYS restore connection from database on resume
         // This ensures connection state is maintained across app lifecycle events
         Log.d("LocomotorDisability", "Restoring connection from database on resume")
-
-        // Show loading state while restoring connection
-        if (!isRestoringConnection) {
-            connectionStatusTextView.text = "Checking for active wheelchair connection..."
-        }
 
         restoreConnectionFromDatabase()
     }
@@ -776,15 +759,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // First, let's check what's actually in the database for debugging
-                withContext(Dispatchers.IO) {
-                    val deviceStatus: DeviceStatus = MySQLHelper.getDeviceStatus("202501")
-                    Log.d("LocomotorDisability", "Device 202501 current status: $deviceStatus")
-
-                    // Monitor for 'active' status
-                    MySQLHelper.monitorDeviceStatusChanges("202501")
-                }
-
                 val activeConnection = withContext(Dispatchers.IO) {
                     MySQLHelper.getActiveConnectionForUser(currentUserID!!)
                 }
