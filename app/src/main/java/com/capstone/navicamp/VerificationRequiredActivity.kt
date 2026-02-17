@@ -1,0 +1,178 @@
+package com.capstone.navicamp
+
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.button.MaterialButton
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class VerificationRequiredActivity : AppCompatActivity() {
+
+    private lateinit var userID: String
+    private lateinit var systemRole: String
+    private lateinit var fullName: String
+    private lateinit var campusAffiliation: String
+    private lateinit var email: String
+    private lateinit var contactNumber: String
+    private lateinit var createdOn: String
+    private lateinit var updatedOn: String
+
+    private val qrCodeScannerLauncher = registerForActivityResult(ScanContract()) { result ->
+        val scannedContent = result.contents?.trim()
+        if (scannedContent.isNullOrBlank()) {
+            return@registerForActivityResult
+        }
+
+        val payload = parseVerificationQrPayload(scannedContent)
+        if (payload == null || payload.roleToken != expectedRoleTokenForRole(systemRole)) {
+            Toast.makeText(this, "Invalid verification QR", Toast.LENGTH_LONG).show()
+            return@registerForActivityResult
+        }
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val staffExists = withContext(Dispatchers.IO) {
+                MySQLHelper.doesUserIDExist(payload.staffUserID)
+            }
+            if (!staffExists) {
+                Toast.makeText(
+                    this@VerificationRequiredActivity,
+                    "Invalid verification QR: staff account not found.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+
+            val isUpdated = withContext(Dispatchers.IO) {
+                MySQLHelper.approveUserVerificationWithProfileAudit(userID, payload.staffUserID)
+            }
+
+            if (!isUpdated) {
+                Toast.makeText(
+                    this@VerificationRequiredActivity,
+                    "Failed to update verification status. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+
+            val userPrefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            with(userPrefs.edit()) {
+                putString("userID", userID)
+                putString("fullName", fullName)
+                putString("userType", campusAffiliation)
+                putString("email", email)
+                putString("contactNumber", contactNumber)
+                putString("createdOn", createdOn)
+                putString("updatedOn", updatedOn)
+                putString("systemRole", systemRole)
+                putBoolean("isLoggedIn", true)
+                apply()
+            }
+            UserSingleton.fullName = fullName
+
+            Toast.makeText(
+                this@VerificationRequiredActivity,
+                "Verification approved. Redirecting...",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            val destination = if (isSafetyOfficerRole(systemRole)) {
+                Intent(this@VerificationRequiredActivity, SecurityOfficerActivity::class.java)
+            } else {
+                Intent(this@VerificationRequiredActivity, LocomotorDisabilityActivity::class.java)
+            }
+            destination.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(destination)
+            finish()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_verification_required)
+
+        userID = intent.getStringExtra(EXTRA_USER_ID).orEmpty()
+        systemRole = intent.getStringExtra(EXTRA_SYSTEM_ROLE).orEmpty()
+        fullName = intent.getStringExtra(EXTRA_FULL_NAME).orEmpty()
+        campusAffiliation = intent.getStringExtra(EXTRA_CAMPUS_AFFILIATION).orEmpty()
+        email = intent.getStringExtra(EXTRA_EMAIL).orEmpty()
+        contactNumber = intent.getStringExtra(EXTRA_CONTACT_NUMBER).orEmpty()
+        createdOn = intent.getStringExtra(EXTRA_CREATED_ON).orEmpty()
+        updatedOn = intent.getStringExtra(EXTRA_UPDATED_ON).orEmpty()
+
+        if (userID.isBlank() || systemRole.isBlank()) {
+            Toast.makeText(this, "Missing verification details.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        val titleText = findViewById<TextView>(R.id.verification_title)
+        val descriptionText = findViewById<TextView>(R.id.verification_description)
+        val scanButton = findViewById<MaterialButton>(R.id.scan_verification_qr_button)
+
+        if (isSafetyOfficerRole(systemRole)) {
+            titleText.text = "Verification Required"
+            descriptionText.text =
+                "Please visit the admin safety officer for account verification. Once verified, your features will be activated."
+            scanButton.text = "Scan Safety Officer Verification QR"
+        } else {
+            titleText.text = "Verification Required"
+            descriptionText.text =
+                "Please visit the CHSW clinic with your Medical Certificate. Once verified, your features will be activated."
+            scanButton.text = "Scan Clinic Verification QR"
+        }
+
+        scanButton.setOnClickListener {
+            val options = ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                setPrompt("Scan Verification QR")
+                setBeepEnabled(true)
+                setBarcodeImageEnabled(true)
+                setOrientationLocked(true)
+            }
+            qrCodeScannerLauncher.launch(options)
+        }
+    }
+
+    private fun isSafetyOfficerRole(role: String): Boolean {
+        val value = role.trim().lowercase()
+        return value.contains("safety") || value.contains("security") || value.contains("officer")
+    }
+
+    private fun expectedRoleTokenForRole(role: String): String {
+        return if (isSafetyOfficerRole(role)) "SAFETY_OFFICER" else "DISABLED"
+    }
+
+    private data class VerificationQrPayload(
+        val roleToken: String,
+        val staffUserID: String
+    )
+
+    private fun parseVerificationQrPayload(content: String): VerificationQrPayload? {
+        val regex = Regex("^NAVICAMP_VERIFY\\|ROLE=([A-Z_]+)\\|STAFF=(\\d+)$")
+        val match = regex.find(content) ?: return null
+        val roleToken = match.groupValues[1]
+        val staffUserID = match.groupValues[2]
+        return VerificationQrPayload(roleToken, staffUserID)
+    }
+
+    companion object {
+        const val EXTRA_USER_ID = "extra_user_id"
+        const val EXTRA_SYSTEM_ROLE = "extra_system_role"
+        const val EXTRA_FULL_NAME = "extra_full_name"
+        const val EXTRA_CAMPUS_AFFILIATION = "extra_campus_affiliation"
+        const val EXTRA_EMAIL = "extra_email"
+        const val EXTRA_CONTACT_NUMBER = "extra_contact_number"
+        const val EXTRA_CREATED_ON = "extra_created_on"
+        const val EXTRA_UPDATED_ON = "extra_updated_on"
+
+    }
+}

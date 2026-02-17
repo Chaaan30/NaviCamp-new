@@ -13,12 +13,23 @@
     <string name="col9">Time of Alert</string>
     <string name="col10">Resolved On</string>
 
-    <string-array name="user_types_reg">
-        <item>User Types</item>
+    <string-array name="campus_affiliations">
+        <item>Campus Affiliation</item>
         <item>Student</item>
-        <item>Personnel</item>
-        <item>Visitor</item>
-        <item>Security Officer</item>
+        <item>Employee</item>
+    </string-array>
+
+    <string-array name="system_roles_student">
+        <item>System Role</item>
+        <item>Temporarily Disabled</item>
+        <item>Permanently Disabled</item>
+    </string-array>
+
+    <string-array name="system_roles_employee">
+        <item>System Role</item>
+        <item>Temporarily Disabled</item>
+        <item>Permanently Disabled</item>
+        <item>Safety Officer</item>
     </string-array>
 
     <string-array name="filter_types">
@@ -29,16 +40,15 @@
     </string-array>
 
     <string-array name="user_types_log">
-        <item>User Types</item>
-        <item>Student/Personnel/Visitor</item>
-        <item>Security Officer</item>
+        <item>System Role</item>
+        <item>Temporarily Disabled/Permanently Disabled</item>
+        <item>Safety Officer</item>
     </string-array>
 
     <string-array name="registered_user_types">
         <item>All</item>
-        <item>Student</item>
-        <item>Personnel</item>
-        <item>Visitor</item>
+        <item>Temporarily Disabled</item>
+        <item>Permanently Disabled</item>
     </string-array>
 
     <string-array name="date_types">
