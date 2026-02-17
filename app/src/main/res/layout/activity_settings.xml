@@ -17,7 +17,7 @@
         android:text="Settings"
         android:textColor="#333D41"
         android:textSize="24sp"
-        android:textStyle="bold"/>
+        android:fontFamily="@font/inter_bold"/>
 
     <!-- User Profile Section -->
     <!-- User Profile Section -->
@@ -48,7 +48,7 @@
                 android:text="Firstname Lastname"
                 android:textColor="#333D41"
                 android:textSize="18sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/inter_bold" />
 
             <!-- 2. Account Details TextView -->
             <TextView
@@ -57,7 +57,8 @@
                 android:layout_height="wrap_content"
                 android:text="Account Details"
                 android:textColor="#8C8C8C"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:fontFamily="@font/inter_medium"/>
 
         </LinearLayout>
 
@@ -98,7 +99,7 @@
             android:text="Terms &amp; Privacy Policy"
             android:textColor="#47494A"
             android:textSize="16sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/inter_bold" />
 
         <TextView
             android:id="@+id/btn_device_setup"
@@ -108,7 +109,7 @@
             android:text="Device Setup"
             android:textColor="#47494A"
             android:textSize="16sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/inter_bold" />
     </LinearLayout>
 
     <!-- Logout Section -->
@@ -125,7 +126,7 @@
             android:text="Logout"
             android:textColor="#FF0000"
             android:textSize="16sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/inter_bold" />
     </LinearLayout>
 
     <!-- Spacer to push Bottom Nav down -->
@@ -142,6 +143,6 @@
         android:paddingBottom="15dp"
         android:layout_gravity="bottom"
         android:background="?android:attr/windowBackground"
-        app:menu="@menu/bottom_navigation_menu" />
+        app:menu="@menu/bottom_navigation_menu_pwd" />
 
 </LinearLayout>
