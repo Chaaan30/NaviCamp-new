@@ -122,7 +122,10 @@ class SetupActivity : AppCompatActivity() {
                     normalizedRole?.contains("security") == true ||
                     normalizedRole?.contains("officer") == true ->
                     Intent(this, SecurityOfficerActivity::class.java)
-                normalizedRole?.contains("disabled") == true ->
+                normalizedRole?.contains("disabled") == true ||
+                    normalizedRole?.contains("tempor") == true ||
+                    normalizedRole?.contains("perman") == true ||
+                    normalizedRole?.contains("pwd") == true ->
                     Intent(this, LocomotorDisabilityActivity::class.java)
                 else -> when (userType) {
                     "Safety Officer", "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)

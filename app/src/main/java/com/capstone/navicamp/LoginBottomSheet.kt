@@ -123,6 +123,12 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                             intent?.let {
                                 startActivity(it)
                                 dismiss()
+                            } ?: run {
+                                Toast.makeText(
+                                    context,
+                                    "Unable to determine your role. Please contact support.",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                         0 -> {
@@ -180,7 +186,10 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     private fun isDisabledRole(role: String?): Boolean {
         if (role.isNullOrBlank()) return false
         val normalized = role.trim().lowercase()
-        return normalized.contains("disabled")
+        return normalized.contains("disabled") ||
+            normalized.contains("tempor") ||
+            normalized.contains("perman") ||
+            normalized.contains("pwd")
     }
 
     private fun registerFCMToken(userID: String) {

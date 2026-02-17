@@ -41,7 +41,10 @@ class MainActivity : AppCompatActivity() {
                     normalizedRole?.contains("security") == true ||
                     normalizedRole?.contains("officer") == true ->
                     Intent(this, SecurityOfficerActivity::class.java)
-                normalizedRole?.contains("disabled") == true ->
+                normalizedRole?.contains("disabled") == true ||
+                    normalizedRole?.contains("tempor") == true ||
+                    normalizedRole?.contains("perman") == true ||
+                    normalizedRole?.contains("pwd") == true ->
                     Intent(this, LocomotorDisabilityActivity::class.java)
                 else -> when (userType) {
                     "Safety Officer", "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
@@ -52,20 +55,21 @@ class MainActivity : AppCompatActivity() {
             intent?.let {
                 startActivity(it)
                 finish()
+                return
             }
-        } else {
-            // No token, fullName, or userType, show login/register screen
-            val showRegisterButton = findViewById<Button>(R.id.show_register_button)
-            showRegisterButton.setOnClickListener {
-                val registerBottomSheet = RegisterBottomSheet()
-                registerBottomSheet.show(supportFragmentManager, "RegisterBottomSheet")
-            }
+        }
 
-            val showLoginButton = findViewById<Button>(R.id.show_login_button)
-            showLoginButton.setOnClickListener {
-                val loginBottomSheet = LoginBottomSheet()
-                loginBottomSheet.show(supportFragmentManager, "LoginBottomSheet")
-            }
+        // Show login/register actions whenever auto-navigation did not happen.
+        val showRegisterButton = findViewById<Button>(R.id.show_register_button)
+        showRegisterButton.setOnClickListener {
+            val registerBottomSheet = RegisterBottomSheet()
+            registerBottomSheet.show(supportFragmentManager, "RegisterBottomSheet")
+        }
+
+        val showLoginButton = findViewById<Button>(R.id.show_login_button)
+        showLoginButton.setOnClickListener {
+            val loginBottomSheet = LoginBottomSheet()
+            loginBottomSheet.show(supportFragmentManager, "LoginBottomSheet")
         }
     }
 }
