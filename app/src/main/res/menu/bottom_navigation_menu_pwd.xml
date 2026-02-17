@@ -3,17 +3,17 @@
 
     <item
         android:id="@+id/nav_home"
-        android:icon="@drawable/ic_bot_home"
+        android:icon="@drawable/ic_botnavbar_home"
     android:title="Home" />
 
     <item
         android:id="@+id/nav_scan_qr"
-        android:icon="@drawable/ic_bot_qr_code"
+        android:icon="@drawable/ic_botnavbar_qr_code"
     android:title="Scan QR" />
 
     <item
         android:id="@+id/nav_settings"
-        android:icon="@drawable/ic_bot_settings"
+        android:icon="@drawable/ic_botnavbar_settings"
     android:title="Settings" />
 
 </menu>
