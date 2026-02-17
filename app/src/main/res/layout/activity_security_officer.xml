@@ -251,7 +251,7 @@
                     android:id="@+id/verification_section_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Proof of Disability Verification (0):"
+                    android:text="Account Verification (0):"
                     android:fontFamily="@font/inter_bold"
                     android:textSize="18sp"
                     android:textStyle="bold"

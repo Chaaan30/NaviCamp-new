@@ -80,6 +80,19 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
         // Initialize navigationView
         navigationView = findViewById(R.id.navigation_view)
+        val officerUserIDForMenu = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+            .getString("userID", null)
+            ?.trim()
+        if (!officerUserIDForMenu.isNullOrBlank()) {
+            lifecycleScope.launch {
+                val isAdmin = withContext(Dispatchers.IO) {
+                    MySQLHelper.isSafetyOfficerAdmin(officerUserIDForMenu)
+                }
+                navigationView.menu.findItem(R.id.nav_verification_qr)?.isVisible = isAdmin
+            }
+        } else {
+            navigationView.menu.findItem(R.id.nav_verification_qr)?.isVisible = false
+        }
 
         // Set up the Toolbar as the Action Bar
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -140,6 +153,32 @@ class SecurityOfficerActivity : AppCompatActivity() {
                     // Start device setup
                     startDeviceSetup()
                     true
+                }
+
+                R.id.nav_verification_qr -> {
+                    val officerUserID = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                        .getString("userID", null)
+                        ?.trim()
+                    if (officerUserID.isNullOrBlank()) {
+                        Toast.makeText(this, "Unable to verify access. Please login again.", Toast.LENGTH_LONG).show()
+                        true
+                    } else {
+                        lifecycleScope.launch {
+                            val isAdmin = withContext(Dispatchers.IO) {
+                                MySQLHelper.isSafetyOfficerAdmin(officerUserID)
+                            }
+                            if (isAdmin) {
+                                startActivity(Intent(this@SecurityOfficerActivity, VerificationQrGeneratorActivity::class.java))
+                            } else {
+                                Toast.makeText(
+                                    this@SecurityOfficerActivity,
+                                    "Only admin safety officers can generate verification QR.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                        true
+                    }
                 }
 
                 else -> false
@@ -288,7 +327,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         val verificationScrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.verification_scroll_view)
 
         // Update section title with user count
-        verificationSectionTitle.text = "Proof of Disability Verification (${users.size}):"
+        verificationSectionTitle.text = "Account Verification (${users.size}):"
 
         if (users.isEmpty()) {
             noVerificationTextView.visibility = View.VISIBLE
@@ -311,7 +350,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 val contactNumberText = cardView.findViewById<TextView>(R.id.contact_number_text)
                 val userTypeText = cardView.findViewById<TextView>(R.id.user_type_text)
                 val createdOnText = cardView.findViewById<TextView>(R.id.created_on_text)
-                val viewProofButton = cardView.findViewById<Button>(R.id.view_proof_button)
+                val verifyUserButton = cardView.findViewById<Button>(R.id.verify_user_button)
 
                 userIdText.text = user.userID
                 fullNameText.text = user.fullName
@@ -324,8 +363,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 val formattedTime = date?.let { timeFormat.format(it) } ?: user.createdOn
                 createdOnText.text = "$formattedDate\n$formattedTime"
 
-                viewProofButton.setOnClickListener {
-                    showProofDialog(user)
+                verifyUserButton.text = "VERIFY USER"
+                verifyUserButton.setOnClickListener {
+                    showVerificationDialog(user)
                 }
 
                 verificationLayout.addView(cardView)
@@ -333,68 +373,10 @@ class SecurityOfficerActivity : AppCompatActivity() {
         }
     }
 
-    private fun showLoadingDialog(): AlertDialog {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_loading, null)
+    private fun showVerificationDialog(user: UserData) {
         val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-        dialog.show()
-        return dialog
-    }
-
-    private fun showProofDialog(user: UserData) {
-        val loadingDialog = showLoadingDialog()
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_proof_image, null)
-        val proofImageView = dialogView.findViewById<ImageView>(R.id.proof_image_view)
-
-        val s3BaseUrl = "https://navicampbucket.s3.amazonaws.com/"
-        val fullImageUrl = s3BaseUrl + user.proofPicture
-        Glide.with(this)
-            .load(fullImageUrl)
-            .apply(RequestOptions()
-                .placeholder(R.drawable.placeholder)
-                .error(R.drawable.error)
-                .timeout(60000) // Increase timeout to 60 seconds
-            )
-            .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable>?,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    loadingDialog.dismiss()
-                    // Show error dialog with more information
-                    runOnUiThread {
-                        AlertDialog.Builder(this@SecurityOfficerActivity)
-                            .setTitle("Image Load Error")
-                            .setMessage("Failed to load proof of disability image.\nReason: ${e?.rootCauses?.firstOrNull()?.message ?: "Unknown error"}")
-                            .setPositiveButton("Retry") { _, _ ->
-                                // Retry loading the image
-                                showProofDialog(user)
-                            }
-                            .setNegativeButton("Cancel", null)
-                            .show()
-                    }
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: Drawable?,
-                    model: Any?,
-                    target: Target<Drawable>?,
-                    dataSource: DataSource?,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    loadingDialog.dismiss()
-                    return false
-                }
-            })
-            .into(proofImageView)
-
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
+            .setTitle("Verify Account")
+            .setMessage("Choose an action for ${user.fullName} (${user.userID}).")
             .setPositiveButton("Accept") { _, _ ->
                 CoroutineScope(Dispatchers.Main).launch {
                     val isUpdated = withContext(Dispatchers.IO) {
@@ -407,7 +389,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                             """
                         Dear User,
 
-                        We are pleased to inform you that your proof of disability has been successfully verified. You may now log in to your account and access all available features.
+                        Your account has been successfully verified. You may now log in and access available features.
 
                         Thank you,
                         CampusNavigator Team
@@ -415,7 +397,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         )
                           Toast.makeText(
                             this@SecurityOfficerActivity,
-                            "User's proof of disability accepted and notified the user",
+                            "User account accepted and user notified",
                             Toast.LENGTH_SHORT
                         ).show()
                         
@@ -442,7 +424,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                             """
                         Dear User,
 
-                        Unfortunately, your proof of disability was declined due to insufficient or unclear evidence. Please log in using your email and password, where you will be prompted to re-upload a valid proof of disability.
+                        Your account verification was declined. Please contact support for more information.
 
                         Thank you,
                         CampusNavigator Team
@@ -450,7 +432,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                         )
                           Toast.makeText(
                             this@SecurityOfficerActivity,
-                            "User's proof of disability declined and notified the user",
+                            "User account declined and user notified",
                             Toast.LENGTH_SHORT
                         ).show()
                         

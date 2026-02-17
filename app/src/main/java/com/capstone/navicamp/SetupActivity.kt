@@ -112,13 +112,26 @@ class SetupActivity : AppCompatActivity() {
         
         val userPrefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val isLoggedIn = userPrefs.getBoolean("isLoggedIn", false)
+        val systemRole = userPrefs.getString("systemRole", null)
         val userType = userPrefs.getString("userType", null)
         
         val intent = if (isLoggedIn && userType != null) {
-            when (userType) {
-                "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
-                "Personnel", "Student", "Visitor" -> Intent(this, LocomotorDisabilityActivity::class.java)
-                else -> Intent(this, MainActivity::class.java)
+            val normalizedRole = systemRole?.trim()?.lowercase()
+            when {
+                normalizedRole?.contains("safety") == true ||
+                    normalizedRole?.contains("security") == true ||
+                    normalizedRole?.contains("officer") == true ->
+                    Intent(this, SecurityOfficerActivity::class.java)
+                normalizedRole?.contains("disabled") == true ||
+                    normalizedRole?.contains("tempor") == true ||
+                    normalizedRole?.contains("perman") == true ||
+                    normalizedRole?.contains("pwd") == true ->
+                    Intent(this, LocomotorDisabilityActivity::class.java)
+                else -> when (userType) {
+                    "Safety Officer", "Security Officer" -> Intent(this, SecurityOfficerActivity::class.java)
+                    "Temporarily Disabled", "Permanently Disabled" -> Intent(this, LocomotorDisabilityActivity::class.java)
+                    else -> Intent(this, MainActivity::class.java)
+                }
             }
         } else {
             Intent(this, MainActivity::class.java)
