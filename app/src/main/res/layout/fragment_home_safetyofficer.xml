@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#F0F3FD">
+
+    <!-- Welcome Header (Fixed Height) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="16dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hello,"
+            android:textSize="16sp"
+            android:fontFamily="@font/inter"
+            android:textColor="#666666"/>
+        <TextView
+            android:id="@+id/secoff_fullname"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="[Safety Officer]"
+            android:textSize="22sp"
+            android:fontFamily="@font/inter_bold"
+            android:textColor="#000000" />
+    </LinearLayout>
+
+    <!-- TOP HALF: Assistance Section (Box 1) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1.2"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/assistance_section_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="People currently in need of assistance (#):"
+            android:fontFamily="@font/inter_bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Internal Scrollable Area for Assistance Cards -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/assistance_scroll_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="4dp">
+
+            <LinearLayout
+                android:id="@+id/assistance_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
+
+    <!-- BOTTOM HALF: Monitoring Section (Box 2) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Monitoring"
+            android:fontFamily="@font/inter_bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <!-- Card 1: Registered Users -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/registered_users_card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/monitoring_orange"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Registered Users"
+                        android:textColor="#FFFFFF"
+                        android:gravity="center"
+                        android:fontFamily="@font/inter" />
+                    <TextView
+                        android:id="@+id/registered_users"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="36sp"
+                        android:textColor="#FFFFFF"
+                        android:fontFamily="@font/inter_bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Card 2: IoT Devices -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/iot_devices_card"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_margin="4dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/monitoring_red"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="IoT Devices"
+                        android:textColor="#FFFFFF"
+                        android:gravity="center"
+                        android:fontFamily="@font/inter" />
+                    <TextView
+                        android:id="@+id/iot_devices"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="36sp"
+                        android:textColor="#FFFFFF"
+                        android:fontFamily="@font/inter_bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

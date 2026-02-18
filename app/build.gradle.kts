@@ -84,6 +84,18 @@ dependencies {
     }
     implementation("com.sun.mail:android-activation:1.6.2")
 
+    // Standard AndroidX
+    implementation ("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.core:core-ktx:1.10.1")
+
+    //Fragment KTX
+    implementation("androidx.fragment:fragment-ktx:1.6.1")
+
+    //Lifecycle & ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
+
     // Core dependencies for NaviCamp features
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
@@ -147,6 +159,7 @@ dependencies {
 
     // Choose one of the following:
     // Material Design 3
+    implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.compose.material3:material3")
     // or Material Design 2
     implementation("androidx.compose.material:material")
