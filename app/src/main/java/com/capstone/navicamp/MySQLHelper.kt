@@ -1181,6 +1181,7 @@ object MySQLHelper {
     // Update user with userID
     suspend fun updateUserWithUserID(
         newFullName: String,
+        newSchoolID: String,
         newEmail: String,
         newContactNumber: String,
         newEmergencyName: String,
@@ -1202,6 +1203,9 @@ object MySQLHelper {
                 if (newFullName.isNotBlank()) {
                     query.append(", u.fullName = ?")
                 }
+                if (newSchoolID.isNotBlank()) {
+                    query.append(", p.schoolID = ?")
+                }
                 if (newEmail.isNotBlank()) {
                     query.append(", u.email = ?")
                 }
@@ -1222,6 +1226,9 @@ object MySQLHelper {
                 if (newFullName.isNotBlank()) {
                     statement.setString(index++, newFullName)
                 }
+                if (newSchoolID.isNotBlank()) {
+                    statement.setString(index++, newSchoolID)
+                }
                 if (newEmail.isNotBlank()) {
                     statement.setString(index++, newEmail)
                 }
@@ -1239,7 +1246,69 @@ object MySQLHelper {
                 Log.d("MySQLHelper", "Executing query: $query")
                 Log.d(
                     "MySQLHelper",
-                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, newEmergencyName=$newEmergencyName, newEmergencyNumber=$newEmergencyNumber, userID=$userID"
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newSchoolID=$newSchoolID, newEmail=$newEmail, newContactNumber=$newContactNumber, newEmergencyName=$newEmergencyName, newEmergencyNumber=$newEmergencyNumber, userID=$userID"
+                )
+                val rowsAffected = statement.executeUpdate()
+                Log.d("MySQLHelper", "Rows affected: $rowsAffected")
+                rowsAffected > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    // Update officer with userID
+    suspend fun updateOfficerWithUserID(
+        newFullName: String,
+        newEmail: String,
+        newContactNumber: String,
+        userID: String,
+        updatedOn: String
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                connection = getConnection()
+                if (connection == null) {
+                    println("Database connection failed.")
+                    return@withContext false
+                }
+
+                val query = StringBuilder("UPDATE user_table SET updatedOn = ?")
+                if (newFullName.isNotBlank()) {
+                    query.append(", fullName = ?")
+                }
+                if (newEmail.isNotBlank()) {
+                    query.append(", email = ?")
+                }
+                if (newContactNumber.isNotBlank()) {
+                    query.append(", contactNumber = ?")
+                }
+                query.append(" WHERE userID = ?")
+
+                statement = connection.prepareStatement(query.toString())
+                statement.setString(1, updatedOn)
+                var index = 2
+                if (newFullName.isNotBlank()) {
+                    statement.setString(index++, newFullName)
+                }
+                if (newEmail.isNotBlank()) {
+                    statement.setString(index++, newEmail)
+                }
+                if (newContactNumber.isNotBlank()) {
+                    statement.setString(index++, newContactNumber)
+                }
+                statement.setString(index, userID)
+
+                Log.d("MySQLHelper", "Executing query: $query")
+                Log.d(
+                    "MySQLHelper",
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID"
                 )
                 val rowsAffected = statement.executeUpdate()
                 Log.d("MySQLHelper", "Rows affected: $rowsAffected")
@@ -3129,16 +3198,59 @@ object MySQLHelper {
         }
     }
 
-    // displays values in account settings
+    // displays values in (pwd) account settings
     suspend fun getUserProfile(userID: String): Map<String, String>? {
         return withContext(Dispatchers.IO) {
             // Corrected columns based on your DB screenshot:
             // emergencyContactPerson and emergencyContactNumber
             val query = """
             SELECT u.fullName, u.email, u.contactNumber, u.userType, u.createdOn,
-                   p.emergencyContactPerson, p.emergencyContactNumber, p.disabilityType, p.verifiedBy, p.verificationDate
+                   p.schoolID, p.emergencyContactPerson, p.emergencyContactNumber, p.disabilityType, p.verifiedBy, p.verificationDate
             FROM user_table u
             LEFT JOIN pwd_profiles_table p ON u.userID = p.userID
+            WHERE u.userID = ?
+        """.trimIndent()
+
+            try {
+                val connection = getConnection() ?: return@withContext null
+                val statement = connection.prepareStatement(query)
+                statement.setString(1, userID)
+                val resultSet = statement.executeQuery()
+
+                if (resultSet != null && resultSet.next()) {
+                    val data = mutableMapOf<String, String>()
+                    data["fullName"] = resultSet.getString("fullName") ?: ""
+                    data["schoolID"] = resultSet.getString("schoolID") ?: ""
+                    data["email"] = resultSet.getString("email") ?: ""
+                    data["contactNumber"] = resultSet.getString("contactNumber") ?: ""
+                    data["userType"] = resultSet.getString("userType") ?: ""
+                    // Map DB names to the keys your Activity expects
+                    data["emergencyName"] = resultSet.getString("emergencyContactPerson") ?: ""
+                    data["emergencyNumber"] = resultSet.getString("emergencyContactNumber") ?: ""
+                    data["disabilityType"] = resultSet.getString("disabilityType") ?: ""
+                    data["verifiedBy"] = resultSet.getString("verifiedBy") ?: ""
+                    data["verificationDate"] = resultSet.getString("verificationDate") ?: ""
+                    data["createdOn"] = resultSet.getString("createdOn") ?: ""
+
+                    resultSet.close()
+                    statement.close()
+                    return@withContext data
+                }
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Fetch Error: ${e.message}")
+            }
+            null
+        }
+    }
+
+    // displays values in officer account settings
+    suspend fun getOfficerProfile(userID: String): Map<String, String>? {
+        return withContext(Dispatchers.IO) {
+            val query = """
+            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.createdOn,
+                   o.position AS systemRole
+            FROM user_table u
+            LEFT JOIN safety_officer_profiles_table o ON u.userID = o.userID
             WHERE u.userID = ?
         """.trimIndent()
 
@@ -3154,12 +3266,9 @@ object MySQLHelper {
                     data["email"] = resultSet.getString("email") ?: ""
                     data["contactNumber"] = resultSet.getString("contactNumber") ?: ""
                     data["userType"] = resultSet.getString("userType") ?: ""
-                    // Map DB names to the keys your Activity expects
-                    data["emergencyName"] = resultSet.getString("emergencyContactPerson") ?: ""
-                    data["emergencyNumber"] = resultSet.getString("emergencyContactNumber") ?: ""
-                    data["disabilityType"] = resultSet.getString("disabilityType") ?: ""
-                    data["verifiedBy"] = resultSet.getString("verifiedBy") ?: ""
-                    data["verificationDate"] = resultSet.getString("verificationDate") ?: ""
+                    data["systemRole"] = resultSet.getString("systemRole") ?: ""
+//                    data["verifiedBy"] = resultSet.getString("verifiedBy") ?: ""
+//                    data["verificationDate"] = resultSet.getString("verificationDate") ?: ""
                     data["createdOn"] = resultSet.getString("createdOn") ?: ""
 
                     resultSet.close()

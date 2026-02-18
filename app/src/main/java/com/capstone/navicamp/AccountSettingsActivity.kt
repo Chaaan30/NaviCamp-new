@@ -23,6 +23,26 @@ import javax.mail.internet.MimeMessage
 
 class AccountSettingsActivity : AppCompatActivity() {
     // OTP / email fields
+
+    private lateinit var pwdDisplayName: TextView
+    private lateinit var pwdEditName: EditText
+    private lateinit var pwdDisplaySchoolId: TextView
+    private lateinit var pwdEditSchoolId: EditText // Fixed: Now accessible everywhere
+    private lateinit var pwdDisplayEmail: TextView
+    private lateinit var pwdEmailEditContainer: View
+    private lateinit var pwdOtpContainer: View
+    private lateinit var pwdDisplayContact: TextView
+    private lateinit var pwdEditContact: EditText
+    private lateinit var pwdDisplayEmergencyName: TextView
+    private lateinit var pwdEditEmergencyName: EditText
+    private lateinit var pwdDisplayEmergencyNumber: TextView
+    private lateinit var pwdEditEmergencyNumber: EditText
+    private lateinit var pwdDisplayUserType: TextView
+    private lateinit var pwdDisplayDisabilityType: TextView
+    private lateinit var pwdDisplayVerifiedBy: TextView
+    private lateinit var pwdDisplayVerificationDate: TextView
+    private lateinit var pwdDisplayCreatedDate: TextView
+    private lateinit var btnAction: Button
     private lateinit var pwdBtnSendOtp: Button
     private lateinit var pwdBtnConfirmOtp: Button
     private lateinit var pwdEditOtp: EditText
@@ -72,38 +92,53 @@ class AccountSettingsActivity : AppCompatActivity() {
         val createdOn = sharedPreferences.getString("createdOn", "")
 
         // Wire views (display and edit fields)
-        val pwdDisplayName = findViewById<TextView>(R.id.pwd_display_name)
-        val pwdEditName = findViewById<EditText>(R.id.pwd_edit_name)
+        pwdDisplayName = findViewById(R.id.pwd_display_name)
+        pwdEditName = findViewById(R.id.pwd_edit_name)
+        pwdDisplaySchoolId = findViewById(R.id.pwd_display_id)
+        pwdEditSchoolId = findViewById(R.id.pwd_edit_school_id)
 
-        val pwdDisplayId = findViewById<TextView>(R.id.pwd_display_id)
-
-        val pwdDisplayEmail = findViewById<TextView>(R.id.pwd_display_email)
-        val pwdEmailEditContainer = findViewById<View>(R.id.pwd_email_edit_container)
+        pwdDisplayEmail = findViewById(R.id.pwd_display_email)
+        pwdEmailEditContainer = findViewById(R.id.pwd_email_edit_container)
         pwdEditEmail = findViewById(R.id.pwd_edit_email)
         pwdBtnSendOtp = findViewById(R.id.pwd_btn_send_otp)
-        val pwdOtpContainer = findViewById<View>(R.id.pwd_otp_container)
+        pwdEditOtp = findViewById(R.id.pwd_edit_otp)
+        pwdBtnConfirmOtp = findViewById(R.id.pwd_btn_confirm_otp)
+        pwdOtpContainer = findViewById<View>(R.id.pwd_otp_container)
         pwdEditOtp = findViewById(R.id.pwd_edit_otp)
         pwdBtnConfirmOtp = findViewById(R.id.pwd_btn_confirm_otp)
 
-        val pwdDisplayContact = findViewById<TextView>(R.id.pwd_display_contact)
-        val pwdEditContact = findViewById<EditText>(R.id.pwd_edit_contact)
+        pwdDisplayContact = findViewById<TextView>(R.id.pwd_display_contact)
+        pwdEditContact = findViewById<EditText>(R.id.pwd_edit_contact)
 
-        val pwdDisplayEmergencyName = findViewById<TextView>(R.id.pwd_display_emergencycontactname)
-        val pwdEditEmergencyName = findViewById<EditText>(R.id.pwd_edit_emergencycontactname)
-        val pwdDisplayEmergencyNumber = findViewById<TextView>(R.id.pwd_display_emergencycontactnumber)
-        val pwdEditEmergencyNumber = findViewById<EditText>(R.id.pwd_edit_emergencycontactnumber)
+        pwdDisplayEmergencyName = findViewById<TextView>(R.id.pwd_display_emergencycontactname)
+        pwdEditEmergencyName = findViewById<EditText>(R.id.pwd_edit_emergencycontactname)
+        pwdDisplayEmergencyNumber = findViewById<TextView>(R.id.pwd_display_emergencycontactnumber)
+        pwdEditEmergencyNumber = findViewById<EditText>(R.id.pwd_edit_emergencycontactnumber)
 
-        val pwdDisplayUserType = findViewById<TextView>(R.id.pwd_display_user_type)
-        val pwdDisplayDisabilityType = findViewById<TextView>(R.id.pwd_display_disability_type)
-        val pwdDisplayVerifiedBy = findViewById<TextView>(R.id.pwd_display_verifiedby)
-        val pwdDisplayVerificationDate = findViewById<TextView>(R.id.pwd_display_verification_date)
-        val pwdDisplayCreatedDate = findViewById<TextView>(R.id.pwd_display_created_date)
+        pwdDisplayUserType = findViewById<TextView>(R.id.pwd_display_user_type)
+        pwdDisplayDisabilityType = findViewById<TextView>(R.id.pwd_display_disability_type)
+        pwdDisplayVerifiedBy = findViewById<TextView>(R.id.pwd_display_verifiedby)
+        pwdDisplayVerificationDate = findViewById<TextView>(R.id.pwd_display_verification_date)
+        pwdDisplayCreatedDate = findViewById<TextView>(R.id.pwd_display_created_date)
 
-        val btnAction = findViewById<Button>(R.id.btnAction)
+        btnAction = findViewById<Button>(R.id.btnAction)
+
+        // Inside onCreate, after initializing pwdEditEmail
+        pwdEditEmail.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // If the text changes, verification is no longer valid
+                isOtpConfirmed = false
+                pwdOtpContainer.visibility = View.GONE
+                pwdBtnSendOtp.text = "Verify"
+                pwdBtnSendOtp.isEnabled = true
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
 
         // Initialize display values
         pwdDisplayName.text = fullName
-        pwdDisplayId.text = userID
+        pwdDisplaySchoolId.text = userID
         pwdDisplayEmail.text = email
         pwdDisplayContact.text = contactNumber
         pwdDisplayEmergencyName.text = emergencyContactName
@@ -131,6 +166,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                 if (dbData != null) {
                     // Populate UI with fresh DB data
                     pwdDisplayName.text = dbData["fullName"]
+                    pwdDisplaySchoolId.text = dbData["schoolID"]
                     pwdDisplayEmail.text = dbData["email"]
                     pwdDisplayContact.text = dbData["contactNumber"]
                     pwdDisplayEmergencyName.text = dbData["emergencyName"]
@@ -170,6 +206,10 @@ class AccountSettingsActivity : AppCompatActivity() {
                 pwdEditName.visibility = View.VISIBLE
                 pwdEditName.setText(pwdDisplayName.text?.toString() ?: "")
 
+                pwdDisplaySchoolId.visibility = View.GONE
+                pwdEditSchoolId.visibility = View.VISIBLE
+                pwdEditSchoolId.setText(pwdDisplaySchoolId.text.toString())
+
                 pwdDisplayEmail.visibility = View.GONE
                 pwdEmailEditContainer.visibility = View.VISIBLE
                 pwdEditEmail.setText(pwdDisplayEmail.text?.toString() ?: "")
@@ -192,6 +232,7 @@ class AccountSettingsActivity : AppCompatActivity() {
             } else {
                 // Save changes
                 val newFullName = pwdEditName.text.toString().trim()
+                val newSchoolID = pwdEditSchoolId.text.toString().trim()
                 val newEmail = pwdEditEmail.text.toString().trim()
                 val newContact = pwdEditContact.text.toString().trim()
                 val newEmergencyName = pwdEditEmergencyName.text.toString().trim()
@@ -218,6 +259,21 @@ class AccountSettingsActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
 
+                // 2. SAFETY CHECK: If email changed but not confirmed
+                val currentEmail = pwdDisplayEmail.text.toString()
+                if (newEmail != currentEmail && !isOtpConfirmed) {
+                    Toast.makeText(this, "Please verify your new email first", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                // 3. Determine which email to send to DB
+                val finalEmail = if (isOtpConfirmed) newEmail else currentEmail
+
+                if (newContact.length != 11 && newContact.isNotBlank()) {
+                    Toast.makeText(this, "Contact number must be 11 digits", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
                 showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
@@ -227,11 +283,12 @@ class AccountSettingsActivity : AppCompatActivity() {
                         // Reuse existing update helper; adapt to accept empty strings for unchanged fields
                         MySQLHelper.updateUserWithUserID(
                             if (newFullName.isNotBlank()) newFullName else "",
+                            if (newSchoolID.isNotBlank()) newSchoolID else "",
                             finalEmail,
                             if (newContact.isNotBlank()) newContact else "",
                             if (newEmergencyName.isNotBlank()) newEmergencyName else "",
                             if (newEmergencyNumber.isNotBlank()) newEmergencyNumber else "",
-                            userID,
+                            userID!!,
                             updatedOn
                         )
                     }
@@ -243,6 +300,10 @@ class AccountSettingsActivity : AppCompatActivity() {
                         if (newFullName.isNotBlank()) {
                             pwdDisplayName.text = newFullName
                             prefsEditor.putString("fullName", newFullName)
+                        }
+                        if (newSchoolID.isNotBlank()) {
+                            pwdDisplayName.text = newFullName
+                            prefsEditor.putString("schoolID", newSchoolID)
                         }
                         if (isOtpConfirmed && newEmail.isNotBlank()) {
                             pwdDisplayEmail.text = newEmail
@@ -304,35 +365,53 @@ class AccountSettingsActivity : AppCompatActivity() {
                 Toast.makeText(this, "The new email is the same as the current email", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            if (userID == null) {
+                Toast.makeText(this, "Session expired. Please log in again.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (newEmail.isEmpty()) {
+                Toast.makeText(this, "Please enter an email address", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             showLoadingDialog()
             pwdEditEmail.isEnabled = false
 
             CoroutineScope(Dispatchers.Main).launch {
-                val emailExists = withContext(Dispatchers.IO) {
-                    MySQLHelper.isEmailExists(newEmail, userID!!)
-                }
-                if (emailExists) {
-                    pwdEditEmail.isEnabled = true
-                    dismissLoadingDialog()
-                    Toast.makeText(this@AccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
-                } else {
-                    generatedOtp = generateOtp()
-                    withContext(Dispatchers.IO) {
-                        sendOtpEmail(newEmail, generatedOtp!!)
+                try {
+                    val emailExists = withContext(Dispatchers.IO) {
+                        MySQLHelper.isEmailExists(newEmail, userID)
                     }
+                    if (emailExists) {
+                        pwdEditEmail.isEnabled = true
+                        dismissLoadingDialog()
+                        Toast.makeText(this@AccountSettingsActivity, "Email already in use", Toast.LENGTH_SHORT).show()
+                    } else {
+                        generatedOtp = generateOtp()
+                        withContext(Dispatchers.IO) {
+                            sendOtpEmail(newEmail, generatedOtp!!)
+                        }
+                        dismissLoadingDialog()
+                        pwdOtpContainer.visibility = View.VISIBLE
+                        Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
                     dismissLoadingDialog()
-                    pwdOtpContainer.visibility = View.VISIBLE
-                    Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                    pwdEditEmail.isEnabled = true
+                    Toast.makeText(this@AccountSettingsActivity, "Network Error. Try again.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
         pwdBtnConfirmOtp.setOnClickListener {
             val otp = pwdEditOtp.text.toString().trim()
-            if (otp == generatedOtp) {
+            if (generatedOtp != null && otp == generatedOtp) {
                 isOtpConfirmed = true
-                Toast.makeText(this, "OTP confirmed", Toast.LENGTH_SHORT).show()
+                pwdOtpContainer.visibility = View.GONE
+                pwdBtnSendOtp.text = "Verified ✓"
+                pwdBtnSendOtp.isEnabled = false // Lock the button
+                pwdEditEmail.isEnabled = false   // Lock the email field so they don't change it
+                Toast.makeText(this, "Email verified!", Toast.LENGTH_SHORT).show()
                 pwdOtpContainer.visibility = View.GONE
             } else {
                 Toast.makeText(this, "Invalid OTP", Toast.LENGTH_SHORT).show()
@@ -429,7 +508,6 @@ class AccountSettingsActivity : AppCompatActivity() {
 
         // List of TextViews that represent non-editable values
         val nonEditableValues = listOf(
-            findViewById<TextView>(R.id.pwd_display_id),
             findViewById<TextView>(R.id.pwd_display_user_type),
             findViewById<TextView>(R.id.pwd_display_disability_type),
             findViewById<TextView>(R.id.pwd_display_verifiedby),

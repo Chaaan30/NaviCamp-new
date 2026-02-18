@@ -2,6 +2,7 @@ package com.capstone.navicamp
 
 import android.app.Dialog
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -26,11 +27,32 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
     private lateinit var confirmOtpButton: Button
     private lateinit var editOtp: EditText
     private lateinit var editEmail: EditText
+
+    private lateinit var emailEditContainer: View
+    private lateinit var fullNameText: TextView
+    private lateinit var editFullName: EditText
+    private lateinit var userTypeText: TextView
+
+    private lateinit var employeeTypeText: TextView
+    private lateinit var emailText: TextView
+    private lateinit var contactNumberText: TextView
+    private lateinit var editContactNumber: EditText
+    private lateinit var dateCreatedText: TextView
+    private lateinit var btnAction: Button
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
     private var loadingDialog: Dialog? = null
 
     private var isEditMode: Boolean = false
+
+    // Real-time refresh variables
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            refreshProfileData()
+            mainHandler.postDelayed(this, 5000) // Poll every 5 seconds
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,33 +71,49 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         editOtp = findViewById(R.id.edit_otp)
         editEmail = findViewById(R.id.edit_email)
 
-        val fullNameText = findViewById<TextView>(R.id.full_name_text)
-        val editFullName = findViewById<EditText>(R.id.edit_full_name)
-        val userIdText = findViewById<TextView>(R.id.school_id_text)
-        val userTypeText = findViewById<TextView>(R.id.user_type_text)
-        val emailText = findViewById<TextView>(R.id.email_text)
-        val contactNumberText = findViewById<TextView>(R.id.contact_number_text)
-        val editContactNumber = findViewById<EditText>(R.id.edit_contact_number)
-        val dateCreatedText = findViewById<TextView>(R.id.date_created_text)
-        val btnAction = findViewById<Button>(R.id.btnAction)
+        emailEditContainer = findViewById(R.id.email_edit_container)
+
+        fullNameText = findViewById(R.id.full_name_text)
+        editFullName = findViewById(R.id.edit_full_name)
+        userTypeText = findViewById(R.id.user_type_text)
+        employeeTypeText = findViewById(R.id.employee_type_text)
+        emailText = findViewById(R.id.email_text)
+        contactNumberText = findViewById(R.id.contact_number_text)
+        editContactNumber = findViewById(R.id.edit_contact_number)
+        dateCreatedText = findViewById(R.id.date_created_text)
+        btnAction = findViewById(R.id.btnAction)
 
         // Load prefs
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val fullName = sharedPreferences.getString("fullName", "")
         val userID = sharedPreferences.getString("userID", "")
         val userType = sharedPreferences.getString("userType", "")
+        val position = sharedPreferences.getString("systemRole", "")
         val email = sharedPreferences.getString("email", "")
         val contactNumber = sharedPreferences.getString("contactNumber", "")
         val createdOn = sharedPreferences.getString("createdOn", "")
         val updatedOn = sharedPreferences.getString("updatedOn", "")
 
         // Init display
-        fullNameText.text = "Full Name: $fullName"
-        userIdText.text = "User ID: $userID"
-        userTypeText.text = "User Type: $userType"
-        emailText.text = "Email: $email"
-        contactNumberText.text = "Contact Number: $contactNumber"
-        dateCreatedText.text = "Date Created: $createdOn"
+        fullNameText.text = "$fullName"
+        userTypeText.text = "$userType"
+        employeeTypeText.text = "$position"
+        emailText.text = "$email"
+        contactNumberText.text = "$contactNumber"
+        dateCreatedText.text = "$createdOn"
+
+        // Reset verification if email changes
+        editEmail.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                isOtpConfirmed = false
+                editOtp.visibility = View.GONE
+                confirmOtpButton.visibility = View.GONE
+                sendOtpButton.text = "Verify"
+                sendOtpButton.isEnabled = true
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
 
         // Hide edit fields initially
         editFullName.visibility = View.GONE
@@ -90,13 +128,15 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                 // Enter edit
                 isEditMode = true
                 btnAction.text = "SAVE CHANGES"
+                setNonEditableFieldsDimmed(true)
 
                 editFullName.visibility = View.VISIBLE
                 editFullName.setText(fullName)
                 fullNameText.visibility = View.GONE
 
-                editEmail.visibility = View.VISIBLE
-                editEmail.setText(email)
+                emailEditContainer.visibility = View.VISIBLE // Show the parent layout
+                editEmail.visibility = View.VISIBLE         // ALSO show the actual text field
+                editEmail.setText(emailText.text.toString())
                 emailText.visibility = View.GONE
 
                 editContactNumber.visibility = View.VISIBLE
@@ -110,6 +150,9 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                 val newEmail = editEmail.text.toString().trim()
                 val newContact = editContactNumber.text.toString().trim()
                 val otp = editOtp.text.toString().trim()
+                val currentEmail = emailText.text.toString().trim()
+                val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                val userID = sharedPreferences.getString("userID", null)
 
                 if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
                     if (otp == generatedOtp) isOtpConfirmed = true
@@ -120,16 +163,25 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
                 if (userID.isNullOrEmpty()) { Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
 
+                if (newEmail != currentEmail && !isOtpConfirmed) {
+                    Toast.makeText(this, "Please verify your new email first", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (newContact.length != 11) {
+                    Toast.makeText(this, "Contact number must be 11 digits", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                val finalEmail = if (isOtpConfirmed) newEmail else currentEmail
+
                 showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
                     val result = withContext(Dispatchers.IO) {
-                        MySQLHelper.updateUserWithUserID(
+                        MySQLHelper.updateOfficerWithUserID(
                             if (newFull.isNotBlank()) newFull else "",
                             if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
                             if (newContact.isNotBlank()) newContact else "",
-                            "", // newEmergencyName (Placeholder for Officer)
-                            "", // newEmergencyNumber (Placeholder for Officer)
                             userID!!,
                             updatedOn
                         )
@@ -148,6 +200,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                         btnAction.text = "EDIT ACCOUNT DETAILS"
 
                         editFullName.visibility = View.GONE
+                        emailEditContainer.visibility = View.GONE
                         editEmail.visibility = View.GONE
                         editContactNumber.visibility = View.GONE
                         editOtp.visibility = View.GONE
@@ -155,6 +208,7 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                         confirmOtpButton.visibility = View.GONE
 
                         fullNameText.visibility = View.VISIBLE
+                        emailEditContainer.visibility = View.GONE
                         emailText.visibility = View.VISIBLE
                         contactNumberText.visibility = View.VISIBLE
 
@@ -184,7 +238,9 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
 
         confirmOtpButton.setOnClickListener {
             val otp = editOtp.text.toString().trim()
-            if (otp == generatedOtp) { isOtpConfirmed = true; Toast.makeText(this, "OTP confirmed", Toast.LENGTH_SHORT).show(); editOtp.visibility = View.GONE; confirmOtpButton.visibility = View.GONE }
+            if (otp == generatedOtp) { isOtpConfirmed = true; Toast.makeText(this, "OTP confirmed", Toast.LENGTH_SHORT).show(); editOtp.visibility = View.GONE; confirmOtpButton.visibility = View.GONE; sendOtpButton.text = "Verified ✓"
+                sendOtpButton.isEnabled = false
+                editEmail.isEnabled = false}
             else { Toast.makeText(this, "Invalid OTP", Toast.LENGTH_SHORT).show() }
         }
     }
@@ -209,6 +265,37 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshProfileData() {
+        if (isEditMode || !::fullNameText.isInitialized) return
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val userID = sharedPreferences.getString("userID", null) ?: return
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val dbData = MySQLHelper.getOfficerProfile(userID)
+            if (dbData != null) {
+                fullNameText.text = "${dbData["fullName"]}"
+                emailText.text = "${dbData["email"]}"
+                contactNumberText.text = "${dbData["contactNumber"]}"
+                userTypeText.text = "${dbData["userType"]}"
+                employeeTypeText.text = "${dbData["systemRole"]}"
+                dateCreatedText.text = "${dbData["createdOn"]}"
+
+                setNonEditableFieldsDimmed(false)
+            }
+        }
+    }
+
+    private fun setNonEditableFieldsDimmed(dim: Boolean) {
+        val color = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
+        val alpha = if (dim) 0.6f else 1.0f
+
+        val nonEditable = listOf(userTypeText, employeeTypeText, dateCreatedText)
+        nonEditable.forEach {
+            it.setTextColor(color)
+            it.alpha = alpha
+        }
+    }
+
     private fun showLoadingDialog() {
         if (loadingDialog == null) { loadingDialog = Dialog(this).apply { setContentView(R.layout.dialog_loading); setCancelable(false); window?.setBackgroundDrawableResource(android.R.color.transparent) } }
         loadingDialog?.show()
@@ -220,6 +307,13 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
         super.onResume()
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
         val fullName = sharedPreferences.getString("fullName", "Full Name")
+        mainHandler.post(refreshRunnable)
         // no navigationView now; nothing to update
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop the loop when user leaves the activity to prevent background data usage
+        mainHandler.removeCallbacks(refreshRunnable)
     }
 }
