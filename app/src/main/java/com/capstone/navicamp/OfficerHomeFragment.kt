@@ -112,10 +112,33 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         timeFormat: SimpleDateFormat
     ) {
         val fullNameTextView = cardView.findViewById<TextView>(R.id.full_name_text)
+        val createdOnDateTextView = cardView.findViewById<TextView>(R.id.created_on_date_text)
+        val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
+        val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
+        val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
         val respondButton = cardView.findViewById<Button>(R.id.respond_button)
         val assistanceTypeBadge = cardView.findViewById<TextView>(R.id.assistance_type_badge)
 
         fullNameTextView.text = item.fullName
+        try {
+            val date = inputFormat.parse(item.dateTime)
+            createdOnDateTextView.text = date?.let { dateFormat.format(it) } ?: item.dateTime
+            createdOnTimeTextView.text = date?.let { timeFormat.format(it) } ?: item.dateTime
+        } catch (e: Exception) {
+            createdOnDateTextView.text = item.dateTime
+            createdOnTimeTextView.text = ""
+        }
+
+        // 4. Set the Floor Level
+        floorLevelTextView.text = item.floorLevel
+
+        // 5. Set the Officer Status
+        val officerName = item.officerName
+        if (!officerName.isNullOrEmpty()) {
+            officerRespondedTextView.text = "Officer: $officerName"
+        } else {
+            officerRespondedTextView.text = "No officer responded yet"
+        }
 
         // Assistance type badge logic
         if (item.assistanceType == "FALL_DETECTION") {
@@ -132,6 +155,8 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
                 putExtra("LATITUDE", item.latitude)
                 putExtra("LONGITUDE", item.longitude)
                 putExtra("FULL_NAME", item.fullName)
+                putExtra("FLOOR_LEVEL", item.floorLevel)
+                putExtra("STATUS", item.status)
             }
             startActivity(intent)
         }
