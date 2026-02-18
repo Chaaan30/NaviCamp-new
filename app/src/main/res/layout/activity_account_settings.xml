@@ -57,6 +57,7 @@
             <!-- SCHOOL ID -->
             <TextView style="@style/SettingLabel" android:text="SCHOOL ID" />
             <TextView android:id="@+id/pwd_display_id" style="@style/SettingValue" android:text="2020654321" />
+            <EditText android:id="@+id/pwd_edit_school_id" style="@style/SettingEdit" android:hint="Enter school ID" />
             <View style="@style/Divider" />
 
             <!-- EMAIL & OTP SECTION -->

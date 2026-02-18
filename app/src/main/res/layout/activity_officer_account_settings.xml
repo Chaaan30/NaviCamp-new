@@ -57,11 +57,6 @@
             <EditText android:id="@+id/edit_full_name" style="@style/SettingEdit" android:hint="Enter full name" />
             <View style="@style/Divider" />
 
-            <!-- SCHOOL ID -->
-            <TextView style="@style/SettingLabel" android:text="SCHOOL ID" />
-            <TextView android:id="@+id/school_id_text" style="@style/SettingValue" android:text="2020654321" />
-            <View style="@style/Divider" />
-
             <!-- EMAIL & OTP SECTION -->
             <TextView style="@style/SettingLabel" android:text="EMAIL" />
             <TextView android:id="@+id/email_text" style="@style/SettingValue" android:text="user@email.com" />
