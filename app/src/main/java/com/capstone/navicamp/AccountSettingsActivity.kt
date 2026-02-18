@@ -1,25 +1,18 @@
 package com.capstone.navicamp
 
+import android.app.Dialog
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import androidx.drawerlayout.widget.DrawerLayout
-import com.google.android.material.navigation.NavigationView
-import androidx.appcompat.app.ActionBarDrawerToggle
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.Properties
 import javax.mail.Message
 import javax.mail.PasswordAuthentication
@@ -27,278 +20,331 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
-import android.app.Dialog
 
 class AccountSettingsActivity : AppCompatActivity() {
-    private lateinit var drawerLayout: DrawerLayout
-    private lateinit var toggle: ActionBarDrawerToggle
-    private lateinit var navigationView: NavigationView
-    private lateinit var sendOtpButton: Button
-    private lateinit var confirmOtpButton: Button
-    private lateinit var editOtp: EditText
-    private lateinit var editEmail: EditText
+    // OTP / email fields
+    private lateinit var pwdBtnSendOtp: Button
+    private lateinit var pwdBtnConfirmOtp: Button
+    private lateinit var pwdEditOtp: EditText
+    private lateinit var pwdEditEmail: EditText
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
+
     private var loadingDialog: Dialog? = null
+
+    // Edit mode flag
+    private var isEditMode: Boolean = false
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            refreshProfileData()
+            // Schedule the next refresh in 5 seconds (5000 milliseconds)
+            mainHandler.postDelayed(this, 5000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_account_settings)
 
-        // Initialize views
-        sendOtpButton = findViewById(R.id.send_otp_button)
-        confirmOtpButton = findViewById(R.id.confirm_otp_button)
-        editOtp = findViewById(R.id.edit_otp)
-        editEmail = findViewById(R.id.edit_email)
+        // Header back button
+        val btnBack: View? = findViewById(R.id.btn_back)
+        btnBack?.setOnClickListener {
+            // Redirect to SettingsActivity
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
 
-        // Set up the Toolbar as the Action Bar
-        val toolbar: Toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
-        supportActionBar?.title = "Account Settings"
-
-        // Set up the DrawerLayout and ActionBarDrawerToggle
-        drawerLayout = findViewById(R.id.drawer_layout)
-        toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
-        drawerLayout.addDrawerListener(toggle)
-        toggle.syncState()
-
-        // Initialize navigationView
-        navigationView = findViewById(R.id.navigation_view)
-
-
-        // Retrieve data from SharedPreferences
+        // Retrieve SharedPreferences
         val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-        val fullName = sharedPreferences.getString("fullName", null)
         val userID = sharedPreferences.getString("userID", null)
-        val userType = sharedPreferences.getString("userType", null)
-        val email = sharedPreferences.getString("email", null)
-        val contactNumber = sharedPreferences.getString("contactNumber", null)
-        val createdOn = sharedPreferences.getString("createdOn", null)
-        val updatedOn = sharedPreferences.getString("updatedOn", null)
+        val fullName = sharedPreferences.getString("fullName", "")
+        val email = sharedPreferences.getString("email", "")
+        val contactNumber = sharedPreferences.getString("contactNumber", "")
+        val emergencyContactName = sharedPreferences.getString("emergencyContactName", "")
+        val emergencyContactNumber = sharedPreferences.getString("emergencyContactNumber", "")
+        val userType = sharedPreferences.getString("userType", "")
+        val disabilityType = sharedPreferences.getString("disabilityType", "")
+        val verifiedBy = sharedPreferences.getString("verifiedBy", "")
+        val verificationDate = sharedPreferences.getString("verificationDate", "")
+        val createdOn = sharedPreferences.getString("createdOn", "")
 
-        // Log the retrieved values
-        Log.d("AccountSettingsActivity", "fullName: $fullName")
-        Log.d("AccountSettingsActivity", "userID: $userID")
-        Log.d("AccountSettingsActivity", "userType: $userType")
-        Log.d("AccountSettingsActivity", "email: $email")
-        Log.d("AccountSettingsActivity", "contactNumber: $contactNumber")
-        Log.d("AccountSettingsActivity", "createdOn: $createdOn")
-        Log.d("AccountSettingsActivity", "updatedOn: $updatedOn")
+        // Wire views (display and edit fields)
+        val pwdDisplayName = findViewById<TextView>(R.id.pwd_display_name)
+        val pwdEditName = findViewById<EditText>(R.id.pwd_edit_name)
 
-        // Format createdOn and updatedOn
-        val formattedCreatedOn = createdOn?.takeIf { it.isNotEmpty() }?.let {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
-            val date = inputFormat.parse(it)
-            outputFormat.format(date)
-        }
+        val pwdDisplayId = findViewById<TextView>(R.id.pwd_display_id)
 
-        val formattedUpdatedOn = updatedOn?.takeIf { it.isNotEmpty() }?.let {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault())
-            val date = inputFormat.parse(it)
-            outputFormat.format(date)
-        }
+        val pwdDisplayEmail = findViewById<TextView>(R.id.pwd_display_email)
+        val pwdEmailEditContainer = findViewById<View>(R.id.pwd_email_edit_container)
+        pwdEditEmail = findViewById(R.id.pwd_edit_email)
+        pwdBtnSendOtp = findViewById(R.id.pwd_btn_send_otp)
+        val pwdOtpContainer = findViewById<View>(R.id.pwd_otp_container)
+        pwdEditOtp = findViewById(R.id.pwd_edit_otp)
+        pwdBtnConfirmOtp = findViewById(R.id.pwd_btn_confirm_otp)
 
-        // Update UI with the retrieved data
-        findViewById<TextView>(R.id.full_name_text)?.text = "Full Name: $fullName"
-        findViewById<TextView>(R.id.user_id_text)?.text = "User ID: $userID"
-        findViewById<TextView>(R.id.user_type_text)?.text = "User Type: $userType"
-        findViewById<TextView>(R.id.email_text)?.text = "Email: $email"
-        findViewById<TextView>(R.id.contact_number_text)?.text = "Contact Number: $contactNumber"
-        findViewById<TextView>(R.id.date_created_text)?.text = "Date Created: $formattedCreatedOn"
+        val pwdDisplayContact = findViewById<TextView>(R.id.pwd_display_contact)
+        val pwdEditContact = findViewById<EditText>(R.id.pwd_edit_contact)
 
-        if (formattedUpdatedOn != null) {
-            findViewById<TextView>(R.id.updated_on_text)?.text = "Updated On: $formattedUpdatedOn"
-            findViewById<View>(R.id.updated_on_card)?.visibility = View.VISIBLE
-        }
+        val pwdDisplayEmergencyName = findViewById<TextView>(R.id.pwd_display_emergencycontactname)
+        val pwdEditEmergencyName = findViewById<EditText>(R.id.pwd_edit_emergencycontactname)
+        val pwdDisplayEmergencyNumber = findViewById<TextView>(R.id.pwd_display_emergencycontactnumber)
+        val pwdEditEmergencyNumber = findViewById<EditText>(R.id.pwd_edit_emergencycontactnumber)
 
-        // Set up NavigationView item click listener
-        navigationView.setNavigationItemSelectedListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.nav_logout -> {
-                    // Clear SharedPreferences
-                    val editor = sharedPreferences.edit()
-                    editor.clear()
-                    editor.apply()
+        val pwdDisplayUserType = findViewById<TextView>(R.id.pwd_display_user_type)
+        val pwdDisplayDisabilityType = findViewById<TextView>(R.id.pwd_display_disability_type)
+        val pwdDisplayVerifiedBy = findViewById<TextView>(R.id.pwd_display_verifiedby)
+        val pwdDisplayVerificationDate = findViewById<TextView>(R.id.pwd_display_verification_date)
+        val pwdDisplayCreatedDate = findViewById<TextView>(R.id.pwd_display_created_date)
 
-                    // Navigate to MainActivity
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                    true
+        val btnAction = findViewById<Button>(R.id.btnAction)
+
+        // Initialize display values
+        pwdDisplayName.text = fullName
+        pwdDisplayId.text = userID
+        pwdDisplayEmail.text = email
+        pwdDisplayContact.text = contactNumber
+        pwdDisplayEmergencyName.text = emergencyContactName
+        pwdDisplayEmergencyNumber.text = emergencyContactNumber
+        pwdDisplayUserType.text = userType
+        pwdDisplayDisabilityType.text = disabilityType
+        pwdDisplayVerifiedBy.text = verifiedBy
+        pwdDisplayVerificationDate.text = verificationDate
+        pwdDisplayCreatedDate.text = createdOn
+
+        // Ensure edit fields are hidden initially
+        pwdEditName.visibility = View.GONE
+        pwdEmailEditContainer.visibility = View.GONE
+        pwdEditContact.visibility = View.GONE
+        pwdEditEmergencyName.visibility = View.GONE
+        pwdEditEmergencyNumber.visibility = View.GONE
+        pwdOtpContainer.visibility = View.GONE
+
+        if (userID != null) {
+            showLoadingDialog()
+            CoroutineScope(Dispatchers.Main).launch {
+                val dbData = MySQLHelper.getUserProfile(userID)
+                dismissLoadingDialog()
+
+                if (dbData != null) {
+                    // Populate UI with fresh DB data
+                    pwdDisplayName.text = dbData["fullName"]
+                    pwdDisplayEmail.text = dbData["email"]
+                    pwdDisplayContact.text = dbData["contactNumber"]
+                    pwdDisplayEmergencyName.text = dbData["emergencyName"]
+                    pwdDisplayEmergencyNumber.text = dbData["emergencyNumber"]
+                    pwdDisplayUserType.text = dbData["userType"]
+                    pwdDisplayDisabilityType.text = dbData["disabilityType"]
+                    pwdDisplayVerifiedBy.text = dbData["verifiedBy"]
+                    pwdDisplayVerificationDate.text = dbData["verificationDate"]
+                    pwdDisplayCreatedDate.text = dbData["createdOn"]
+
+                    // Sync SharedPreferences in case local cache was wrong
+                    sharedPreferences.edit().apply {
+                        putString("fullName", dbData["fullName"])
+                        putString("email", dbData["email"])
+                        putString("contactNumber", dbData["contactNumber"])
+                        putString("emergencyContactName", dbData["emergencyName"])
+                        putString("emergencyContactNumber", dbData["emergencyNumber"])
+                        apply()
+                    }
+                } else {
+                    Toast.makeText(this@AccountSettingsActivity, "Failed to load profile from DB", Toast.LENGTH_SHORT).show()
                 }
-                R.id.nav_item1 -> {
-                    // Navigate to AccountSettingsActivity
-                    val intent = Intent(this, AccountSettingsActivity::class.java)
-                    startActivity(intent)
-                    true
-                }
-                R.id.nav_item2 -> {
-                    // Navigate to SecurityOfficerActivity and clear the activity stack
-                    val intent = Intent(this, LocomotorDisabilityActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    true
-                }
-                R.id.nav_device_setup -> {
-                    // Start device setup
-                    startDeviceSetup()
-                    true
-                }
-                else -> false
             }
         }
 
-        // Set up Update Info button click listener
-        val updateInfoButton: Button = findViewById(R.id.update_info_button)
-        val cancelEditButton: Button = findViewById(R.id.cancel_edit_button)
-        val editFullName: EditText = findViewById(R.id.edit_full_name)
-        val editContactNumber: EditText = findViewById(R.id.edit_contact_number)
+        // Toggle behavior for bottom action button
+        btnAction.setOnClickListener {
+            if (!isEditMode) {
+                // Enter edit mode
+                isEditMode = true
+                btnAction.text = "SAVE CHANGES"
 
-        updateInfoButton.setOnClickListener {
-            if (editFullName.visibility == View.VISIBLE || editEmail.visibility == View.VISIBLE || editContactNumber.visibility == View.VISIBLE) {
-                val newFullName = editFullName.text.toString()
-                val newEmail = editEmail.text.toString()
-                val newContactNumber = editContactNumber.text.toString()
-                val otp = editOtp.text.toString()
+                setNonEditableFieldsDimmed(true)
 
-                Log.d("AccountSettingsActivity", "newFullName: $newFullName")
-                Log.d("AccountSettingsActivity", "newEmail: $newEmail")
-                Log.d("AccountSettingsActivity", "newContactNumber: $newContactNumber")
-                Log.d("AccountSettingsActivity", "userID: $userID") // Log the userID
+                // Hide display TextViews, show edit fields
+                pwdDisplayName.visibility = View.GONE
+                pwdEditName.visibility = View.VISIBLE
+                pwdEditName.setText(pwdDisplayName.text?.toString() ?: "")
 
-                if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
+                pwdDisplayEmail.visibility = View.GONE
+                pwdEmailEditContainer.visibility = View.VISIBLE
+                pwdEditEmail.setText(pwdDisplayEmail.text?.toString() ?: "")
+
+                pwdDisplayContact.visibility = View.GONE
+                pwdEditContact.visibility = View.VISIBLE
+                pwdEditContact.setText(pwdDisplayContact.text?.toString() ?: "")
+
+                pwdDisplayEmergencyName.visibility = View.GONE
+                pwdEditEmergencyName.visibility = View.VISIBLE
+                pwdEditEmergencyName.setText(pwdDisplayEmergencyName.text?.toString() ?: "")
+
+                pwdDisplayEmergencyNumber.visibility = View.GONE
+                pwdEditEmergencyNumber.visibility = View.VISIBLE
+                pwdEditEmergencyNumber.setText(pwdDisplayEmergencyNumber.text?.toString() ?: "")
+
+                // Allow OTP flow
+                pwdBtnSendOtp.visibility = View.VISIBLE
+
+            } else {
+                // Save changes
+                val newFullName = pwdEditName.text.toString().trim()
+                val newEmail = pwdEditEmail.text.toString().trim()
+                val newContact = pwdEditContact.text.toString().trim()
+                val newEmergencyName = pwdEditEmergencyName.text.toString().trim()
+                val newEmergencyNumber = pwdEditEmergencyNumber.text.toString().trim()
+                val otp = pwdEditOtp.text.toString().trim()
+
+                if (pwdEmailEditContainer.visibility == View.VISIBLE && otp.isNotBlank()) {
                     if (otp == generatedOtp) {
                         isOtpConfirmed = true
+                    } else {
+                        Toast.makeText(this, "Invalid OTP", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
                     }
                 }
 
-                // Validate contact number
-                if (newContactNumber.isNotBlank() && newContactNumber.length != 11) {
+                if (newContact.isNotBlank() && newContact.length != 11) {
                     Toast.makeText(this, "Contact number must be exactly 11 digits", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                // Perform DB update using existing helper
+                if (userID == null) {
+                    Toast.makeText(this, "User not logged in.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
                 showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                    // Logic: If email wasn't changed or OTP not confirmed, send the CURRENT display email
+                    val finalEmail = if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else pwdDisplayEmail.text.toString()
                     val result = withContext(Dispatchers.IO) {
+                        // Reuse existing update helper; adapt to accept empty strings for unchanged fields
                         MySQLHelper.updateUserWithUserID(
                             if (newFullName.isNotBlank()) newFullName else "",
-                            if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
-                            if (newContactNumber.isNotBlank()) newContactNumber else "",
-                            userID!!,
+                            finalEmail,
+                            if (newContact.isNotBlank()) newContact else "",
+                            if (newEmergencyName.isNotBlank()) newEmergencyName else "",
+                            if (newEmergencyNumber.isNotBlank()) newEmergencyNumber else "",
+                            userID,
                             updatedOn
                         )
                     }
-                    withContext(Dispatchers.Main) {
-                        dismissLoadingDialog()
-                        Log.d("AccountSettingsActivity", "Update result: $result")
-                        if (result) {
-                            Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
-                            // Update the TextViews with the new values
-                            if (newFullName.isNotBlank()) {
-                                findViewById<TextView>(R.id.full_name_text).text = "Full Name: $newFullName"
-                                sharedPreferences.edit().putString("fullName", newFullName).apply()
-                            }
-                            if (isOtpConfirmed && newEmail.isNotBlank()) {
-                                findViewById<TextView>(R.id.email_text).text = "Email: $newEmail"
-                                sharedPreferences.edit().putString("email", newEmail).apply()
-                            }
-                            if (newContactNumber.isNotBlank()) {
-                                findViewById<TextView>(R.id.contact_number_text).text = "Contact Number: $newContactNumber"
-                                sharedPreferences.edit().putString("contactNumber", newContactNumber).apply()
-                            }
-                            finish()
-                            startActivity(intent)
-                        } else {
-                            Toast.makeText(this@AccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
+
+                    dismissLoadingDialog()
+                    if (result) {
+                        // Update local display fields and SharedPreferences
+                        val prefsEditor = sharedPreferences.edit()
+                        if (newFullName.isNotBlank()) {
+                            pwdDisplayName.text = newFullName
+                            prefsEditor.putString("fullName", newFullName)
                         }
-                    }
-                }
-            } else {
-                editFullName.visibility = View.VISIBLE
-                editEmail.visibility = View.VISIBLE
-                editContactNumber.visibility = View.VISIBLE
-                sendOtpButton.visibility = View.VISIBLE
-                cancelEditButton.visibility = View.VISIBLE
-            }
-        }
+                        if (isOtpConfirmed && newEmail.isNotBlank()) {
+                            pwdDisplayEmail.text = newEmail
+                            prefsEditor.putString("email", newEmail)
+                        }
+                        if (newContact.isNotBlank()) {
+                            pwdDisplayContact.text = newContact
+                            prefsEditor.putString("contactNumber", newContact)
+                        }
+                        if (newEmergencyName.isNotBlank()) {
+                            pwdDisplayEmergencyName.text = newEmergencyName
+                            prefsEditor.putString("emergencyContactName", newEmergencyName)
+                        }
+                        if (newEmergencyNumber.isNotBlank()) {
+                            pwdDisplayEmergencyNumber.text = newEmergencyNumber
+                            prefsEditor.putString("emergencyContactNumber", newEmergencyNumber)
+                        }
+                        prefsEditor.apply()
 
-        cancelEditButton.setOnClickListener {
-            // Clear the text fields
-            editFullName.text.clear()
-            editEmail.text.clear()
-            editContactNumber.text.clear()
-            editOtp.text.clear()
+                        Toast.makeText(this@AccountSettingsActivity, "Information updated successfully", Toast.LENGTH_SHORT).show()
 
-            // Re-enable the disabled fields
-            editEmail.isEnabled = true
+                        // Exit edit mode and reset UI
+                        isEditMode = false
+                        btnAction.text = "EDIT ACCOUNT DETAILS"
 
-            // Hide the editable fields and buttons
-            editFullName.visibility = View.GONE
-            editEmail.visibility = View.GONE
-            editContactNumber.visibility = View.GONE
-            sendOtpButton.visibility = View.GONE
-            editOtp.visibility = View.GONE
-            confirmOtpButton.visibility = View.GONE
-            cancelEditButton.visibility = View.GONE
-        }
+                        pwdEditName.visibility = View.GONE
+                        pwdEmailEditContainer.visibility = View.GONE
+                        pwdEditContact.visibility = View.GONE
+                        pwdEditEmergencyName.visibility = View.GONE
+                        pwdEditEmergencyNumber.visibility = View.GONE
+                        pwdOtpContainer.visibility = View.GONE
+                        pwdBtnSendOtp.visibility = View.GONE
 
-        sendOtpButton.setOnClickListener {
-            val newEmail = editEmail.text.toString()
-            if (newEmail.isNotBlank()) {
-                if (newEmail == email) {
-                    Toast.makeText(this, "The new email is the same as the current email", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
+                        pwdDisplayName.visibility = View.VISIBLE
+                        pwdDisplayEmail.visibility = View.VISIBLE
+                        pwdDisplayContact.visibility = View.VISIBLE
+                        pwdDisplayEmergencyName.visibility = View.VISIBLE
+                        pwdDisplayEmergencyNumber.visibility = View.VISIBLE
 
-                showLoadingDialog()
-                editEmail.isEnabled = false // Disable the email EditText
+                        // Optionally restart activity to refresh other parts
+                        finish()
+                        startActivity(intent)
 
-                CoroutineScope(Dispatchers.Main).launch {
-                    val emailExists = withContext(Dispatchers.IO) {
-                        MySQLHelper.isEmailExists(newEmail, userID!!)
-                    }
-
-                    if (emailExists) {
-                        editEmail.isEnabled = true
-                        Toast.makeText(this@AccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
                     } else {
-                        generatedOtp = generateOtp()
-                        withContext(Dispatchers.IO) {
-                            sendOtpEmail(newEmail, generatedOtp!!)
-                        }
-                        dismissLoadingDialog()
-                        editOtp.visibility = View.VISIBLE
-                        confirmOtpButton.visibility = View.VISIBLE
-                        Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
                     }
                 }
-            } else {
-                Toast.makeText(this, "Please enter a new email", Toast.LENGTH_SHORT).show()
             }
         }
 
-        confirmOtpButton.setOnClickListener {
-            val otp = editOtp.text.toString()
+        // OTP send/confirm listeners
+        pwdBtnSendOtp.setOnClickListener {
+            val newEmail = pwdEditEmail.text.toString().trim()
+            if (newEmail.isBlank()) {
+                Toast.makeText(this, "Please enter a new email", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (newEmail == pwdDisplayEmail.text.toString()) {
+                Toast.makeText(this, "The new email is the same as the current email", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            showLoadingDialog()
+            pwdEditEmail.isEnabled = false
+
+            CoroutineScope(Dispatchers.Main).launch {
+                val emailExists = withContext(Dispatchers.IO) {
+                    MySQLHelper.isEmailExists(newEmail, userID!!)
+                }
+                if (emailExists) {
+                    pwdEditEmail.isEnabled = true
+                    dismissLoadingDialog()
+                    Toast.makeText(this@AccountSettingsActivity, "Email already exists in the database", Toast.LENGTH_SHORT).show()
+                } else {
+                    generatedOtp = generateOtp()
+                    withContext(Dispatchers.IO) {
+                        sendOtpEmail(newEmail, generatedOtp!!)
+                    }
+                    dismissLoadingDialog()
+                    pwdOtpContainer.visibility = View.VISIBLE
+                    Toast.makeText(this@AccountSettingsActivity, "OTP sent to email", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        pwdBtnConfirmOtp.setOnClickListener {
+            val otp = pwdEditOtp.text.toString().trim()
             if (otp == generatedOtp) {
                 isOtpConfirmed = true
                 Toast.makeText(this, "OTP confirmed", Toast.LENGTH_SHORT).show()
-                editOtp.visibility = View.GONE
-                confirmOtpButton.visibility = View.GONE
+                pwdOtpContainer.visibility = View.GONE
             } else {
                 Toast.makeText(this, "Invalid OTP", Toast.LENGTH_SHORT).show()
             }
         }
+
     }
 
     private fun generateOtp(): String {
         val random = Random()
         val otp = StringBuilder()
-        for (i in 0 until 6) {
+        repeat(6) {
             otp.append(random.nextInt(10))
         }
         return otp.toString()
@@ -340,6 +386,78 @@ class AccountSettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun refreshProfileData() {
+        // We only refresh if the user is NOT currently typing (Edit Mode)
+        if (isEditMode) return
+
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val userID = sharedPreferences.getString("userID", null) ?: return
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val dbData = MySQLHelper.getUserProfile(userID)
+
+            if (dbData != null) {
+                // Update the TextViews only
+                findViewById<TextView>(R.id.pwd_display_name).text = dbData["fullName"]
+                findViewById<TextView>(R.id.pwd_display_email).text = dbData["email"]
+                findViewById<TextView>(R.id.pwd_display_contact).text = dbData["contactNumber"]
+                findViewById<TextView>(R.id.pwd_display_emergencycontactname).text = dbData["emergencyName"]
+                findViewById<TextView>(R.id.pwd_display_emergencycontactnumber).text = dbData["emergencyNumber"]
+                findViewById<TextView>(R.id.pwd_display_user_type).text = dbData["userType"]
+                findViewById<TextView>(R.id.pwd_display_disability_type).text = dbData["disabilityType"]
+                findViewById<TextView>(R.id.pwd_display_verifiedby).text = dbData["verifiedBy"]
+                findViewById<TextView>(R.id.pwd_display_verification_date).text = dbData["verificationDate"]
+                findViewById<TextView>(R.id.pwd_display_created_date).text = dbData["createdOn"]
+
+                // Sync SharedPreferences in the background
+                sharedPreferences.edit().apply {
+                    putString("fullName", dbData["fullName"])
+                    putString("email", dbData["email"])
+                    putString("contactNumber", dbData["contactNumber"])
+                    putString("emergencyContactName", dbData["emergencyName"])
+                    putString("emergencyContactNumber", dbData["emergencyNumber"])
+                    apply()
+                }
+            }
+        }
+    }
+
+    private fun setNonEditableFieldsDimmed(dim: Boolean) {
+        // Define the colors
+        val valueColor = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
+        val labelAlpha = if (dim) 0.4f else 1.0f
+
+        // List of TextViews that represent non-editable values
+        val nonEditableValues = listOf(
+            findViewById<TextView>(R.id.pwd_display_id),
+            findViewById<TextView>(R.id.pwd_display_user_type),
+            findViewById<TextView>(R.id.pwd_display_disability_type),
+            findViewById<TextView>(R.id.pwd_display_verifiedby),
+            findViewById<TextView>(R.id.pwd_display_verification_date),
+            findViewById<TextView>(R.id.pwd_display_created_date)
+        )
+
+        // Apply color and alpha changes
+        nonEditableValues.forEach { textView ->
+            textView.setTextColor(valueColor)
+            // Dim the parent (the layout containing the label and the value) if needed,
+            // or just dim the text view itself:
+            textView.alpha = if (dim) 0.6f else 1.0f
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Start the automatic refresh loop
+        mainHandler.post(refreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop the loop when user leaves the activity to prevent background data usage
+        mainHandler.removeCallbacks(refreshRunnable)
+    }
+
     private fun showLoadingDialog() {
         if (loadingDialog == null) {
             loadingDialog = Dialog(this).apply {
@@ -356,21 +474,4 @@ class AccountSettingsActivity : AppCompatActivity() {
         loadingDialog = null
     }
 
-    private fun startDeviceSetup() {
-        val intent = Intent(this, SetupActivity::class.java)
-        // Add flag to indicate we want to return to main activity after setup
-        intent.putExtra("RETURN_TO_MAIN", true)
-        startActivity(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Retrieve the full name from SharedPreferences
-        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-        val fullName = sharedPreferences.getString("fullName", "Full Name")
-        navigationView?.let {
-            val headerView = it.getHeaderView(0)
-            headerView?.findViewById<TextView>(R.id.nav_name_header)?.text = fullName
-        }
-    }
 }

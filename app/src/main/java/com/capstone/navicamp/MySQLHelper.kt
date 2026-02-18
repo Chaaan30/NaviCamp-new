@@ -34,8 +34,12 @@ data class ActiveConnectionInfo(
     val expiryTime: Long
 )
 
-
-
+data class PwdProfileData(
+    val disabilityType: String?,
+    val expiryDate: String?,
+    val emergencyContactPerson: String?,
+    val emergencyContactNumber: String?
+)
 
 object MySQLHelper {
 
@@ -1179,6 +1183,8 @@ object MySQLHelper {
         newFullName: String,
         newEmail: String,
         newContactNumber: String,
+        newEmergencyName: String,
+        newEmergencyNumber: String,
         userID: String,
         updatedOn: String
     ): Boolean {
@@ -1192,17 +1198,23 @@ object MySQLHelper {
                     return@withContext false
                 }
 
-                val query = StringBuilder("UPDATE user_table SET updatedOn = ?")
+                val query = StringBuilder("UPDATE user_table u LEFT JOIN pwd_profiles_table p ON u.userID = p.userID SET u.updatedOn = ?")
                 if (newFullName.isNotBlank()) {
-                    query.append(", fullName = ?")
+                    query.append(", u.fullName = ?")
                 }
                 if (newEmail.isNotBlank()) {
-                    query.append(", email = ?")
+                    query.append(", u.email = ?")
                 }
                 if (newContactNumber.isNotBlank()) {
-                    query.append(", contactNumber = ?")
+                    query.append(", u.contactNumber = ?")
                 }
-                query.append(" WHERE userID = ?")
+                if (newEmergencyName.isNotBlank()) {
+                    query.append(", p.emergencyContactPerson  = ?")
+                }
+                if (newEmergencyNumber.isNotBlank()) {
+                    query.append(", p.emergencyContactNumber  = ?")
+                }
+                query.append(" WHERE u.userID = ?")
 
                 statement = connection.prepareStatement(query.toString())
                 statement.setString(1, updatedOn)
@@ -1216,12 +1228,18 @@ object MySQLHelper {
                 if (newContactNumber.isNotBlank()) {
                     statement.setString(index++, newContactNumber)
                 }
+                if (newEmergencyName.isNotBlank()) {
+                    statement.setString(index++, newEmergencyName)
+                }
+                if (newEmergencyNumber.isNotBlank()) {
+                    statement.setString(index++, newEmergencyNumber)
+                }
                 statement.setString(index, userID)
 
                 Log.d("MySQLHelper", "Executing query: $query")
                 Log.d(
                     "MySQLHelper",
-                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID"
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, newEmergencyName=$newEmergencyName, newEmergencyNumber=$newEmergencyNumber, userID=$userID"
                 )
                 val rowsAffected = statement.executeUpdate()
                 Log.d("MySQLHelper", "Rows affected: $rowsAffected")
@@ -2637,6 +2655,41 @@ object MySQLHelper {
         }
     }
 
+    suspend fun getPwdProfileData(userID: String): PwdProfileData? {
+        return withContext(Dispatchers.IO) {
+            var profile: PwdProfileData? = null
+            val query = "SELECT disabilityType, expiryDate, emergencyContactPerson, emergencyContactNumber " +
+                    "FROM pwd_profiles_table WHERE userID = ?"
+
+            try {
+                // Using the connection manager logic you likely already have in MySQLHelper
+                val connection = getConnection()
+                val statement = connection?.prepareStatement(query)
+                statement?.setString(1, userID)
+
+                val resultSet = statement?.executeQuery()
+
+                if (resultSet != null && resultSet.next()) {
+                    profile = PwdProfileData(
+                        disabilityType = resultSet.getString("disabilityType"),
+                        expiryDate = resultSet.getString("expiryDate"),
+                        emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
+                        emergencyContactNumber = resultSet.getString("emergencyContactNumber")
+                    )
+                }
+
+                resultSet?.close()
+                statement?.close()
+                // connection?.close() // Don't close if you use a persistent connection pool
+
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Error fetching PWD profile: ${e.message}")
+            }
+
+            profile
+        }
+    }
+
     // Check if a device is available for connection
     fun isDeviceAvailable(deviceID: String): Boolean {
         var connection: Connection? = null
@@ -3076,6 +3129,50 @@ object MySQLHelper {
         }
     }
 
+    // displays values in account settings
+    suspend fun getUserProfile(userID: String): Map<String, String>? {
+        return withContext(Dispatchers.IO) {
+            // Corrected columns based on your DB screenshot:
+            // emergencyContactPerson and emergencyContactNumber
+            val query = """
+            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.createdOn,
+                   p.emergencyContactPerson, p.emergencyContactNumber, p.disabilityType, p.verifiedBy, p.verificationDate
+            FROM user_table u
+            LEFT JOIN pwd_profiles_table p ON u.userID = p.userID
+            WHERE u.userID = ?
+        """.trimIndent()
+
+            try {
+                val connection = getConnection() ?: return@withContext null
+                val statement = connection.prepareStatement(query)
+                statement.setString(1, userID)
+                val resultSet = statement.executeQuery()
+
+                if (resultSet != null && resultSet.next()) {
+                    val data = mutableMapOf<String, String>()
+                    data["fullName"] = resultSet.getString("fullName") ?: ""
+                    data["email"] = resultSet.getString("email") ?: ""
+                    data["contactNumber"] = resultSet.getString("contactNumber") ?: ""
+                    data["userType"] = resultSet.getString("userType") ?: ""
+                    // Map DB names to the keys your Activity expects
+                    data["emergencyName"] = resultSet.getString("emergencyContactPerson") ?: ""
+                    data["emergencyNumber"] = resultSet.getString("emergencyContactNumber") ?: ""
+                    data["disabilityType"] = resultSet.getString("disabilityType") ?: ""
+                    data["verifiedBy"] = resultSet.getString("verifiedBy") ?: ""
+                    data["verificationDate"] = resultSet.getString("verificationDate") ?: ""
+                    data["createdOn"] = resultSet.getString("createdOn") ?: ""
+
+                    resultSet.close()
+                    statement.close()
+                    return@withContext data
+                }
+            } catch (e: Exception) {
+                Log.e("MySQLHelper", "Fetch Error: ${e.message}")
+            }
+            null
+        }
+    }
+
     // In your MySQLHelper.kt file
 
     @JvmStatic
@@ -3105,7 +3202,7 @@ object MySQLHelper {
     }
     @JvmStatic
     fun getDeviceStatus(deviceID: String): LocomotorDisabilityActivity.DeviceStatus { // Return type is now the Enum
-        val sql = "SELECT status FROM devices_table WHERE device_id = ?" // Use correct table name
+        val sql = "SELECT status FROM devices_table WHERE deviceID = ?" // Use correct table name
         var connection: Connection? = null
         var pstmt: PreparedStatement? = null
         var rs: ResultSet? = null
