@@ -2,6 +2,7 @@ package com.capstone.navicamp
 
 import android.app.Dialog
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -33,6 +34,15 @@ class AccountSettingsActivity : AppCompatActivity() {
 
     // Edit mode flag
     private var isEditMode: Boolean = false
+
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            refreshProfileData()
+            // Schedule the next refresh in 5 seconds (5000 milliseconds)
+            mainHandler.postDelayed(this, 5000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,12 +122,48 @@ class AccountSettingsActivity : AppCompatActivity() {
         pwdEditEmergencyNumber.visibility = View.GONE
         pwdOtpContainer.visibility = View.GONE
 
+        if (userID != null) {
+            showLoadingDialog()
+            CoroutineScope(Dispatchers.Main).launch {
+                val dbData = MySQLHelper.getUserProfile(userID)
+                dismissLoadingDialog()
+
+                if (dbData != null) {
+                    // Populate UI with fresh DB data
+                    pwdDisplayName.text = dbData["fullName"]
+                    pwdDisplayEmail.text = dbData["email"]
+                    pwdDisplayContact.text = dbData["contactNumber"]
+                    pwdDisplayEmergencyName.text = dbData["emergencyName"]
+                    pwdDisplayEmergencyNumber.text = dbData["emergencyNumber"]
+                    pwdDisplayUserType.text = dbData["userType"]
+                    pwdDisplayDisabilityType.text = dbData["disabilityType"]
+                    pwdDisplayVerifiedBy.text = dbData["verifiedBy"]
+                    pwdDisplayVerificationDate.text = dbData["verificationDate"]
+                    pwdDisplayCreatedDate.text = dbData["createdOn"]
+
+                    // Sync SharedPreferences in case local cache was wrong
+                    sharedPreferences.edit().apply {
+                        putString("fullName", dbData["fullName"])
+                        putString("email", dbData["email"])
+                        putString("contactNumber", dbData["contactNumber"])
+                        putString("emergencyContactName", dbData["emergencyName"])
+                        putString("emergencyContactNumber", dbData["emergencyNumber"])
+                        apply()
+                    }
+                } else {
+                    Toast.makeText(this@AccountSettingsActivity, "Failed to load profile from DB", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         // Toggle behavior for bottom action button
         btnAction.setOnClickListener {
             if (!isEditMode) {
                 // Enter edit mode
                 isEditMode = true
                 btnAction.text = "SAVE CHANGES"
+
+                setNonEditableFieldsDimmed(true)
 
                 // Hide display TextViews, show edit fields
                 pwdDisplayName.visibility = View.GONE
@@ -175,12 +221,16 @@ class AccountSettingsActivity : AppCompatActivity() {
                 showLoadingDialog()
                 CoroutineScope(Dispatchers.Main).launch {
                     val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                    // Logic: If email wasn't changed or OTP not confirmed, send the CURRENT display email
+                    val finalEmail = if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else pwdDisplayEmail.text.toString()
                     val result = withContext(Dispatchers.IO) {
                         // Reuse existing update helper; adapt to accept empty strings for unchanged fields
                         MySQLHelper.updateUserWithUserID(
                             if (newFullName.isNotBlank()) newFullName else "",
-                            if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
+                            finalEmail,
                             if (newContact.isNotBlank()) newContact else "",
+                            if (newEmergencyName.isNotBlank()) newEmergencyName else "",
+                            if (newEmergencyNumber.isNotBlank()) newEmergencyNumber else "",
                             userID,
                             updatedOn
                         )
@@ -334,6 +384,78 @@ class AccountSettingsActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun refreshProfileData() {
+        // We only refresh if the user is NOT currently typing (Edit Mode)
+        if (isEditMode) return
+
+        val sharedPreferences = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        val userID = sharedPreferences.getString("userID", null) ?: return
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val dbData = MySQLHelper.getUserProfile(userID)
+
+            if (dbData != null) {
+                // Update the TextViews only
+                findViewById<TextView>(R.id.pwd_display_name).text = dbData["fullName"]
+                findViewById<TextView>(R.id.pwd_display_email).text = dbData["email"]
+                findViewById<TextView>(R.id.pwd_display_contact).text = dbData["contactNumber"]
+                findViewById<TextView>(R.id.pwd_display_emergencycontactname).text = dbData["emergencyName"]
+                findViewById<TextView>(R.id.pwd_display_emergencycontactnumber).text = dbData["emergencyNumber"]
+                findViewById<TextView>(R.id.pwd_display_user_type).text = dbData["userType"]
+                findViewById<TextView>(R.id.pwd_display_disability_type).text = dbData["disabilityType"]
+                findViewById<TextView>(R.id.pwd_display_verifiedby).text = dbData["verifiedBy"]
+                findViewById<TextView>(R.id.pwd_display_verification_date).text = dbData["verificationDate"]
+                findViewById<TextView>(R.id.pwd_display_created_date).text = dbData["createdOn"]
+
+                // Sync SharedPreferences in the background
+                sharedPreferences.edit().apply {
+                    putString("fullName", dbData["fullName"])
+                    putString("email", dbData["email"])
+                    putString("contactNumber", dbData["contactNumber"])
+                    putString("emergencyContactName", dbData["emergencyName"])
+                    putString("emergencyContactNumber", dbData["emergencyNumber"])
+                    apply()
+                }
+            }
+        }
+    }
+
+    private fun setNonEditableFieldsDimmed(dim: Boolean) {
+        // Define the colors
+        val valueColor = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
+        val labelAlpha = if (dim) 0.4f else 1.0f
+
+        // List of TextViews that represent non-editable values
+        val nonEditableValues = listOf(
+            findViewById<TextView>(R.id.pwd_display_id),
+            findViewById<TextView>(R.id.pwd_display_user_type),
+            findViewById<TextView>(R.id.pwd_display_disability_type),
+            findViewById<TextView>(R.id.pwd_display_verifiedby),
+            findViewById<TextView>(R.id.pwd_display_verification_date),
+            findViewById<TextView>(R.id.pwd_display_created_date)
+        )
+
+        // Apply color and alpha changes
+        nonEditableValues.forEach { textView ->
+            textView.setTextColor(valueColor)
+            // Dim the parent (the layout containing the label and the value) if needed,
+            // or just dim the text view itself:
+            textView.alpha = if (dim) 0.6f else 1.0f
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Start the automatic refresh loop
+        mainHandler.post(refreshRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Stop the loop when user leaves the activity to prevent background data usage
+        mainHandler.removeCallbacks(refreshRunnable)
     }
 
     private fun showLoadingDialog() {

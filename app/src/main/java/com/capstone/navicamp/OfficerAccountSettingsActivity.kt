@@ -128,7 +128,9 @@ class OfficerAccountSettingsActivity : AppCompatActivity() {
                             if (newFull.isNotBlank()) newFull else "",
                             if (isOtpConfirmed && newEmail.isNotBlank()) newEmail else "",
                             if (newContact.isNotBlank()) newContact else "",
-                            userID,
+                            "", // newEmergencyName (Placeholder for Officer)
+                            "", // newEmergencyNumber (Placeholder for Officer)
+                            userID!!,
                             updatedOn
                         )
                     }
