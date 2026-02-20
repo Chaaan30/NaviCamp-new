@@ -98,7 +98,7 @@ class WheelchairManagementActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_item1 -> {
-                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    val intent = Intent(this, OfficerAccountSettingsFragment::class.java)
                     startActivity(intent)
                     true
                 }

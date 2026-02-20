@@ -14,7 +14,6 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,7 +70,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 R.id.nav_item1 -> {
                     // Navigate to OfficerAccountSettingsActivity
-                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    val intent = Intent(this, OfficerAccountSettingsFragment::class.java)
                     startActivity(intent)
                     true
                 }
