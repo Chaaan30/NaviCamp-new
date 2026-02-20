@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F0F3FD">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:paddingBottom="80dp"> <!-- Leave space for the banner/nav -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 1. HEADER SECTION -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:fontFamily="@font/inter_medium"
+                android:text="Hello,"
+                android:textColor="#1F2020"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/user_fullname"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_bold"
+                android:text="Full Name"
+                android:textColor="#1F2020"
+                android:textSize="25sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="25dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center"
+                android:text="Emergency help needed?"
+                android:textColor="#1F2020"
+                android:textSize="24sp" />
+
+            <TextView
+                android:id="@+id/instruction_text"
+                android:layout_width="319dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:text="Press and hold the button below for 5 seconds to alert a safety officer in the campus"
+                android:textColor="#575757"
+                android:textSize="14sp" />
+
+            <!-- 2. SOS BUTTON SECTION -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="320dp"
+                android:layout_marginTop="20dp">
+
+                <Button
+                    android:id="@+id/assistance_button_background"
+                    android:layout_width="286dp"
+                    android:layout_height="286dp"
+                    android:layout_gravity="center"
+                    android:text="CONNECT TO A WHEELCHAIR"
+                    android:fontFamily="sans-serif-black"
+                    android:textSize="20sp"
+                    android:textColor="#FFFFFF"
+                    android:background="@drawable/assist_button_rounded_background"
+                    app:backgroundTint="#E9C7CD" />
+
+                <Button
+                    android:id="@+id/assistance_button"
+                    android:layout_width="174dp"
+                    android:layout_height="174dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/assist_button_rounded_background"
+                    android:fontFamily="sans-serif-black"
+                    android:text="SOS"
+                    android:textColor="@android:color/white"
+                    android:textSize="50sp"
+                    app:backgroundTint="#EE2D4C" />
+            </FrameLayout>
+
+            <!-- 3. CONNECTION STATUS -->
+            <TextView
+                android:id="@+id/connection_status_textview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="@font/inter"
+                android:gravity="center"
+                android:text="Not connected to a wheelchair"
+                android:textColor="#8C8C8C"
+                android:textSize="14sp" />
+
+            <!-- 4. EXPIRY SECTION -->
+            <LinearLayout
+                android:id="@+id/expiry_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/expiry_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Access Expiry"
+                    android:textColor="#1F2020"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/expiry_date_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:gravity="center"
+                    android:text="Your temporary access expires on:\n[Date]"
+                    android:textColor="#575757"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- 5. EMERGENCY CONTACT BANNER (FLOATING) -->
+    <LinearLayout
+        android:id="@+id/emergency_contact_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#EE2D4C"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_medium"
+            android:gravity="center"
+            android:text="Kindly set your emergency contact person\nin the account settings"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

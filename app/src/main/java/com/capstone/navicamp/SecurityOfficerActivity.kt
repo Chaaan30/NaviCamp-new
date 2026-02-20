@@ -18,7 +18,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_security_officer)
 
-        navigationView = findViewById(R.id.navigation_view)
+        //navigationView = findViewById(R.id.navigation_view)
 
         // 2. Setup Bottom Navigation
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)

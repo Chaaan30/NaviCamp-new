@@ -41,6 +41,13 @@ data class PwdProfileData(
     val emergencyContactNumber: String?
 )
 
+enum class DeviceStatus {
+    AVAILABLE,
+    IN_USE,
+    MAINTENANCE,
+    UNKNOWN
+}
+
 object MySQLHelper {
 
     // Database credentials
@@ -774,106 +781,26 @@ object MySQLHelper {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         return try {
-            connection = getConnection()
-            if (connection == null) {
-                println("Database connection failed.")
-                return false
+            connection = getConnection() ?: return false
+            val query = if (newUserID != null) {
+                // CONNECTING: Set status to in_use, userID to current user, and time to NULL
+                "UPDATE devices_table SET userID = ?, connectedUntil = NULL, status = 'in_use' " +
+                        "WHERE deviceID = ? AND status = 'available'"
+            } else {
+                // DISCONNECTING: Set everything back to default
+                "UPDATE devices_table SET userID = NULL, connectedUntil = NULL, status = 'available' WHERE deviceID = ?"
             }
 
-            val newDeviceStatus = if (newUserID != null) "in_use" else "available"
-
-            val query: String
+            statement = connection.prepareStatement(query)
             if (newUserID != null) {
-                // Trying to connect a user
-                // First, let's check current device status for debugging
-                val checkQuery =
-                    "SELECT deviceID, userID, connectedUntil, status FROM devices_table WHERE deviceID = ?"
-                val checkStmt = connection.prepareStatement(checkQuery)
-                checkStmt.setString(1, deviceID)
-                val checkResult = checkStmt.executeQuery()
-
-                if (checkResult.next()) {
-                    val currentUserID = checkResult.getString("userID")
-                    val currentConnectedUntil = checkResult.getString("connectedUntil")
-                    val currentStatus = checkResult.getString("status")
-                    Log.d(
-                        "MySQLHelper",
-                        "Device $deviceID current state - UserID: $currentUserID, ConnectedUntil: $currentConnectedUntil, Status: $currentStatus"
-                    )
-
-                    // Check if device is already in use by someone else
-                    if (currentUserID != null && currentUserID.isNotEmpty() && currentStatus == "in_use") {
-                        Log.w(
-                            "MySQLHelper",
-                            "Device $deviceID is already in use by user $currentUserID"
-                        )
-                        checkStmt.close()
-                        return false
-                    }
-
-                    // Check if device is under maintenance
-                    if (currentStatus == "maintenance") {
-                        Log.w(
-                            "MySQLHelper",
-                            "Device $deviceID is under maintenance and cannot be connected to"
-                        )
-                        checkStmt.close()
-                        return false
-                    }
-                } else {
-                    Log.e("MySQLHelper", "Device $deviceID not found in database")
-                    checkStmt.close()
-                    return false
-                }
-                checkStmt.close()
-
-                // Updated query - only allow connection to available devices or expired connections
-                query = """
-                    UPDATE devices_table
-                    SET userID = ?, connectedUntil = ?, status = ?
-                    WHERE deviceID = ?
-                    AND (
-                        (status = 'available' AND (userID IS NULL OR userID = ''))
-                        OR (connectedUntil IS NOT NULL AND STR_TO_DATE(connectedUntil, '%Y-%m-%d %H:%i:%s') < NOW())
-                    )
-                """.trimIndent()
-                statement = connection.prepareStatement(query)
                 statement.setString(1, newUserID)
-                if (newConnectedUntil != null) {
-                    statement.setString(2, newConnectedUntil)
-                } else {
-                    // This case should ideally not happen if newUserID is not null,
-                    // but as a safeguard, set connectedUntil to NULL or a very past time.
-                    // Forcing a valid connection to have an expiry.
-                    statement.setNull(2, java.sql.Types.TIMESTAMP)
-                }
-                statement.setString(3, newDeviceStatus) // "in_use"
-                statement.setString(4, deviceID)
+                statement.setString(2, deviceID)
             } else {
-                // Disconnecting a user (newUserID is null)
-                query = "UPDATE devices_table SET userID = NULL, connectedUntil = NULL, status = 'available' WHERE deviceID = ?"
-                statement = connection.prepareStatement(query)
                 statement.setString(1, deviceID)
             }
 
             val rowsAffected = statement.executeUpdate()
-            Log.d(
-                "MySQLHelper",
-                "Device $deviceID connection status update attempt. Rows affected: $rowsAffected. User: $newUserID, Until: $newConnectedUntil, Status: $newDeviceStatus."
-            )
-
-            // If we were trying to connect a user (newUserID != null) and no rows were affected,
-            // it means the device was busy with a still-valid connection or deviceID didn't exist.
-            if (newUserID != null && rowsAffected == 0) {
-                Log.w(
-                    "MySQLHelper",
-                    "Failed to connect device $deviceID. It might be in use with a valid session or deviceID is invalid."
-                )
-                return false // Explicitly return false as connection was not established
-            }
-            // If disconnecting, 0 rows affected is fine if already disconnected.
-            // If connecting, rowsAffected > 0 means success.
-            return rowsAffected > 0 || (newUserID == null)
+            rowsAffected > 0
         } catch (e: SQLException) {
             Log.e(
                 "MySQLHelper",
@@ -2204,57 +2131,15 @@ object MySQLHelper {
             // Query devices_table for an active connection for this user
             // Assumes 'connectedUntil' is a DATETIME/TIMESTAMP and 'status' is 'in_use'
             val query =
-                "SELECT deviceID, connectedUntil FROM devices_table WHERE userID = ? AND status = 'in_use'"
+                "SELECT deviceID FROM devices_table WHERE userID = ? AND status = 'in_use'"
             statement = connection?.prepareStatement(query)
             statement?.setString(1, userID)
 
             resultSet = statement?.executeQuery()
             if (resultSet?.next() == true) {
                 val deviceID = resultSet.getString("deviceID")
-                val connectedUntilStr = resultSet.getString("connectedUntil")
-
-                if (deviceID != null && connectedUntilStr != null) {
-                    try {
-                        // Parse the datetime string to milliseconds
-                        // Ensure this format matches how it's stored by updateDeviceConnectionStatus
-                        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
-                        dateFormat.timeZone =
-                            TimeZone.getTimeZone("Asia/Manila") // Consistent timezone
-                        val date = dateFormat.parse(connectedUntilStr)
-                        if (date != null) {
-                            val connectedUntilMillis = date.time
-                            // Optional: Check if current time is already past connectedUntilMillis
-                            // if (System.currentTimeMillis() > connectedUntilMillis) {
-                            // Log.d("MySQLHelper", "Found expired connection for user $userID, device $deviceID in DB.")
-                            // return null // Or trigger a cleanup
-                            // }
-                            Log.d(
-                                "MySQLHelper",
-                                "Found active connection for user $userID: device $deviceID, until $connectedUntilStr ($connectedUntilMillis ms)"
-                            )
-                            ActiveConnectionInfo(deviceID, connectedUntilMillis)
-                        } else {
-                            Log.e(
-                                "MySQLHelper",
-                                "Failed to parse connectedUntil date string: $connectedUntilStr for user $userID"
-                            )
-                            null
-                        }
-                    } catch (e: Exception) {
-                        Log.e(
-                            "MySQLHelper",
-                            "Error parsing date for getActiveConnectionForUser: ${e.message}",
-                            e
-                        )
-                        null
-                    }
-                } else {
-                    Log.d(
-                        "MySQLHelper",
-                        "No valid deviceID or connectedUntil found for user $userID with status 'in_use'."
-                    )
-                    null
-                }
+                // Return with a dummy timestamp (10 years in the future) so timer logic doesn't trigger
+                ActiveConnectionInfo(deviceID, System.currentTimeMillis() + (10L * 365 * 24 * 60 * 60 * 1000))
             } else {
                 Log.d(
                     "MySQLHelper",
@@ -3310,7 +3195,7 @@ object MySQLHelper {
         return success
     }
     @JvmStatic
-    fun getDeviceStatus(deviceID: String): LocomotorDisabilityActivity.DeviceStatus { // Return type is now the Enum
+    fun getDeviceStatus(deviceID: String): DeviceStatus { // Return type is now the Enum
         val sql = "SELECT status FROM devices_table WHERE deviceID = ?" // Use correct table name
         var connection: Connection? = null
         var pstmt: PreparedStatement? = null
@@ -3333,13 +3218,11 @@ object MySQLHelper {
             connection?.close()
         }
 
-        // --- THIS IS THE KEY PART ---
-        // Convert the String from the database into the correct Enum type before returning
         return when (statusString?.lowercase()) {
-            "available" -> LocomotorDisabilityActivity.DeviceStatus.AVAILABLE
-            "in_use" -> LocomotorDisabilityActivity.DeviceStatus.IN_USE
-            "maintenance" -> LocomotorDisabilityActivity.DeviceStatus.MAINTENANCE
-            else -> LocomotorDisabilityActivity.DeviceStatus.UNKNOWN
+            "available" -> DeviceStatus.AVAILABLE
+            "in_use" -> DeviceStatus.IN_USE
+            "maintenance" -> DeviceStatus.MAINTENANCE
+            else -> DeviceStatus.UNKNOWN
         }
     }
 
