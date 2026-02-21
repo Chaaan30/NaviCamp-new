@@ -1,344 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/drawer_layout"
     android:background="#F0F3FD">
 
-    <!-- Main Content -->
-    <androidx.coordinatorlayout.widget.CoordinatorLayout
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <!-- App Bar with Toolbar -->
-        <com.google.android.material.appbar.AppBarLayout
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primaryColor"
+            android:title="Security Officer"
+            app:titleTextColor="@android:color/white" />
+    </com.google.android.material.appbar.AppBarLayout>
 
-            <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="?attr/colorPrimary"
-                android:title="Security Officer"
-                android:titleTextColor="@android:color/white" />
-        </com.google.android.material.appbar.AppBarLayout>
+    <!-- THIS IS WHERE FRAGMENTS WILL BE LOADED -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/officer_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout" />
 
-        <!-- Main Screen Content -->
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:menu="@menu/bottom_navigation_menu_safetyofficer" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <!-- Welcome Section -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/inter_bold"
-                    android:text="Welcome!"
-                    android:textColor="#000000"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/secoff_fullname"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Full Name Security Officer!"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#000000"
-                    android:fontFamily="@font/inter_bold" />                <!-- Assistance Section -->
-                <TextView
-                    android:id="@+id/assistance_section_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="People currently in need of assistance (0):"
-                    android:textSize="18sp"
-                    android:textColor="#000000"
-                    android:paddingTop="16dp"
-                    android:fontFamily="@font/inter_bold" />
-
-                <TextView
-                    android:id="@+id/no_assistance_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="There are currently no assistance requests."
-                    android:textSize="16sp"
-                    android:fontFamily="@font/inter"
-                    android:textColor="#000000" />
-
-                <ProgressBar
-                    android:id="@+id/no_assistance_progress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:visibility="gone"
-                    style="?android:attr/progressBarStyleLarge" />                <androidx.core.widget.NestedScrollView
-                    android:id="@+id/assistance_scroll_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="260dp"
-                    android:fillViewport="true"
-                    android:scrollbarFadeDuration="0"
-                    android:scrollbars="vertical"
-                    android:fadeScrollbars="false"
-                    android:scrollbarSize="4dp"
-                    android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
-                    android:background="#F0F3FD"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="4dp"
-                        android:background="#F0F3FD">
-                        <androidx.cardview.widget.CardView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            app:cardElevation="0dp"
-                            app:cardCornerRadius="8dp"
-                            android:background="#F0F3FD">
-
-                            <LinearLayout
-                                android:id="@+id/assistance_layout"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="4dp"
-                                android:background="#F0F3FD">
-                            </LinearLayout>
-
-                        </androidx.cardview.widget.CardView>
-                    </LinearLayout>
-                </androidx.core.widget.NestedScrollView>
-
-
-                <!-- Monitoring Section -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Monitoring:"
-                    android:fontFamily="@font/inter_bold"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:paddingTop="16dp"
-                    android:textColor="#000000" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="250dp"
-                    android:orientation="horizontal"
-                    android:weightSum="2"
-                    android:paddingTop="8dp">
-
-                    <!-- Card 1 -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/registered_users_card"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_margin="8dp"
-                        app:cardElevation="4dp"
-                        android:foreground="?android:attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        app:rippleColor="@color/white"
-                        android:stateListAnimator="@animator/card_elevation">
-
-                        <LinearLayout
-                            android:id="@+id/registered_users_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/monitoring_orange"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Number of registered people with locomotor disability in MMCL"
-                                android:fontFamily="@font/inter"
-                                android:textSize="16sp"
-                                android:textColor="#FFFFFF"
-                                android:lines="6"
-                                android:ellipsize="end" />
-
-                            <TextView
-                                android:id="@+id/registered_users"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:fontFamily="@font/inter_bold"
-                                android:gravity="center"
-                                android:paddingTop="16dp"
-                                android:textSize="32sp"
-                                android:textColor="#FFFFFF" />
-
-                            <ProgressBar
-                                android:id="@+id/registered_users_progress"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:visibility="gone"
-                                style="?android:attr/progressBarStyleLarge" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/iot_devices_card"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_margin="8dp"
-                        app:cardElevation="4dp"
-                        android:foreground="?android:attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        app:rippleColor="@color/white"
-                        android:stateListAnimator="@animator/card_elevation">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/monitoring_red"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Number of currently IoT-modified wheelchairs"
-                                android:fontFamily="@font/inter"
-                                android:textSize="16sp"
-                                android:textColor="#FFFFFF"
-                                android:lines="6"
-                                android:ellipsize="end" />
-
-                            <TextView
-                                android:id="@+id/iot_devices"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="0"
-                                android:fontFamily="@font/inter_bold"
-                                android:gravity="center"
-                                android:paddingTop="16dp"
-                                android:textSize="32sp"
-                                android:textColor="#FFFFFF" />
-
-                            <ProgressBar
-                                android:id="@+id/iot_devices_progress"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:visibility="gone"
-                                style="?android:attr/progressBarStyleLarge" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>                <!-- Locomotor Disabled User Verification Section -->
-                <TextView
-                    android:id="@+id/verification_section_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Account Verification (0):"
-                    android:fontFamily="@font/inter_bold"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:paddingTop="16dp"
-                    android:textColor="#000000" /><TextView
-                    android:id="@+id/no_verification_text"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="There are currently no users in need of verification."
-                    android:fontFamily="@font/inter"
-                    android:textSize="16sp"
-                    android:textColor="#000000" />                <androidx.core.widget.NestedScrollView
-                    android:id="@+id/verification_scroll_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:paddingTop="8dp"
-                    android:fillViewport="true"
-                    android:scrollbarFadeDuration="0"
-                    android:scrollbars="vertical"
-                    android:fadeScrollbars="false"
-                    android:scrollbarSize="4dp"
-                    android:scrollbarThumbVertical="@drawable/scrollbar_thumb"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:id="@+id/verification_layout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="4dp">
-                    </LinearLayout>
-                </androidx.core.widget.NestedScrollView>
-
-                <!-- Incident Log Section -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Incident Log:"
-                    android:fontFamily="@font/inter_bold"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:paddingTop="16dp"
-                    android:textColor="#000000" />
-
-                <!-- Replace this with RecyclerView for logs -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="8dp">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/incidentLogBtn"
-                        style="@style/Widget.MaterialComponents.Button"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="VIEW INCIDENT LOG"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:fontFamily="@font/inter_bold"
-                        android:backgroundTint="@color/primaryColor"
-                        android:textColor="@color/white"
-                        app:cornerRadius="8dp"
-                        app:rippleColor="@color/white"
-                        android:letterSpacing="0.05"
-                        app:icon="@drawable/ic_document_check"
-                        app:iconGravity="textStart"
-                        app:iconPadding="8dp"
-                        app:iconTint="@color/white"
-                        android:elevation="2dp" />
-
-                </LinearLayout>
-            </LinearLayout>
-        </ScrollView>
-    </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
-    <!-- Navigation Drawer -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/navigation_view"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        android:background="@color/primaryColor"
-        android:fontFamily="@font/inter"
-        app:headerLayout="@layout/nav_header_officer"
-        app:itemTextColor="@color/onPrimaryColor"
-        app:menu="@menu/drawer_menu_officer" />
-</androidx.drawerlayout.widget.DrawerLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

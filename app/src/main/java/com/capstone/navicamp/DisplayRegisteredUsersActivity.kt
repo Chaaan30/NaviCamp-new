@@ -24,8 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
-import java.text.SimpleDateFormat
-import java.util.*
 
 class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -95,7 +93,7 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_item1 -> {
-                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    val intent = Intent(this, OfficerAccountSettingsFragment::class.java)
                     startActivity(intent)
                     true
                 }

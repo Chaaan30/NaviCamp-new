@@ -16,13 +16,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.button.MaterialButton
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import android.content.Context
 import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import java.text.SimpleDateFormat
@@ -120,7 +116,7 @@ class IncidentLogNew : AppCompatActivity() {
                     true
                 }
                 R.id.nav_item1 -> {
-                    val intent = Intent(this, OfficerAccountSettingsActivity::class.java)
+                    val intent = Intent(this, OfficerAccountSettingsFragment::class.java)
                     startActivity(intent)
                     true
                 }
