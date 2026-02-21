@@ -329,6 +329,9 @@ class AssistanceModalDialog : DialogFragment() {
                 // Send broadcast and trigger updates
                 sendDataChangeBroadcast()
                 SmartPollingManager.getInstance().triggerFastUpdate()
+
+                // Start officer GPS tracking for the disabled user to see
+                (activity as? MapActivity)?.onOfficerResponded()
                 
                 Toast.makeText(requireContext(), "You are now responding to this assistance request", Toast.LENGTH_SHORT).show()
             } else {
