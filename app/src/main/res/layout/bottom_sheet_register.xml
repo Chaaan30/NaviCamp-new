@@ -121,6 +121,63 @@
         android:layout_marginEnd="16dp"
         android:singleLine="true" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="@font/inter"
+        android:text="Password requirements (meet at least 3):"
+        android:textColor="@android:color/darker_gray"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/password_requirement_length"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="@font/inter"
+        android:text="• 12-16 characters"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/password_requirement_case"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="@font/inter"
+        android:text="• Uppercase and lowercase letters"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/password_requirement_number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="@font/inter"
+        android:text="• At least 1 number"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/password_requirement_symbol"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="2dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="@font/inter"
+        android:text="• At least 1 symbol"
+        android:textColor="@android:color/holo_red_dark"
+        android:textSize="12sp" />
+
     <Spinner
         android:id="@+id/campus_affiliation_spinner"
         android:layout_width="match_parent"

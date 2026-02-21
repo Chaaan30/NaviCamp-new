@@ -4,7 +4,9 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.Editable
 import android.text.InputFilter
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -48,11 +50,20 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var termsConditionsCheckbox: CheckBox
     private lateinit var termsConditionsText: TextView
     private lateinit var termsConditionsLabel: TextView
+    private lateinit var requirementLengthTextView: TextView
+    private lateinit var requirementCaseTextView: TextView
+    private lateinit var requirementNumberTextView: TextView
+    private lateinit var requirementSymbolTextView: TextView
     private var generatedOtp: String? = null
     private var isOtpSent: Boolean = false
     private var campusAffiliationSelectionTouched = false
     private var systemRoleSelectionTouched = false
     private var isUpdatingSystemRoleOptions = false
+
+    private data class PasswordRuleResult(
+        val score: Int,
+        val failedRequirements: List<String>
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -74,6 +85,10 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         termsConditionsCheckbox = view.findViewById(R.id.terms_conditions_checkbox)
         termsConditionsText = view.findViewById(R.id.terms_conditions_text)
         termsConditionsLabel = view.findViewById(R.id.terms_conditions_label)
+        requirementLengthTextView = view.findViewById(R.id.password_requirement_length)
+        requirementCaseTextView = view.findViewById(R.id.password_requirement_case)
+        requirementNumberTextView = view.findViewById(R.id.password_requirement_number)
+        requirementSymbolTextView = view.findViewById(R.id.password_requirement_symbol)
 
         campusAffiliationSpinner.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
@@ -101,6 +116,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
         setupCampusAffiliationSpinner()
         updateSystemRoleOptions("Campus Affiliation")
+        setupPasswordRequirementWatcher()
 
         sendOtpButton.setOnClickListener {
             val email = emailEditText.text.toString()
@@ -260,11 +276,13 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
-        if (password.length < 7) {
+        val passwordRuleResult = validatePasswordRequirements(password)
+        if (passwordRuleResult.score < 3) {
+            val failedRulesText = passwordRuleResult.failedRequirements.joinToString("\n- ")
             Toast.makeText(
                 context,
-                "Password must be at least 7 characters long",
-                Toast.LENGTH_SHORT
+                "Password must meet at least 3 of 4 requirements:\n- $failedRulesText",
+                Toast.LENGTH_LONG
             ).show()
             return
         }
@@ -338,6 +356,57 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val md = MessageDigest.getInstance("SHA-256")
         val hashedBytes = md.digest(password.toByteArray())
         return hashedBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun setupPasswordRequirementWatcher() {
+        updatePasswordRequirementIndicators("")
+        passwordEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updatePasswordRequirementIndicators(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+    }
+
+    private fun updatePasswordRequirementIndicators(password: String) {
+        val hasValidLength = password.length in 12..16
+        val hasUppercaseAndLowercase =
+            password.any { it.isUpperCase() } && password.any { it.isLowerCase() }
+        val hasNumber = password.any { it.isDigit() }
+        val hasSymbol = password.any { !it.isLetterOrDigit() }
+
+        setRequirementColor(requirementLengthTextView, hasValidLength)
+        setRequirementColor(requirementCaseTextView, hasUppercaseAndLowercase)
+        setRequirementColor(requirementNumberTextView, hasNumber)
+        setRequirementColor(requirementSymbolTextView, hasSymbol)
+    }
+
+    private fun setRequirementColor(textView: TextView, isMet: Boolean) {
+        val colorRes = if (isMet) android.R.color.holo_green_dark else android.R.color.holo_red_dark
+        textView.setTextColor(ContextCompat.getColor(requireContext(), colorRes))
+    }
+
+    private fun validatePasswordRequirements(password: String): PasswordRuleResult {
+        val hasValidLength = password.length in 12..16
+        val hasUppercaseAndLowercase =
+            password.any { it.isUpperCase() } && password.any { it.isLowerCase() }
+        val hasNumber = password.any { it.isDigit() }
+        val hasSymbol = password.any { !it.isLetterOrDigit() }
+
+        val checks = listOf(
+            hasValidLength to "12-16 characters",
+            hasUppercaseAndLowercase to "both uppercase and lowercase letters",
+            hasNumber to "at least 1 number",
+            hasSymbol to "at least 1 symbol"
+        )
+
+        return PasswordRuleResult(
+            score = checks.count { it.first },
+            failedRequirements = checks.filterNot { it.first }.map { it.second }
+        )
     }
 
     private fun generateOtp(): String {
