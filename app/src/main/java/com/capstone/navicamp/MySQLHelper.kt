@@ -48,6 +48,13 @@ enum class DeviceStatus {
     UNKNOWN
 }
 
+data class OngoingIncidentInfo(
+    val alertID: String,
+    val locationID: String,
+    val officerName: String,
+    val officerUserID: String?
+)
+
 object MySQLHelper {
 
     // Database credentials
@@ -2202,11 +2209,11 @@ object MySQLHelper {
             }
 
             val query = """
-                SELECT fcm_token FROM user_table 
-                WHERE userType IN ('Safety Officer', 'Security Officer') 
-                AND verified = 1 
-                AND fcm_token IS NOT NULL 
-                AND fcm_token != ''
+                SELECT u.fcm_token FROM user_table u
+                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.verified = 1
+                AND u.fcm_token IS NOT NULL
+                AND u.fcm_token != ''
             """
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
@@ -3265,5 +3272,160 @@ object MySQLHelper {
             connection?.close()
         }
         return null
+    }
+
+    // --- Live GPS Tracking (phone GPS for officer dispatch) ---
+
+    @Volatile
+    private var liveGpsTableReady = false
+
+    private fun ensureLiveGpsTableExists(conn: Connection) {
+        if (liveGpsTableReady) return
+        try {
+            conn.createStatement().execute("""
+                CREATE TABLE IF NOT EXISTS live_gps_table (
+                    userID VARCHAR(45) NOT NULL PRIMARY KEY,
+                    latitude DOUBLE NOT NULL,
+                    longitude DOUBLE NOT NULL,
+                    accuracy FLOAT NOT NULL DEFAULT 0,
+                    updatedAt VARCHAR(45) DEFAULT NULL
+                )
+            """.trimIndent())
+            // Add accuracy column for existing tables that don't have it yet
+            try {
+                conn.createStatement().execute(
+                    "ALTER TABLE live_gps_table ADD COLUMN accuracy FLOAT NOT NULL DEFAULT 0"
+                )
+            } catch (_: SQLException) { /* column already exists */ }
+            liveGpsTableReady = true
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Failed to ensure live_gps_table: ${e.message}")
+        }
+    }
+
+    fun upsertLiveGPS(userID: String, latitude: Double, longitude: Double, accuracy: Float = 0f): Boolean {
+        var connection: Connection? = null
+        return try {
+            connection = getConnection() ?: return false
+            ensureLiveGpsTableExists(connection)
+
+            val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+            val query = """
+                INSERT INTO live_gps_table (userID, latitude, longitude, accuracy, updatedAt)
+                VALUES (?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE latitude = ?, longitude = ?, accuracy = ?, updatedAt = ?
+            """.trimIndent()
+            val stmt = connection.prepareStatement(query)
+            stmt.setString(1, userID)
+            stmt.setDouble(2, latitude)
+            stmt.setDouble(3, longitude)
+            stmt.setFloat(4, accuracy)
+            stmt.setString(5, now)
+            stmt.setDouble(6, latitude)
+            stmt.setDouble(7, longitude)
+            stmt.setFloat(8, accuracy)
+            stmt.setString(9, now)
+            stmt.executeUpdate() >= 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "upsertLiveGPS failed: ${e.message}")
+            false
+        } finally {
+            connection?.close()
+        }
+    }
+
+    /** Returns [latitude, longitude, accuracyMeters] or null */
+    fun getLiveGPS(userID: String): DoubleArray? {
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            ensureLiveGpsTableExists(connection)
+            stmt = connection.prepareStatement(
+                "SELECT latitude, longitude, accuracy FROM live_gps_table WHERE userID = ?"
+            )
+            stmt.setString(1, userID)
+            rs = stmt.executeQuery()
+            if (rs.next()) doubleArrayOf(
+                rs.getDouble("latitude"),
+                rs.getDouble("longitude"),
+                rs.getDouble("accuracy")
+            ) else null
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getLiveGPS failed: ${e.message}")
+            null
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun deleteLiveGPS(userID: String): Boolean {
+        var connection: Connection? = null
+        return try {
+            connection = getConnection() ?: return false
+            val stmt = connection.prepareStatement("DELETE FROM live_gps_table WHERE userID = ?")
+            stmt.setString(1, userID)
+            stmt.executeUpdate() >= 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "deleteLiveGPS failed: ${e.message}")
+            false
+        } finally {
+            connection?.close()
+        }
+    }
+
+    fun getOngoingIncidentForUser(userID: String): OngoingIncidentInfo? {
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            val query = """
+                SELECT i.alertID, i.locationID, i.officerResponded, u.userID AS officerUserID
+                FROM incident_logs_table i
+                LEFT JOIN user_table u ON u.fullName = i.officerResponded
+                WHERE i.userID = ? AND i.status = 'ongoing' AND i.officerResponded IS NOT NULL
+                ORDER BY i.alertDateTime DESC LIMIT 1
+            """.trimIndent()
+            stmt = connection.prepareStatement(query)
+            stmt.setString(1, userID)
+            rs = stmt.executeQuery()
+            if (rs.next()) {
+                OngoingIncidentInfo(
+                    alertID = rs.getString("alertID"),
+                    locationID = rs.getString("locationID"),
+                    officerName = rs.getString("officerResponded"),
+                    officerUserID = rs.getString("officerUserID")
+                )
+            } else null
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getOngoingIncidentForUser failed: ${e.message}")
+            null
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun hasActiveIncidentForUser(userID: String): Boolean {
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return false
+            stmt = connection.prepareStatement(
+                "SELECT 1 FROM incident_logs_table WHERE userID = ? AND status IN ('pending','ongoing') LIMIT 1"
+            )
+            stmt.setString(1, userID)
+            rs = stmt.executeQuery()
+            rs.next()
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "hasActiveIncidentForUser failed: ${e.message}")
+            false
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
     }
 }

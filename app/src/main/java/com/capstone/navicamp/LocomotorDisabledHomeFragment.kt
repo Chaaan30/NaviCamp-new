@@ -1,8 +1,10 @@
 package com.capstone.navicamp
 
+import android.Manifest
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.*
@@ -14,8 +16,15 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.material.card.MaterialCardView
 import com.google.firebase.messaging.FirebaseMessaging
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
@@ -35,16 +44,21 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private lateinit var expiryDateText: TextView
     private lateinit var expiryTitle: TextView
     private lateinit var emergencyBanner: View
+    private lateinit var officerDispatchCard: MaterialCardView
+    private lateinit var officerDispatchName: TextView
 
     // State Variables
     private var connectedDeviceID: String? = null
     private var connectionTimer: CountDownTimer? = null
-//    private var currentConnectionDurationMs: Long = 30 * 60 * 1000
-//    private var connectionExpiryTimeMillis: Long? = null
-//    private var isRestoringConnection = false
     private var currentUserID: String? = null
     private var currentUserFullName: String? = null
     private var isAlertSent = false
+
+    // Officer dispatch tracking
+    private var currentIncident: OngoingIncidentInfo? = null
+    private val incidentPollHandler = Handler(Looper.getMainLooper())
+    private var isPollingIncident = false
+    private var locationCallback: LocationCallback? = null
 
     private val resetHandler = Handler(Looper.getMainLooper())
     private lateinit var resetRunnable: Runnable
@@ -69,6 +83,8 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         expiryDateText = view.findViewById(R.id.expiry_date_text)
         expiryTitle = view.findViewById(R.id.expiry_title)
         emergencyBanner = view.findViewById(R.id.emergency_contact_banner)
+        officerDispatchCard = view.findViewById(R.id.officer_dispatch_card)
+        officerDispatchName = view.findViewById(R.id.officer_dispatch_name)
 
         // 2. Data Initialization
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -99,6 +115,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 //            }
 //        }
         registerFCMToken()
+        startIncidentPolling()
     }
 
     override fun onResume() {
@@ -118,6 +135,8 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         connectionTimer?.cancel()
         countDownTimer?.cancel()
         resetHandler.removeCallbacks(resetRunnable)
+        stopIncidentPolling()
+        stopGpsUpdates()
     }
 
     // --- LOGIC FUNCTIONS ---
@@ -316,8 +335,10 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private fun forceResetButtonState() {
         isAlertSent = false
         assistanceButton.text = "SOS"
+        assistanceButton.textSize = 50f
         assistanceButton.scaleX = 1.0f
         assistanceButton.scaleY = 1.0f
+        assistanceButton.clearAnimation()
         animateButtonSize(dpToPx(174))
         checkUserAccessStatus()
     }
@@ -411,6 +432,118 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 //    }
 
     private fun registerFCMToken() { /* Keep existing logic but use requireContext() */ }
+
+    // --- Officer Dispatch Tracking ---
+
+    private val incidentPollRunnable = object : Runnable {
+        override fun run() {
+            if (!isPollingIncident || !isAdded) return
+            pollOngoingIncident()
+            incidentPollHandler.postDelayed(this, 5000)
+        }
+    }
+
+    private fun startIncidentPolling() {
+        if (isPollingIncident) return
+        isPollingIncident = true
+        incidentPollHandler.post(incidentPollRunnable)
+    }
+
+    private fun stopIncidentPolling() {
+        isPollingIncident = false
+        incidentPollHandler.removeCallbacks(incidentPollRunnable)
+    }
+
+    private fun pollOngoingIncident() {
+        val uid = currentUserID ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val incident = withContext(Dispatchers.IO) {
+                MySQLHelper.getOngoingIncidentForUser(uid)
+            }
+            if (!isAdded) return@launch
+
+            if (incident != null) {
+                // Officer has responded — show dispatch card
+                if (currentIncident == null) startGpsUpdates()
+                currentIncident = incident
+                officerDispatchName.text = "${incident.officerName} is dispatched"
+                officerDispatchCard.visibility = View.VISIBLE
+                officerDispatchCard.setOnClickListener { openOfficerTrackingMap(incident) }
+            } else {
+                // No ongoing incident with an officer — clean up dispatch card
+                if (currentIncident != null) {
+                    val oldOfficerID = currentIncident?.officerUserID
+                    stopGpsUpdates()
+                    if (oldOfficerID != null) {
+                        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                            MySQLHelper.deleteLiveGPS(oldOfficerID)
+                        }
+                    }
+                }
+                currentIncident = null
+                officerDispatchCard.visibility = View.GONE
+
+                // If SOS button is stuck on "Help is on the way", check if incident is fully resolved
+                if (isAlertSent) {
+                    val stillActive = withContext(Dispatchers.IO) {
+                        MySQLHelper.hasActiveIncidentForUser(uid)
+                    }
+                    if (!stillActive) {
+                        resetHandler.removeCallbacks(resetRunnable)
+                        forceResetButtonState()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun openOfficerTrackingMap(incident: OngoingIncidentInfo) {
+        val intent = Intent(requireContext(), OfficerTrackingMapActivity::class.java).apply {
+            putExtra("OFFICER_NAME", incident.officerName)
+            putExtra("OFFICER_USER_ID", incident.officerUserID)
+            putExtra("MY_USER_ID", currentUserID)
+        }
+        startActivity(intent)
+    }
+
+    private fun startGpsUpdates() {
+        if (locationCallback != null) return
+        val ctx = context ?: return
+
+        if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001)
+            return
+        }
+
+        val fusedClient = LocationServices.getFusedLocationProviderClient(ctx)
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val loc = result.lastLocation ?: return
+                val uid = currentUserID ?: return
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                    MySQLHelper.upsertLiveGPS(uid, loc.latitude, loc.longitude, loc.accuracy)
+                }
+            }
+        }
+        fusedClient.requestLocationUpdates(request, locationCallback!!, Looper.getMainLooper())
+    }
+
+    private fun stopGpsUpdates() {
+        val ctx = context ?: return
+        locationCallback?.let {
+            LocationServices.getFusedLocationProviderClient(ctx).removeLocationUpdates(it)
+        }
+        locationCallback = null
+        // Clean up own GPS entry on a detached-safe scope
+        val uid = currentUserID ?: return
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            MySQLHelper.deleteLiveGPS(uid)
+        }
+    }
 
 //    fun handleQrTabClick() {
 //        if (connectedDeviceID == null) launchQrScanner()

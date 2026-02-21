@@ -75,6 +75,9 @@
             android:theme="@style/Theme.MyApp" />
         <activity android:name=".MapActivity"
             android:theme="@style/Theme.MyApp" />
+        <activity android:name=".OfficerTrackingMapActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MyApp" />
         <!-- Declare the library's CaptureActivity and force portrait mode -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"

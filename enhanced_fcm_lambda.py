@@ -30,14 +30,15 @@ def get_db_connection():
         raise e
 
 def get_security_officer_tokens():
-    """Get all FCM tokens for verified Security Officers"""
+    """Get all FCM tokens for verified Security Officers (via safety_officer_profiles_table)"""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             query = """
-                SELECT fcm_token FROM user_table 
-                WHERE userType = 'Security Officer' AND verified = 1 AND fcm_token IS NOT NULL AND fcm_token != ''
+                SELECT u.fcm_token FROM user_table u
+                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.verified = 1 AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
             """
             cursor.execute(query)
             tokens = [row['fcm_token'] for row in cursor.fetchall()]
@@ -258,7 +259,11 @@ def get_other_security_officer_tokens(responding_officer_id):
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            query = "SELECT fcm_token FROM user_table WHERE userType = 'Security Officer' AND verified = 1 AND fcm_token IS NOT NULL AND fcm_token != '' AND userID != %s"
+            query = """
+                SELECT u.fcm_token FROM user_table u
+                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.verified = 1 AND u.fcm_token IS NOT NULL AND u.fcm_token != '' AND u.userID != %s
+            """
             cursor.execute(query, (responding_officer_id,))
             tokens = [row['fcm_token'] for row in cursor.fetchall()]
             logger.info(f"Found {len(tokens)} other officers to notify.")

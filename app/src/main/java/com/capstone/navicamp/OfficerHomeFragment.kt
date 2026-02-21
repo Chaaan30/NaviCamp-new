@@ -20,14 +20,16 @@ import java.util.*
 class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
 
     private val viewModel: SecurityOfficerViewModel by viewModels()
-    private lateinit var assistanceLayout: LinearLayout // This is the class property
+    private lateinit var assistanceLayout: LinearLayout
+    private lateinit var assistanceSectionTitle: TextView
     private lateinit var smartPollingManager: SmartPollingManager
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. Initialize Views (Fixed: removed 'val' from assistanceLayout)
+        // 1. Initialize Views
         val secoffFullname = view.findViewById<TextView>(R.id.secoff_fullname)
+        assistanceSectionTitle = view.findViewById<TextView>(R.id.assistance_section_title)
         assistanceLayout = view.findViewById<LinearLayout>(R.id.assistance_layout)
         val registeredUsersCard = view.findViewById<MaterialCardView>(R.id.registered_users_card)
         val iotDevicesCard = view.findViewById<MaterialCardView>(R.id.iot_devices_card)
@@ -84,10 +86,10 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
 
     // This moves the logic from your old Activity to the Fragment
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
+        assistanceSectionTitle.text = "People currently in need of assistance (${pendingItems.size}):"
         assistanceLayout.removeAllViews()
 
         if (pendingItems.isEmpty()) {
-            // Optional: Handle empty state
             return
         }
 
