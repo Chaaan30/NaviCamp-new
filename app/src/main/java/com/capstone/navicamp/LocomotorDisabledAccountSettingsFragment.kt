@@ -9,12 +9,12 @@ import android.view.View
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Properties
 import javax.mail.Message
 import javax.mail.PasswordAuthentication
 import javax.mail.Session
@@ -22,20 +22,33 @@ import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
-class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_account_settings) {
+class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_disabled_account_settings) {
     // UI Components
     private lateinit var sendOtpButton: Button
     private lateinit var confirmOtpButton: Button
     private lateinit var editOtp: EditText
     private lateinit var editEmail: EditText
     private lateinit var emailEditContainer: View
+    private lateinit var otpContainer: View
+
     private lateinit var fullNameText: TextView
     private lateinit var editFullName: EditText
-    private lateinit var userTypeText: TextView
-    private lateinit var employeeTypeText: TextView
+    private lateinit var schoolIdText: TextView
+    private lateinit var editSchoolId: EditText
     private lateinit var emailText: TextView
     private lateinit var contactNumberText: TextView
     private lateinit var editContactNumber: EditText
+
+    // PWD Specific Display Fields
+    private lateinit var emergencyNameText: TextView
+    private lateinit var editEmergencyName: EditText
+    private lateinit var emergencyNumberText: TextView
+    private lateinit var editEmergencyNumber: EditText
+
+    private lateinit var userTypeText: TextView
+    private lateinit var disabilityTypeText: TextView
+    private lateinit var verifiedByText: TextView
+    private lateinit var verificationDateText: TextView
     private lateinit var dateCreatedText: TextView
     private lateinit var btnAction: Button
 
@@ -55,43 +68,52 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
 
 //    override fun onStart() {
 //        super.onStart()
-//        // Find the navbar in the Activity and hide it
 //        val bottomNav = requireActivity().findViewById<View>(R.id.bottom_navigation)
 //        bottomNav?.visibility = View.GONE
 //    }
 //
 //    override fun onStop() {
 //        super.onStop()
-//        // Show the navbar again when leaving this fragment
 //        val bottomNav = requireActivity().findViewById<View>(R.id.bottom_navigation)
-//        bottomNav?.visibility = View.GONE
+//        bottomNav?.visibility = View.VISIBLE
 //    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. Header back button (Switches back to Home Tab)
+        // 1. Header back button
         val btnBack: View? = view.findViewById(R.id.btn_back)
         btnBack?.setOnClickListener {
             parentFragmentManager.popBackStack()
         }
 
-        // 2. Wire views
-        sendOtpButton = view.findViewById(R.id.send_otp_button)
-        confirmOtpButton = view.findViewById(R.id.confirm_otp_button)
-        editOtp = view.findViewById(R.id.edit_otp)
-        editEmail = view.findViewById(R.id.edit_email)
-        emailEditContainer = view.findViewById(R.id.email_edit_container)
+        // 2. Wire views (FindViewById)
+        sendOtpButton = view.findViewById(R.id.pwd_btn_send_otp)
+        confirmOtpButton = view.findViewById(R.id.pwd_btn_confirm_otp)
+        editOtp = view.findViewById(R.id.pwd_edit_otp)
+        editEmail = view.findViewById(R.id.pwd_edit_email)
+        emailEditContainer = view.findViewById(R.id.pwd_email_edit_container)
+        otpContainer = view.findViewById(R.id.pwd_otp_container)
 
-        fullNameText = view.findViewById(R.id.full_name_text)
-        editFullName = view.findViewById(R.id.edit_full_name)
-        userTypeText = view.findViewById(R.id.user_type_text)
-        employeeTypeText = view.findViewById(R.id.employee_type_text)
-        emailText = view.findViewById(R.id.email_text)
-        contactNumberText = view.findViewById(R.id.contact_number_text)
-        editContactNumber = view.findViewById(R.id.edit_contact_number)
+        fullNameText = view.findViewById(R.id.pwd_display_name)
+        editFullName = view.findViewById(R.id.pwd_edit_name)
+        schoolIdText = view.findViewById(R.id.pwd_display_id)
+        editSchoolId = view.findViewById(R.id.pwd_edit_school_id)
+        emailText = view.findViewById(R.id.pwd_display_email)
+        contactNumberText = view.findViewById(R.id.pwd_display_contact)
+        editContactNumber = view.findViewById(R.id.pwd_edit_contact)
 
-        dateCreatedText = view.findViewById(R.id.date_created_text)
+        emergencyNameText = view.findViewById(R.id.pwd_display_emergencycontactname)
+        editEmergencyName = view.findViewById(R.id.pwd_edit_emergencycontactname)
+        emergencyNumberText = view.findViewById(R.id.pwd_display_emergencycontactnumber)
+        editEmergencyNumber = view.findViewById(R.id.pwd_edit_emergencycontactnumber)
+
+        userTypeText = view.findViewById(R.id.pwd_display_user_type)
+        disabilityTypeText = view.findViewById(R.id.pwd_display_disability_type)
+        verifiedByText = view.findViewById(R.id.pwd_display_verifiedby)
+        verificationDateText = view.findViewById(R.id.pwd_display_verification_date)
+
+        dateCreatedText = view.findViewById(R.id.pwd_display_created_date)
         btnAction = view.findViewById(R.id.btnAction)
 
         // 3. Load Initial Data
@@ -102,7 +124,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 isOtpConfirmed = false
-                editOtp.visibility = View.GONE
+                otpContainer.visibility = View.GONE
                 confirmOtpButton.visibility = View.GONE
                 sendOtpButton.text = "Verify"
                 sendOtpButton.isEnabled = true
@@ -126,18 +148,28 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
 
     private fun loadInitialData() {
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+
         fullNameText.text = sharedPreferences.getString("fullName", "")
-        userTypeText.text = sharedPreferences.getString("userType", "")
-        employeeTypeText.text = sharedPreferences.getString("systemRole", "")
+        schoolIdText.text = sharedPreferences.getString("schoolID", "")
         emailText.text = sharedPreferences.getString("email", "")
         contactNumberText.text = sharedPreferences.getString("contactNumber", "")
+        emergencyNameText.text = sharedPreferences.getString("emergencyContactName", "")
+        emergencyNumberText.text = sharedPreferences.getString("emergencyContactNumber", "")
+        userTypeText.text = sharedPreferences.getString("userType", "")
+        disabilityTypeText.text = sharedPreferences.getString("disabilityType", "")
+        verifiedByText.text = sharedPreferences.getString("verifiedBy", "")
+        verificationDateText.text = sharedPreferences.getString("verificationDate", "")
         dateCreatedText.text = sharedPreferences.getString("createdOn", "")
 
         // Initial Visibility
         editFullName.visibility = View.GONE
+        editSchoolId.visibility = View.GONE
         editEmail.visibility = View.GONE
         editContactNumber.visibility = View.GONE
-        editOtp.visibility = View.GONE
+        editEmergencyName.visibility = View.GONE
+        editEmergencyNumber.visibility = View.GONE
+        emailEditContainer.visibility = View.GONE
+        otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
         confirmOtpButton.visibility = View.GONE
     }
@@ -147,12 +179,18 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         btnAction.text = "SAVE CHANGES"
         setNonEditableFieldsDimmed(true)
 
-        val currentEmail = emailText.text.toString()
         val currentFull = fullNameText.text.toString()
+        val currentSchoolId = schoolIdText.text.toString()
+        val currentEmail = emailText.text.toString()
         val currentContact = contactNumberText.text.toString()
+        val currentEmerName = emergencyNameText.text.toString()
+        val currentEmerNumber = emergencyNumberText.text.toString()
 
         editFullName.apply { visibility = View.VISIBLE; setText(currentFull) }
         fullNameText.visibility = View.GONE
+
+        editSchoolId.apply { visibility = View.VISIBLE; setText(currentSchoolId) }
+        schoolIdText.visibility = View.GONE
 
         emailEditContainer.visibility = View.VISIBLE
         editEmail.apply { visibility = View.VISIBLE; setText(currentEmail) }
@@ -161,15 +199,24 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         editContactNumber.apply { visibility = View.VISIBLE; setText(currentContact) }
         contactNumberText.visibility = View.GONE
 
+        editEmergencyName.apply { visibility = View.VISIBLE; setText(currentEmerName) }
+        emergencyNameText.visibility = View.GONE
+
+        editEmergencyNumber.apply { visibility = View.VISIBLE; setText(currentEmerNumber) }
+        emergencyNumberText.visibility = View.GONE
+
         sendOtpButton.visibility = View.VISIBLE
     }
 
     private fun saveChanges() {
         val newFull = editFullName.text.toString().trim()
+        val newSchool = editSchoolId.text.toString().trim()
         val newEmail = editEmail.text.toString().trim()
-        val newContact = editContactNumber.text.toString().trim()
         val otp = editOtp.text.toString().trim()
         val currentEmail = emailText.text.toString().trim()
+        val newContact = editContactNumber.text.toString().trim()
+        val newEmerName = editEmergencyName.text.toString().trim()
+        val newEmerNumber = editEmergencyNumber.text.toString().trim()
 
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         val userID = sharedPreferences.getString("userID", null)
@@ -178,23 +225,35 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
             if (otp != generatedOtp) { Toast.makeText(requireContext(), "Invalid OTP", Toast.LENGTH_SHORT).show(); return }
         }
-        if (newContact.isNotBlank() && newContact.length != 11) { Toast.makeText(requireContext(), "11 digits required", Toast.LENGTH_SHORT).show(); return }
-        if (newEmail != currentEmail && !isOtpConfirmed) { Toast.makeText(requireContext(), "Verify new email first", Toast.LENGTH_SHORT).show(); return }
+        if (newEmail != currentEmail && !isOtpConfirmed) {
+            Toast.makeText(requireContext(), "Verify new email first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (newContact.length != 11 || (newEmerNumber.isNotBlank() && newEmerNumber.length != 11)) {
+            Toast.makeText(requireContext(), "Phone numbers must be 11 digits", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         showLoadingDialog()
 
         lifecycleScope.launch {
             val updatedOn = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
             val result = withContext(Dispatchers.IO) {
-                MySQLHelper.updateOfficerWithUserID(newFull, if (isOtpConfirmed) newEmail else currentEmail, newContact, userID!!, updatedOn)
+                MySQLHelper.updateUserWithUserID(
+                    newFull, newSchool, if (isOtpConfirmed) newEmail else currentEmail,
+                    newContact, newEmerName, newEmerNumber, userID!!, updatedOn
+                )
             }
 
             dismissLoadingDialog()
             if (result) {
                 val editor = sharedPreferences.edit()
                 editor.putString("fullName", newFull)
+                editor.putString("schoolID", newSchool)
                 editor.putString("email", if (isOtpConfirmed) newEmail else currentEmail)
                 editor.putString("contactNumber", newContact)
+                editor.putString("emergencyContactName", newEmerName)
+                editor.putString("emergencyContactNumber", newEmerNumber)
                 editor.apply()
 
                 Toast.makeText(requireContext(), "Updated Successfully", Toast.LENGTH_SHORT).show()
@@ -211,24 +270,29 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         setNonEditableFieldsDimmed(false)
 
         editFullName.visibility = View.GONE
+        editSchoolId.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editEmail.visibility = View.GONE
         editContactNumber.visibility = View.GONE
-        editOtp.visibility = View.GONE
+        editEmergencyName.visibility = View.GONE
+        editEmergencyNumber.visibility = View.GONE
+        otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
         confirmOtpButton.visibility = View.GONE
 
         fullNameText.visibility = View.VISIBLE
+        schoolIdText.visibility = View.VISIBLE
         emailText.visibility = View.VISIBLE
         contactNumberText.visibility = View.VISIBLE
+        emergencyNameText.visibility = View.VISIBLE
+        emergencyNumberText.visibility = View.VISIBLE
 
         loadInitialData()
     }
 
     private fun sendOtp() {
         val newEmail = editEmail.text.toString().trim()
-        val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        val userID = sharedPreferences.getString("userID", "")!!
+        val userID = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE).getString("userID", "")!!
 
         showLoadingDialog()
         lifecycleScope.launch {
@@ -239,9 +303,9 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
             } else {
                 generatedOtp = (100000..999999).random().toString()
                 withContext(Dispatchers.IO) { sendOtpEmail(newEmail, generatedOtp!!) }
-                editOtp.visibility = View.VISIBLE
+                otpContainer.visibility = View.VISIBLE
                 confirmOtpButton.visibility = View.VISIBLE
-                Toast.makeText(requireContext(), "OTP sent", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "OTP sent to email", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -250,7 +314,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         if (editOtp.text.toString().trim() == generatedOtp) {
             isOtpConfirmed = true
             Toast.makeText(requireContext(), "Confirmed", Toast.LENGTH_SHORT).show()
-            editOtp.visibility = View.GONE
+            otpContainer.visibility = View.GONE
             confirmOtpButton.visibility = View.GONE
             sendOtpButton.text = "Verified ✓"
             sendOtpButton.isEnabled = false
@@ -291,14 +355,28 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         val userID = sharedPreferences.getString("userID", null) ?: return
 
         lifecycleScope.launch {
-            val dbData = withContext(Dispatchers.IO) { MySQLHelper.getOfficerProfile(userID) }
+            val dbData = withContext(Dispatchers.IO) { MySQLHelper.getUserProfile(userID) }
             if (dbData != null && isAdded) {
                 fullNameText.text = dbData["fullName"]
+                schoolIdText.text = dbData["schoolID"]
                 emailText.text = dbData["email"]
                 contactNumberText.text = dbData["contactNumber"]
+                emergencyNameText.text = dbData["emergencyName"]
+                emergencyNumberText.text = dbData["emergencyNumber"]
                 userTypeText.text = dbData["userType"]
-                employeeTypeText.text = dbData["systemRole"]
+                disabilityTypeText.text = dbData["disabilityType"]
+                verifiedByText.text = dbData["verifiedBy"]
+                verificationDateText.text = dbData["verificationDate"]
                 dateCreatedText.text = dbData["createdOn"]
+
+                sharedPreferences.edit().apply {
+                    putString("fullName", dbData["fullName"])
+                    putString("email", dbData["email"])
+                    putString("contactNumber", dbData["contactNumber"])
+                    putString("emergencyContactName", dbData["emergencyName"])
+                    putString("emergencyContactNumber", dbData["emergencyNumber"])
+                    apply()
+                }
             }
         }
     }
@@ -306,7 +384,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
     private fun setNonEditableFieldsDimmed(dim: Boolean) {
         val color = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
         val alpha = if (dim) 0.6f else 1.0f
-        listOf(userTypeText, employeeTypeText, dateCreatedText).forEach {
+        listOf(userTypeText, disabilityTypeText, verifiedByText, verificationDateText, dateCreatedText).forEach {
             it.setTextColor(color)
             it.alpha = alpha
         }

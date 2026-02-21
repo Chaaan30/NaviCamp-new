@@ -191,14 +191,16 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         assistanceButton.setTextColor(Color.WHITE) // Force text to be visible
 
         // Use contrasting grays so you can see the two separate circles
-        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#9E9E9E")) // Dark Gray
-        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E0E0E0")) // Light Gray ring
-
-        assistanceButtonBackground.text = "CONNECT TO A WHEELCHAIR"
-        assistanceButtonBackground.setTextColor(Color.WHITE)
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#7a7979")) // Dark Gray
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F5F5F5")) // Light Gray ring
 
         assistanceButton.text = "SOS"
         assistanceButton.setTextColor(Color.WHITE)
+
+        // FIX: Keep the inner button "above" the outer one in 3D space
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            assistanceButton.translationZ = 10f // This forces it to stay on top
+        }
 
         // Keep ring enabled for the Toast
         assistanceButtonBackground.isEnabled = true

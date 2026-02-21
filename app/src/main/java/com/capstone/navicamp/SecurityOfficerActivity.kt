@@ -45,7 +45,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
                 }
                 R.id.nav_officer_settings -> {
                     supportActionBar?.title = "Account Settings"
-                    transaction.replace(R.id.officer_fragment_container, OfficerSettingsMenuFragment())
+                    transaction.replace(R.id.officer_fragment_container, SettingsMenuFragment())
                 }
             }
             transaction.commit()

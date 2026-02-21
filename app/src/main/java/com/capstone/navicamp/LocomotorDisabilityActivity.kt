@@ -82,7 +82,7 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
                 }
 
                 R.id.nav_pwd_settings -> {
-                    //loadFragment(SettingsFragment())
+                    loadFragment(SettingsMenuFragment())
                     true
                 }
                 else -> false

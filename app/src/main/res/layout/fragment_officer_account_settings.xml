@@ -31,7 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:fontFamily="@font/inter_bold"
-            android:text="Officer Account Settings"
+            android:text="Account Settings"
             android:textColor="#333"
             android:textSize="18sp" />
     </RelativeLayout>

@@ -4,25 +4,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F0F3FD">
+    android:background="#FFFFFF">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:paddingBottom="80dp"> <!-- Leave space for the banner/nav -->
+        android:paddingBottom="80dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
-
+            android:padding="16dp"
+            android:gravity="top">
+S
             <!-- 1. HEADER SECTION -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="30dp"
                 android:fontFamily="@font/inter_medium"
                 android:text="Hello,"
                 android:textColor="#1F2020"
@@ -70,7 +70,6 @@
                     android:layout_width="286dp"
                     android:layout_height="286dp"
                     android:layout_gravity="center"
-                    android:text="CONNECT TO A WHEELCHAIR"
                     android:fontFamily="sans-serif-black"
                     android:textSize="20sp"
                     android:textColor="#FFFFFF"

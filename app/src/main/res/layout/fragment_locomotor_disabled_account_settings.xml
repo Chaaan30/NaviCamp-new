@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white">
+
+    <!-- Header Section: Pinned to Top -->
+    <RelativeLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back"
+            android:padding="8dp"
+            android:src="@drawable/abc_ic_ab_back_material" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:fontFamily="@font/inter_bold"
+            android:text="Account Settings"
+            android:textColor="#333"
+            android:textSize="18sp" />
+    </RelativeLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@+id/btnAction"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintVertical_bias="1.0"
+        tools:layout_editor_absoluteX="-102dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- NAME -->
+            <TextView style="@style/SettingLabel" android:text="NAME" />
+            <TextView android:id="@+id/pwd_display_name" style="@style/SettingValue" android:text="Firstname Lastname" />
+            <EditText android:id="@+id/pwd_edit_name" style="@style/SettingEdit" android:hint="Enter full name" />
+            <View style="@style/Divider" />
+
+            <!-- SCHOOL ID -->
+            <TextView style="@style/SettingLabel" android:text="SCHOOL ID" />
+            <TextView android:id="@+id/pwd_display_id" style="@style/SettingValue" android:text="2020654321" />
+            <EditText android:id="@+id/pwd_edit_school_id" style="@style/SettingEdit" android:hint="Enter school ID" />
+            <View style="@style/Divider" />
+
+            <!-- EMAIL & OTP SECTION -->
+            <TextView style="@style/SettingLabel" android:text="EMAIL" />
+            <TextView android:id="@+id/pwd_display_email" style="@style/SettingValue" android:text="user@email.com" />
+
+            <LinearLayout
+                android:id="@+id/pwd_email_edit_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <EditText android:id="@+id/pwd_edit_email" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="New email" />
+                    <Button android:id="@+id/pwd_btn_send_otp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Verify" style="@style/Widget.MaterialComponents.Button.TextButton" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/pwd_otp_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+                    <EditText android:id="@+id/pwd_edit_otp" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="Enter OTP" android:inputType="number" />
+                    <Button android:id="@+id/pwd_btn_confirm_otp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Confirm" style="@style/Widget.MaterialComponents.Button.TextButton" />
+                </LinearLayout>
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <!-- CONTACT NUMBER -->
+            <TextView style="@style/SettingLabel" android:text="CONTACT NUMBER" />
+            <TextView android:id="@+id/pwd_display_contact" style="@style/SettingValue" android:text="09123456789" />
+            <EditText android:id="@+id/pwd_edit_contact" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
+            <View style="@style/Divider" />
+
+            <!-- EMERGENCY CONTACT NAME -->
+            <TextView style="@style/SettingLabel" android:text="EMERGENCY CONTACT NAME" />
+            <TextView android:id="@+id/pwd_display_emergencycontactname" style="@style/SettingValue" android:text="Firstname Lastname" />
+            <EditText android:id="@+id/pwd_edit_emergencycontactname" style="@style/SettingEdit" android:hint="Enter full name" />
+            <View style="@style/Divider" />
+
+            <!-- EMERGENCYCONTACT NUMBER -->
+            <TextView style="@style/SettingLabel" android:text="EMERGENCY CONTACT NUMBER" />
+            <TextView android:id="@+id/pwd_display_emergencycontactnumber" style="@style/SettingValue" android:text="09123456789" />
+            <EditText android:id="@+id/pwd_edit_emergencycontactnumber" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
+            <View style="@style/Divider" />
+
+            <!-- USER TYPE -->
+            <TextView style="@style/SettingLabel" android:text="USER TYPE" />
+            <TextView android:id="@+id/pwd_display_user_type" style="@style/SettingValue" android:text="Student/Employee" />
+            <View style="@style/Divider" />
+
+            <!-- DISABILITY TYPE -->
+            <TextView style="@style/SettingLabel" android:text="DISABILITY TYPE" />
+            <TextView android:id="@+id/pwd_display_disability_type" style="@style/SettingValue" android:text="Permanent/Temporary" />
+            <View style="@style/Divider" />
+
+            <!-- VERIFIED BY -->
+            <TextView style="@style/SettingLabel" android:text="VERIFIED BY" />
+            <TextView android:id="@+id/pwd_display_verifiedby" style="@style/SettingValue" android:text="2020654321" />
+            <View style="@style/Divider" />
+
+            <!-- VERIFICATION DATE -->
+            <TextView style="@style/SettingLabel" android:text="VERIFICATION DATE" />
+            <TextView android:id="@+id/pwd_display_verification_date" style="@style/SettingValue" android:text="January 1, 2024" />
+            <View style="@style/Divider" />
+
+            <!-- ACCOUNT CREATION DATE -->
+            <TextView style="@style/SettingLabel" android:text="ACCOUNT CREATION DATE" />
+            <TextView android:id="@+id/pwd_display_created_date" style="@style/SettingValue" android:text="January 1, 2024" />
+            <View style="@style/Divider" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom Action Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAction"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_margin="24dp"
+        android:backgroundTint="#6C8EEF"
+        android:fontFamily="@font/inter_bold"
+        android:text="EDIT ACCOUNT DETAILS"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="8dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

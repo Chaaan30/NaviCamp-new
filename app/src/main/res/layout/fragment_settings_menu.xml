@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="16dp"
-        android:layout_marginTop="46dp"
+        android:layout_marginTop="65dp"
         android:layout_marginBottom="20dp"
         android:text="Settings"
         android:textColor="#333D41"
