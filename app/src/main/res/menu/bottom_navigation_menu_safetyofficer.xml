@@ -7,6 +7,11 @@
         android:title="Home" />
 
     <item
+        android:id="@+id/nav_admin_verify_account"
+        android:icon="@drawable/ic_bot_qr_code"
+        android:title="Generate QR" />
+
+    <item
         android:id="@+id/nav_officer_incidents"
         android:icon="@drawable/ic_bot_incidents"
         android:title="Incidents" />

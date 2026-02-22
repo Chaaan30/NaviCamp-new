@@ -4,14 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#F0F3FD">
+    android:background="#FAF9F6">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
         android:text="Incident Logs"
-        android:textSize="22sp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="20dp"
+        android:textSize="24sp"
         android:fontFamily="@font/inter_bold"
         android:textColor="#000000" />
 
@@ -20,8 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp">
+        android:padding="16dp">
 
         <LinearLayout
             android:layout_width="0dp"
