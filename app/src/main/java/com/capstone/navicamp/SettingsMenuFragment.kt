@@ -59,7 +59,15 @@ class SettingsMenuFragment : Fragment(R.layout.fragment_settings_menu) {
                 .show()
         }
 
-        // 4. Logout
+        // 4. Device Setup
+        view.findViewById<TextView>(R.id.btn_device_setup).setOnClickListener {
+            val intent = Intent(requireContext(), SetupActivity::class.java).apply {
+                putExtra("RETURN_TO_MAIN", true)
+            }
+            startActivity(intent)
+        }
+
+        // 5. Logout
         view.findViewById<TextView>(R.id.btn_logout).setOnClickListener {
             prefs.edit().clear().apply()
             startActivity(Intent(requireContext(), MainActivity::class.java))
