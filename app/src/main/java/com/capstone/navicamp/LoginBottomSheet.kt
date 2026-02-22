@@ -121,6 +121,8 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                                 else -> null
                             }
                             intent?.let {
+                                // Clear auth entry screens from back stack so Back exits app.
+                                it.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 startActivity(it)
                                 dismiss()
                             } ?: run {

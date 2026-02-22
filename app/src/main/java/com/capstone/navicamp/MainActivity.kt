@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
             val intent = when {
                 normalizedRole?.contains("safety") == true ||
                     normalizedRole?.contains("security") == true ||
+                    normalizedRole?.contains("admin") == true ||
                     normalizedRole?.contains("officer") == true ->
                     Intent(this, SecurityOfficerActivity::class.java)
                 normalizedRole?.contains("disabled") == true ||
