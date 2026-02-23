@@ -16,6 +16,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.google.firebase.messaging.FirebaseMessaging
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -384,6 +385,8 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     // --- Polling & Dispatch Logic ---
 
+
+
     private val incidentPollRunnable = object : Runnable {
         override fun run() {
             if (!isPollingIncident || !isAdded) return
@@ -415,9 +418,29 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                 officerDispatchCard.visibility = View.VISIBLE
                 officerDispatchCard.setOnClickListener { openOfficerTrackingMap(incident) }
             } else {
-                if (currentIncident != null) stopGpsUpdates()
+                // No ongoing incident with an officer — clean up dispatch card
+                if (currentIncident != null) {
+                    val oldOfficerID = currentIncident?.officerUserID
+                    stopGpsUpdates()
+                    if (oldOfficerID != null) {
+                        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                            MySQLHelper.deleteLiveGPS(oldOfficerID)
+                        }
+                    }
+                }
                 currentIncident = null
                 officerDispatchCard.visibility = View.GONE
+
+                // If SOS button is stuck on "Help is on the way", check if incident is fully resolved
+                if (isAlertSent) {
+                    val stillActive = withContext(Dispatchers.IO) {
+                        MySQLHelper.hasActiveIncidentForUser(uid)
+                    }
+                    if (!stillActive) {
+                        resetHandler.removeCallbacks(resetRunnable)
+                        forceResetButtonState()
+                    }
+                }
             }
         }
     }
@@ -426,6 +449,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         val intent = Intent(requireContext(), OfficerTrackingMapActivity::class.java).apply {
             putExtra("OFFICER_NAME", incident.officerName)
             putExtra("OFFICER_USER_ID", incident.officerUserID)
+            putExtra("MY_USER_ID", currentUserID)
         }
         startActivity(intent)
     }
@@ -482,4 +506,5 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
             MySQLHelper.deleteLiveGPS(uid)
         }
     }
+
 }
