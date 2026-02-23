@@ -147,7 +147,6 @@
         android:backgroundTint="#6C8EEF"
         android:fontFamily="@font/inter_bold"
         android:text="EDIT ACCOUNT DETAILS"
-        android:textAllCaps="false"
         android:textColor="@android:color/white"
         app:cornerRadius="8dp"
         app:layout_constraintBottom_toBottomOf="parent" />

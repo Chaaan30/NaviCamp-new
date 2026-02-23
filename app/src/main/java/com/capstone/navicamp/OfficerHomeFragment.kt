@@ -23,6 +23,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     private lateinit var assistanceLayout: LinearLayout
     private lateinit var assistanceSectionTitle: TextView
     private lateinit var smartPollingManager: SmartPollingManager
+    private lateinit var emptyStateLayout: LinearLayout
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -35,6 +36,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val iotDevicesCard = view.findViewById<MaterialCardView>(R.id.iot_devices_card)
         val registeredUsersText = view.findViewById<TextView>(R.id.registered_users)
         val iotDevicesText = view.findViewById<TextView>(R.id.iot_devices)
+        emptyStateLayout = view.findViewById(R.id.empty_state_layout)
 
         // 2. Setup Click Listeners
 
@@ -90,8 +92,15 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         assistanceLayout.removeAllViews()
 
         if (pendingItems.isEmpty()) {
+            // empty state
+            emptyStateLayout.visibility = View.VISIBLE
+            assistanceLayout.visibility = View.GONE
             return
-        }
+        } else {
+        // active list
+        emptyStateLayout.visibility = View.GONE
+        assistanceLayout.visibility = View.VISIBLE
+    }
 
         val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())

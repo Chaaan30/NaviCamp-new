@@ -42,6 +42,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private lateinit var emergencyBanner: View
     private lateinit var officerDispatchCard: MaterialCardView
     private lateinit var officerDispatchName: TextView
+    private lateinit var availableOfficersText: TextView
 
     // State Variables
     private var connectedDeviceID: String? = null
@@ -76,6 +77,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         emergencyBanner = view.findViewById(R.id.emergency_contact_banner)
         officerDispatchCard = view.findViewById(R.id.officer_dispatch_card)
         officerDispatchName = view.findViewById(R.id.officer_dispatch_name)
+        availableOfficersText = view.findViewById(R.id.available_officers_count_text)
 
         // 2. Data Initialization
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -181,11 +183,6 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         assistanceButtonBackground.setTextColor(Color.parseColor("#757575"))
         assistanceButton.text = "SOS"
         assistanceButton.setTextColor(Color.WHITE)
-
-        assistanceButtonBackground.isEnabled = true
-        assistanceButtonBackground.setOnClickListener {
-            Toast.makeText(requireContext(), reason, Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun restoreConnectionFromDatabase() {
@@ -385,12 +382,23 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     // --- Polling & Dispatch Logic ---
 
+    private fun refreshAvailableOfficersCount() {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val count = MySQLHelper.getAvailableOfficersCount()
 
+            withContext(Dispatchers.Main) {
+                if (isAdded) {
+                    availableOfficersText.text = count.toString()
+                }
+            }
+        }
+    }
 
     private val incidentPollRunnable = object : Runnable {
         override fun run() {
             if (!isPollingIncident || !isAdded) return
             pollOngoingIncident()
+            refreshAvailableOfficersCount() // ADD THIS LINE
             incidentPollHandler.postDelayed(this, 5000)
         }
     }

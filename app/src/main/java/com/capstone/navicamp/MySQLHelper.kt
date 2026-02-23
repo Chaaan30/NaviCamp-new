@@ -3428,4 +3428,82 @@ object MySQLHelper {
             rs?.close(); stmt?.close(); connection?.close()
         }
     }
+
+    /**
+     * 1. Count ONLY PWD users who are currently logged in
+     * Note: I updated the query to match your disabilityType check logic.
+     */
+    @JvmStatic
+    fun getTotalPwdUserCount(): Int {
+        var connection: Connection? = null
+        var pstmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        var count = 0
+        // Adjust the string 'Locomotor Disabled' if your database uses a different role name
+        val sql = "SELECT COUNT(*) FROM pwd_profiles_table"
+
+        try {
+            connection = getConnection()
+            pstmt = connection?.prepareStatement(sql)
+            rs = pstmt?.executeQuery()
+            if (rs?.next() == true) count = rs.getInt(1)
+        } catch (e: Exception) {
+            Log.e("MySQLHelper", "Error counting total PWDs: ${e.message}")
+        } finally {
+            rs?.close(); pstmt?.close(); connection?.close()
+        }
+        return count
+    }
+
+    /**
+     * 2. Count ONLY wheelchairs that are currently marked as 'in_use'
+     */
+    @JvmStatic
+    fun getInUseWheelchairCount(): Int {
+        var connection: Connection? = null
+        var pstmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        var count = 0
+
+        val sql = "SELECT COUNT(*) FROM devices_table WHERE status = 'in_use'"
+
+        try {
+            connection = getConnection()
+            pstmt = connection?.prepareStatement(sql)
+            rs = pstmt?.executeQuery()
+
+            if (rs?.next() == true) {
+                count = rs.getInt(1)
+            }
+        } catch (e: Exception) {
+            Log.e("MySQLHelper", "Error counting in-use wheelchairs: ${e.message}")
+        } finally {
+            rs?.close()
+            pstmt?.close()
+            connection?.close()
+        }
+        return count
+    }
+
+    @JvmStatic
+    fun getAvailableOfficersCount(): Int {
+        var count = 0
+        val sql = "SELECT COUNT(*) FROM safety_officer_profiles_table WHERE isOnDuty = 1 AND isDispatched = 0"
+        var connection: Connection? = null
+        try {
+            connection = getConnection()
+            val stmt = connection?.createStatement()
+            val rs = stmt?.executeQuery(sql)
+            if (rs?.next() == true) {
+                count = rs.getInt(1)
+            }
+            rs?.close()
+            stmt?.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            connection?.close()
+        }
+        return count
+    }
 }
