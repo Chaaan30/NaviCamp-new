@@ -2372,10 +2372,20 @@ object MySQLHelper {
             if (connection == null) return users
 
             val query = """
-                SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
-                FROM user_table
-                WHERE verified = 1 AND userType NOT IN ('Safety Officer', 'Security Officer')
-                ORDER BY createdOn DESC
+                SELECT 
+                u.userID, 
+                u.fullName, 
+                p.disabilityType AS userType, 
+                u.email, 
+                u.contactNumber, 
+                u.createdOn, 
+                u.updatedOn, 
+                u.proofPicture, 
+                u.verified
+            FROM user_table u
+            INNER JOIN pwd_profiles_table p ON u.userID = p.userID
+            WHERE u.verified = 1
+            ORDER BY u.createdOn DESC
             """
 
             statement = connection.prepareStatement(query)

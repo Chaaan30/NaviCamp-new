@@ -41,11 +41,17 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         // 2. Setup Click Listeners
 
         registeredUsersCard.setOnClickListener {
-            startActivity(Intent(requireContext(), DisplayRegisteredUsersActivity::class.java))
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.officer_fragment_container, RegisteredUsersFragment())
+                .addToBackStack(null) // Allows user to press "Back" to return home
+                .commit()
         }
 
         iotDevicesCard.setOnClickListener {
-            startActivity(Intent(requireContext(), WheelchairManagementActivity::class.java))
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.officer_fragment_container, WheelchairManagementFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
         // 3. Setup Smart Polling

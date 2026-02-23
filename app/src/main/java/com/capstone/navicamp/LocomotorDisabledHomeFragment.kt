@@ -79,6 +79,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         officerDispatchName = view.findViewById(R.id.officer_dispatch_name)
         availableOfficersText = view.findViewById(R.id.available_officers_count_text)
 
+        assistanceButtonBackground.isClickable = false
+        assistanceButtonBackground.isFocusable = false
+
         // 2. Data Initialization
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         currentUserID = sharedPreferences.getString("userID", null)
@@ -181,6 +184,11 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
         assistanceButtonBackground.text = "CONNECT TO A WHEELCHAIR"
         assistanceButtonBackground.setTextColor(Color.parseColor("#757575"))
+
+        // Ensure the background is not interactive
+        assistanceButtonBackground.isClickable = false
+        assistanceButtonBackground.isFocusable = false
+
         assistanceButton.text = "SOS"
         assistanceButton.setTextColor(Color.WHITE)
     }

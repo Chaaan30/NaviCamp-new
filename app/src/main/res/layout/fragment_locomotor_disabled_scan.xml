@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FAF9F6">
+    android:background="#FFFFFF">
 
     <!-- THE LIVE SCANNER VIEW -->
     <com.journeyapps.barcodescanner.DecoratedBarcodeView
