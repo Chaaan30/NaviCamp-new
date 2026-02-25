@@ -91,6 +91,14 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
                         MySQLHelper.getSystemRoleByUserID(userData.userID)
                     }
 
+                    val temporaryAccessExpired = withContext(Dispatchers.IO) {
+                        MySQLHelper.isTemporaryUserAccessExpired(userData.userID)
+                    }
+                    if (temporaryAccessExpired) {
+                        showExpiredTemporaryAccountDialog(userData, systemRole)
+                        return@launch
+                    }
+
                     when (userData.verified) {
                         1 -> {
                             UserSingleton.fullName = userData.fullName
@@ -192,6 +200,37 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
             normalized.contains("tempor") ||
             normalized.contains("perman") ||
             normalized.contains("pwd")
+    }
+
+    private fun showExpiredTemporaryAccountDialog(userData: UserData, systemRole: String?) {
+        if (!isAdded) return
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Temporary Access Expired")
+            .setMessage(
+                "Your temporary account access has expired.\n\n" +
+                    "Go to CHSW/Clinic and ask an admin to reactivate your account.\n\n" +
+                    "Do you want to scan a reactivation QR now?"
+            )
+            .setPositiveButton("Yes") { _, _ ->
+                val resolvedRole = systemRole ?: userData.userType
+                val verificationIntent = Intent(context, VerificationRequiredActivity::class.java).apply {
+                    putExtra(VerificationRequiredActivity.EXTRA_USER_ID, userData.userID)
+                    putExtra(VerificationRequiredActivity.EXTRA_SYSTEM_ROLE, resolvedRole)
+                    putExtra(VerificationRequiredActivity.EXTRA_FULL_NAME, userData.fullName)
+                    putExtra(VerificationRequiredActivity.EXTRA_CAMPUS_AFFILIATION, userData.userType)
+                    putExtra(VerificationRequiredActivity.EXTRA_EMAIL, userData.email)
+                    putExtra(VerificationRequiredActivity.EXTRA_CONTACT_NUMBER, userData.contactNumber)
+                    putExtra(VerificationRequiredActivity.EXTRA_CREATED_ON, userData.createdOn)
+                    putExtra(VerificationRequiredActivity.EXTRA_UPDATED_ON, userData.updatedOn)
+                }
+                startActivity(verificationIntent)
+                dismiss()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun registerFCMToken(userID: String) {

@@ -8,6 +8,7 @@ import java.sql.SQLException
 import java.sql.ResultSet
 import java.util.*
 import java.time.ZonedDateTime
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
 import android.content.Context
@@ -566,6 +567,83 @@ object MySQLHelper {
         return position.trim().equals("admin", ignoreCase = true)
     }
 
+    fun getSafetyOfficerOnDutyStatus(userID: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val parsedUserID = userID.toIntOrNull() ?: return false
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "SELECT isOnDuty FROM safety_officer_profiles_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, parsedUserID)
+            resultSet = statement.executeQuery()
+            resultSet.next() && resultSet.getInt("isOnDuty") == 1
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun updateSafetyOfficerOnDutyStatus(userID: String, isOnDuty: Boolean): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            val parsedUserID = userID.toIntOrNull() ?: return false
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE safety_officer_profiles_table SET isOnDuty = ? WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, if (isOnDuty) 1 else 0)
+            statement.setInt(2, parsedUserID)
+            statement.executeUpdate() > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun updateSafetyOfficerDispatchedStatus(userID: String, isDispatched: Boolean): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            val parsedUserID = userID.toIntOrNull() ?: return false
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = "UPDATE safety_officer_profiles_table SET isDispatched = ? WHERE userID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, if (isDispatched) 1 else 0)
+            statement.setInt(2, parsedUserID)
+            statement.executeUpdate() > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun doesUserIDExist(userID: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -645,7 +723,8 @@ object MySQLHelper {
         locationID: String,
         status: String,
         officerName: String,
-        relocatedLocation: String? = null
+        relocatedLocation: String? = null,
+        officerUserID: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -675,6 +754,11 @@ object MySQLHelper {
             }
             val rowsAffected = statement.executeUpdate()
             if (rowsAffected > 0) {
+                val resolvedOfficerUserID = officerUserID?.takeIf { it.isNotBlank() } ?: getUserIDByFullName(officerName)
+                if (!resolvedOfficerUserID.isNullOrBlank()) {
+                    updateSafetyOfficerDispatchedStatus(resolvedOfficerUserID, false)
+                }
+
                 SmartPollingManager.getInstance().triggerFastUpdate()
 
                 // Send FCM notification about assistance resolution
@@ -1574,6 +1658,60 @@ object MySQLHelper {
         }
     }
 
+    fun isTemporaryUserAccessExpired(userID: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+
+        return try {
+            val parsedUserID = userID.toIntOrNull() ?: return false
+            connection = getConnection()
+            if (connection == null) {
+                println("Database connection failed.")
+                return false
+            }
+
+            val query = """
+                SELECT disabilityType, expiryDate
+                FROM pwd_profiles_table
+                WHERE userID = ?
+                LIMIT 1
+            """.trimIndent()
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, parsedUserID)
+            resultSet = statement.executeQuery()
+
+            if (!resultSet.next()) {
+                return false
+            }
+
+            val disabilityType = resultSet.getString("disabilityType")?.trim()?.lowercase(Locale.US).orEmpty()
+            if (!disabilityType.contains("tempor")) {
+                return false
+            }
+
+            val expiryDateRaw = resultSet.getString("expiryDate")?.trim().orEmpty()
+            if (expiryDateRaw.isBlank()) {
+                return false
+            }
+
+            val expiryDate = try {
+                LocalDate.parse(expiryDateRaw, DateTimeFormatter.ISO_LOCAL_DATE)
+            } catch (_: Exception) {
+                return false
+            }
+            val today = LocalDate.now(ZoneId.of("UTC+8"))
+            !expiryDate.isAfter(today)
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     suspend fun updateUserPasswordByEmail(email: String, newPassword: String): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -1628,7 +1766,12 @@ object MySQLHelper {
         }
     }
 
-    fun updateIncidentResponse(locationID: String, status: String, officerName: String): Boolean {
+    fun updateIncidentResponse(
+        locationID: String,
+        status: String,
+        officerName: String,
+        officerUserID: String? = null
+    ): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
         return try {
@@ -1648,6 +1791,11 @@ object MySQLHelper {
             val rowsAffected = statement.executeUpdate()
             Log.d("MySQLHelper", "Updated incident response: $rowsAffected rows affected")
             if (rowsAffected > 0) {
+                val resolvedOfficerUserID = officerUserID?.takeIf { it.isNotBlank() } ?: getUserIDByFullName(officerName)
+                if (!resolvedOfficerUserID.isNullOrBlank()) {
+                    updateSafetyOfficerDispatchedStatus(resolvedOfficerUserID, true)
+                }
+
                 SmartPollingManager.getInstance().triggerFastUpdate()
 
                 // Send FCM notification about officer response
@@ -1947,7 +2095,12 @@ object MySQLHelper {
         }
     }
 
-    suspend fun approveUserVerificationWithProfileAudit(userID: String, staffUserID: String): Boolean {
+    suspend fun approveUserVerificationWithProfileAudit(
+        userID: String,
+        staffUserID: String,
+        disabledVerificationMode: String? = null,
+        temporaryValidUntil: String? = null
+    ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
             var userStatement: PreparedStatement? = null
@@ -1979,6 +2132,40 @@ object MySQLHelper {
                 val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
+                val normalizedMode = disabledVerificationMode?.trim()?.uppercase(Locale.US)
+                val shouldApplyDisabledSettings = normalizedMode == "TEMPORARY" || normalizedMode == "PERMANENT"
+
+                if (!normalizedMode.isNullOrBlank() && !shouldApplyDisabledSettings) {
+                    connection.rollback()
+                    return@withContext false
+                }
+
+                val resolvedExpiryDate = when (normalizedMode) {
+                    "TEMPORARY" -> {
+                        val trimmedDate = temporaryValidUntil?.trim()
+                        if (trimmedDate.isNullOrBlank()) {
+                            connection.rollback()
+                            return@withContext false
+                        }
+                        try {
+                            LocalDate.parse(trimmedDate, DateTimeFormatter.ISO_LOCAL_DATE)
+                            trimmedDate
+                        } catch (_: Exception) {
+                            connection.rollback()
+                            return@withContext false
+                        }
+                    }
+                    "PERMANENT" -> null
+                    else -> null
+                }
+
+                val resolvedDisabilityType = if (shouldApplyDisabledSettings) {
+                    val selectedType = if (normalizedMode == "TEMPORARY") "Temporary" else "Permanent"
+                    resolveDisabilityTypeForDatabase(connection ?: return@withContext false, selectedType) ?: selectedType
+                } else {
+                    null
+                }
+
                 val userQuery = "UPDATE user_table SET verified = 1 WHERE userID = ?"
                 userStatement = connection.prepareStatement(userQuery)
                 userStatement.setInt(1, userIDInt)
@@ -1988,15 +2175,29 @@ object MySQLHelper {
                     return@withContext false
                 }
 
-                val profileQuery = """
-                    UPDATE pwd_profiles_table
-                    SET verifiedBy = ?, verificationDate = ?
-                    WHERE userID = ?
-                """.trimIndent()
+                val profileQuery = if (shouldApplyDisabledSettings) {
+                    """
+                        UPDATE pwd_profiles_table
+                        SET verifiedBy = ?, verificationDate = ?, expiryDate = ?, disabilityType = ?
+                        WHERE userID = ?
+                    """.trimIndent()
+                } else {
+                    """
+                        UPDATE pwd_profiles_table
+                        SET verifiedBy = ?, verificationDate = ?
+                        WHERE userID = ?
+                    """.trimIndent()
+                }
                 profileStatement = connection.prepareStatement(profileQuery)
                 profileStatement.setInt(1, staffUserIDInt)
                 profileStatement.setString(2, now)
-                profileStatement.setInt(3, userIDInt)
+                if (shouldApplyDisabledSettings) {
+                    profileStatement.setString(3, resolvedExpiryDate)
+                    profileStatement.setString(4, resolvedDisabilityType)
+                    profileStatement.setInt(5, userIDInt)
+                } else {
+                    profileStatement.setInt(3, userIDInt)
+                }
                 val profileUpdated = profileStatement.executeUpdate() > 0
                 if (!profileUpdated) {
                     val hasSafetyProfileQuery = "SELECT COUNT(*) AS count FROM safety_officer_profiles_table WHERE userID = ?"

@@ -64,6 +64,93 @@
                 android:paddingEnd="12dp"
                 android:popupBackground="@android:color/white" />
 
+            <LinearLayout
+                android:id="@+id/disabled_verification_options_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Role"
+                    android:textColor="#1F2020"
+                    android:textSize="14sp" />
+
+                <RadioGroup
+                    android:id="@+id/disabled_role_radio_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/radio_temporary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter"
+                        android:text="Temporary"
+                        android:textColor="#1F2020"
+                        android:textSize="14sp" />
+
+                    <RadioButton
+                        android:id="@+id/radio_permanent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/inter"
+                        android:text="Permanent"
+                        android:textColor="#1F2020"
+                        android:textSize="14sp" />
+                </RadioGroup>
+
+                <LinearLayout
+                    android:id="@+id/temporary_valid_until_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter_bold"
+                        android:text="Valid until:"
+                        android:textColor="#1F2020"
+                        android:textSize="14sp" />
+
+                    <EditText
+                        android:id="@+id/verification_valid_until_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/edit_text_background_bordered"
+                        android:clickable="true"
+                        android:focusable="false"
+                        android:fontFamily="@font/inter"
+                        android:hint="Pick Date"
+                        android:inputType="none"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="#1F2020"
+                        android:textColorHint="#8C8C8C"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="@font/inter"
+                    android:gravity="center"
+                    android:text="Please ensure you have physically inspected the user's medical certificate before issuance."
+                    android:textColor="#1F2020"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
             <!-- QR Preview Area -->
             <TextView
                 android:layout_width="wrap_content"
