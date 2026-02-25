@@ -310,10 +310,19 @@ class AssistanceModalDialog : DialogFragment() {
         respondButton.isEnabled = false
 
         val officerName = UserSingleton.fullName ?: "Unknown Officer"
+        val officerUserID = requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .getString("userID", null)
+            .orEmpty()
 
         lifecycleScope.launch {
             val success = withContext(Dispatchers.IO) {
-                MySQLHelper.updateIncidentResponse(locationID ?: "", "ongoing", officerName)
+                MySQLHelper.updateIncidentResponse(
+                    locationID = locationID ?: "",
+                    status = "ongoing",
+                    officerName = officerName,
+                    officerUserID = officerUserID
+                )
             }
 
             respondProgress.visibility = View.GONE
@@ -342,10 +351,20 @@ class AssistanceModalDialog : DialogFragment() {
 
     private fun resolveAssistance(status: String, description: String? = null) {
         val officerName = UserSingleton.fullName ?: "Unknown Officer"
+        val officerUserID = requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .getString("userID", null)
+            .orEmpty()
 
         lifecycleScope.launch {
             val success = withContext(Dispatchers.IO) {
-                MySQLHelper.resolveIncident(locationID ?: "", status, officerName, description)
+                MySQLHelper.resolveIncident(
+                    locationID = locationID ?: "",
+                    status = status,
+                    officerName = officerName,
+                    relocatedLocation = description,
+                    officerUserID = officerUserID
+                )
             }
 
             if (success) {

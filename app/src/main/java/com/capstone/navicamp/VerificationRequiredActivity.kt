@@ -13,6 +13,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 class VerificationRequiredActivity : AppCompatActivity() {
 
@@ -37,6 +41,11 @@ class VerificationRequiredActivity : AppCompatActivity() {
             return@registerForActivityResult
         }
 
+        if (payload.roleToken == "DISABLED" && !isValidDisabledVerificationPayload(payload)) {
+            Toast.makeText(this, "Invalid verification QR", Toast.LENGTH_LONG).show()
+            return@registerForActivityResult
+        }
+
         CoroutineScope(Dispatchers.Main).launch {
             val staffExists = withContext(Dispatchers.IO) {
                 MySQLHelper.doesUserIDExist(payload.staffUserID)
@@ -51,7 +60,12 @@ class VerificationRequiredActivity : AppCompatActivity() {
             }
 
             val isUpdated = withContext(Dispatchers.IO) {
-                MySQLHelper.approveUserVerificationWithProfileAudit(userID, payload.staffUserID)
+                MySQLHelper.approveUserVerificationWithProfileAudit(
+                    userID = userID,
+                    staffUserID = payload.staffUserID,
+                    disabledVerificationMode = payload.disabledVerificationMode,
+                    temporaryValidUntil = payload.validUntil
+                )
             }
 
             if (!isUpdated) {
@@ -153,15 +167,62 @@ class VerificationRequiredActivity : AppCompatActivity() {
 
     private data class VerificationQrPayload(
         val roleToken: String,
-        val staffUserID: String
+        val staffUserID: String,
+        val disabledVerificationMode: String?,
+        val validUntil: String?
     )
 
     private fun parseVerificationQrPayload(content: String): VerificationQrPayload? {
-        val regex = Regex("^NAVICAMP_VERIFY\\|ROLE=([A-Z_]+)\\|STAFF=(\\d+)$")
-        val match = regex.find(content) ?: return null
-        val roleToken = match.groupValues[1]
-        val staffUserID = match.groupValues[2]
-        return VerificationQrPayload(roleToken, staffUserID)
+        val sections = content.split("|")
+        if (sections.isEmpty() || sections.first() != "NAVICAMP_VERIFY") {
+            return null
+        }
+
+        val values = mutableMapOf<String, String>()
+        for (index in 1 until sections.size) {
+            val token = sections[index]
+            val keyValue = token.split("=", limit = 2)
+            if (keyValue.size != 2) {
+                continue
+            }
+            values[keyValue[0].uppercase(Locale.US)] = keyValue[1].trim()
+        }
+
+        val roleToken = values["ROLE"]?.uppercase(Locale.US) ?: return null
+        val staffUserID = values["STAFF"] ?: return null
+        if (!staffUserID.matches(Regex("^\\d+$"))) {
+            return null
+        }
+
+        val disabledVerificationMode = values["MODE"]?.uppercase(Locale.US)
+        val validUntil = values["UNTIL"]?.trim()
+
+        return VerificationQrPayload(
+            roleToken = roleToken,
+            staffUserID = staffUserID,
+            disabledVerificationMode = disabledVerificationMode,
+            validUntil = validUntil
+        )
+    }
+
+    private fun isValidDisabledVerificationPayload(payload: VerificationQrPayload): Boolean {
+        return when (payload.disabledVerificationMode) {
+            null, "PERMANENT" -> true
+            "TEMPORARY" -> !payload.validUntil.isNullOrBlank() && isIsoDate(payload.validUntil)
+            else -> false
+        }
+    }
+
+    private fun isIsoDate(value: String?): Boolean {
+        if (value.isNullOrBlank()) {
+            return false
+        }
+        return try {
+            LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE)
+            true
+        } catch (_: DateTimeParseException) {
+            false
+        }
     }
 
     companion object {

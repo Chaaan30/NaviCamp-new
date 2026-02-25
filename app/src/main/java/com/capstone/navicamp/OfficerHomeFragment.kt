@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,8 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     private lateinit var assistanceSectionTitle: TextView
     private lateinit var smartPollingManager: SmartPollingManager
     private lateinit var emptyStateLayout: LinearLayout
+    private lateinit var onDutySwitch: SwitchCompat
+    private var suppressOnDutySwitchCallback = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -37,6 +40,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val registeredUsersText = view.findViewById<TextView>(R.id.registered_users)
         val iotDevicesText = view.findViewById<TextView>(R.id.iot_devices)
         emptyStateLayout = view.findViewById(R.id.empty_state_layout)
+        onDutySwitch = view.findViewById(R.id.on_duty_switch)
 
         // 2. Setup Click Listeners
 
@@ -63,6 +67,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
 
         // 5. Initial Data Fetch
         initializeUserName(view)
+        initializeOnDutySwitch()
         viewModel.fetchPendingItems()
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
@@ -90,6 +95,48 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val fullName = sharedPreferences.getString("fullName", "Officer")
         // Fixed: ID was changed to home_secoff_fullname in XML
         view.findViewById<TextView>(R.id.secoff_fullname)?.text = fullName
+    }
+
+    private fun initializeOnDutySwitch() {
+        val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
+        val officerUserID = sharedPreferences.getString("userID", null).orEmpty()
+        if (officerUserID.isBlank()) {
+            onDutySwitch.isEnabled = false
+            return
+        }
+
+        onDutySwitch.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            val isOnDuty = withContext(Dispatchers.IO) {
+                MySQLHelper.getSafetyOfficerOnDutyStatus(officerUserID)
+            }
+
+            suppressOnDutySwitchCallback = true
+            onDutySwitch.isChecked = isOnDuty
+            suppressOnDutySwitchCallback = false
+            onDutySwitch.isEnabled = true
+        }
+
+        onDutySwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (suppressOnDutySwitchCallback) {
+                return@setOnCheckedChangeListener
+            }
+
+            onDutySwitch.isEnabled = false
+            viewLifecycleOwner.lifecycleScope.launch {
+                val updated = withContext(Dispatchers.IO) {
+                    MySQLHelper.updateSafetyOfficerOnDutyStatus(officerUserID, isChecked)
+                }
+
+                if (!updated) {
+                    suppressOnDutySwitchCallback = true
+                    onDutySwitch.isChecked = !isChecked
+                    suppressOnDutySwitchCallback = false
+                    Toast.makeText(requireContext(), "Failed to update on-duty status.", Toast.LENGTH_SHORT).show()
+                }
+                onDutySwitch.isEnabled = true
+            }
+        }
     }
 
     // This moves the logic from your old Activity to the Fragment

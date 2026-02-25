@@ -2,10 +2,13 @@ package com.capstone.navicamp
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.ImageView
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -18,6 +21,8 @@ import com.google.zxing.common.BitMatrix
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
+import java.util.Locale
 
 class AccountVerificationFragment : Fragment(R.layout.fragment_account_verification) {
 
@@ -25,9 +30,14 @@ class AccountVerificationFragment : Fragment(R.layout.fragment_account_verificat
     private lateinit var generatedQrImage: ImageView
     private lateinit var generatedQrContent: TextView
     private lateinit var generateButton: MaterialButton
+    private lateinit var disabledVerificationOptionsContainer: View
+    private lateinit var disabledRoleRadioGroup: RadioGroup
+    private lateinit var temporaryValidUntilContainer: View
+    private lateinit var validUntilInput: EditText
 
     private var roleSpinnerTouched = false
     private var staffUserID: String? = null
+    private var selectedValidUntil: String? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -37,6 +47,10 @@ class AccountVerificationFragment : Fragment(R.layout.fragment_account_verificat
         generatedQrImage = view.findViewById(R.id.generated_qr_image)
         generatedQrContent = view.findViewById(R.id.generated_qr_content)
         generateButton = view.findViewById(R.id.generate_qr_button)
+        disabledVerificationOptionsContainer = view.findViewById(R.id.disabled_verification_options_container)
+        disabledRoleRadioGroup = view.findViewById(R.id.disabled_role_radio_group)
+        temporaryValidUntilContainer = view.findViewById(R.id.temporary_valid_until_container)
+        validUntilInput = view.findViewById(R.id.verification_valid_until_input)
 
         // 2. Access SharedPreferences via requireContext()
         staffUserID = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -83,11 +97,27 @@ class AccountVerificationFragment : Fragment(R.layout.fragment_account_verificat
 
         roleSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedRole = roleSpinner.selectedItem.toString()
+                updateDisabledVerificationUi(selectedRole)
                 if (roleSpinnerTouched && position == 0) {
                     Toast.makeText(requireContext(), "Please select a verification type.", Toast.LENGTH_SHORT).show()
                 }
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) = Unit
+        }
+
+        disabledRoleRadioGroup.setOnCheckedChangeListener { _, checkedId ->
+            val isTemporary = checkedId == R.id.radio_temporary
+            temporaryValidUntilContainer.visibility = if (isTemporary) View.VISIBLE else View.GONE
+
+            if (!isTemporary) {
+                selectedValidUntil = null
+                validUntilInput.setText("")
+            }
+        }
+
+        validUntilInput.setOnClickListener {
+            showDatePicker()
         }
 
         generateButton.setOnClickListener {
@@ -99,6 +129,39 @@ class AccountVerificationFragment : Fragment(R.layout.fragment_account_verificat
         roleSpinner.visibility = visibility
         generateButton.visibility = visibility
         generatedQrImage.visibility = visibility
+        if (visibility != View.VISIBLE) {
+            disabledVerificationOptionsContainer.visibility = View.GONE
+        } else {
+            updateDisabledVerificationUi(roleSpinner.selectedItem?.toString().orEmpty())
+        }
+    }
+
+    private fun updateDisabledVerificationUi(selectedRole: String) {
+        val isDisabledVerification = selectedRole == "Disabled User Verification"
+        disabledVerificationOptionsContainer.visibility = if (isDisabledVerification) View.VISIBLE else View.GONE
+
+        if (!isDisabledVerification) {
+            disabledRoleRadioGroup.clearCheck()
+            temporaryValidUntilContainer.visibility = View.GONE
+            selectedValidUntil = null
+            validUntilInput.setText("")
+        }
+    }
+
+    private fun showDatePicker() {
+        val now = Calendar.getInstance()
+        val picker = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                selectedValidUntil = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                validUntilInput.setText(selectedValidUntil)
+            },
+            now.get(Calendar.YEAR),
+            now.get(Calendar.MONTH),
+            now.get(Calendar.DAY_OF_MONTH)
+        )
+        picker.datePicker.minDate = now.timeInMillis
+        picker.show()
     }
 
     private fun generateQrLogic() {
@@ -114,7 +177,26 @@ class AccountVerificationFragment : Fragment(R.layout.fragment_account_verificat
             "DISABLED"
         }
 
-        val qrContent = "NAVICAMP_VERIFY|ROLE=$roleToken|STAFF=${staffUserID!!}"
+        val qrContent = if (selectedRole == "Disabled User Verification") {
+            val selectedDisabledRoleId = disabledRoleRadioGroup.checkedRadioButtonId
+            if (selectedDisabledRoleId == -1) {
+                Toast.makeText(requireContext(), "Please select Temporary or Permanent.", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (selectedDisabledRoleId == R.id.radio_temporary) {
+                val validUntil = selectedValidUntil
+                if (validUntil.isNullOrBlank()) {
+                    Toast.makeText(requireContext(), "Please pick a valid date for temporary access.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                "NAVICAMP_VERIFY|ROLE=$roleToken|STAFF=${staffUserID!!}|MODE=TEMPORARY|UNTIL=$validUntil"
+            } else {
+                "NAVICAMP_VERIFY|ROLE=$roleToken|STAFF=${staffUserID!!}|MODE=PERMANENT"
+            }
+        } else {
+            "NAVICAMP_VERIFY|ROLE=$roleToken|STAFF=${staffUserID!!}"
+        }
         generatedQrImage.setImageBitmap(generateQrBitmap(qrContent, 760))
         generatedQrContent.text = "QR Content: $qrContent"
     }
