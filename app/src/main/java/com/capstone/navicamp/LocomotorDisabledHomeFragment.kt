@@ -16,16 +16,12 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import com.google.firebase.messaging.FirebaseMessaging
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
+import com.google.android.gms.location.*
 import com.google.android.material.card.MaterialCardView
-import com.google.firebase.messaging.FirebaseMessaging
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +42,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private lateinit var emergencyBanner: View
     private lateinit var officerDispatchCard: MaterialCardView
     private lateinit var officerDispatchName: TextView
+    private lateinit var availableOfficersText: TextView
 
     // State Variables
     private var connectedDeviceID: String? = null
@@ -53,8 +50,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private var currentUserID: String? = null
     private var currentUserFullName: String? = null
     private var isAlertSent = false
+    private var isRestoringConnection = false
 
-    // Officer dispatch tracking
+    // Polling & GPS
     private var currentIncident: OngoingIncidentInfo? = null
     private val incidentPollHandler = Handler(Looper.getMainLooper())
     private var isPollingIncident = false
@@ -64,18 +62,12 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private lateinit var resetRunnable: Runnable
     private var countDownTimer: CountDownTimer? = null
 
-    private val animationStages = listOf(
-        1 to 200,
-        2 to 220,
-        3 to 240,
-        4 to 260,
-        5 to 286,
-    )
+    private val animationStages = listOf(1 to 200, 2 to 220, 3 to 240, 4 to 260, 5 to 286)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 1. Initialize Views (Must use 'view.findViewById')
+        // 1. Initialize Views
         connectionStatusTextView = view.findViewById(R.id.connection_status_textview)
         assistanceButton = view.findViewById(R.id.assistance_button)
         assistanceButtonBackground = view.findViewById(R.id.assistance_button_background)
@@ -85,6 +77,10 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         emergencyBanner = view.findViewById(R.id.emergency_contact_banner)
         officerDispatchCard = view.findViewById(R.id.officer_dispatch_card)
         officerDispatchName = view.findViewById(R.id.officer_dispatch_name)
+        availableOfficersText = view.findViewById(R.id.available_officers_count_text)
+
+        assistanceButtonBackground.isClickable = false
+        assistanceButtonBackground.isFocusable = false
 
         // 2. Data Initialization
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -95,38 +91,21 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
         // 3. UI Setup
         setupHoldToActivateButton()
-        initializeUserName(view)
+        view.findViewById<TextView>(R.id.user_fullname).text = "${currentUserFullName}!"
 
-        // 4. Async DB Operations
-//        val userId = currentUserID
-//        if (userId != null) {
-//            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-//                MySQLHelper.awaitInitialized()
-//                val connectionInfo = MySQLHelper.getActiveConnectionForUser(userId)
-//
-//                withContext(Dispatchers.Main) {
-//                    if (connectionInfo != null) {
-//                        restoreConnectionState(connectionInfo.deviceID, connectionInfo.expiryTime)
-//                    } else {
-//                        updateConnectionStatusUI()
-//                    }
-//                }
-//                MySQLHelper.cleanupExpiredConnections()
-//            }
-//        }
-        registerFCMToken()
+        // 4. Restore Database State (Critical Assistance Feature)
+        restoreConnectionFromDatabase()
         startIncidentPolling()
     }
 
     override fun onResume() {
         super.onResume()
-//        checkUserAccessStatus()
-//        restoreConnectionFromDatabase()
         refreshStateManually()
     }
 
     fun refreshStateManually() {
         if (!isAdded) return
+        checkUserAccessStatus()
         restoreConnectionFromDatabase()
     }
 
@@ -139,11 +118,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         stopGpsUpdates()
     }
 
-    // --- LOGIC FUNCTIONS ---
-
     private fun checkUserAccessStatus() {
         val uid = currentUserID ?: return
-        lifecycleScope.launch(Dispatchers.IO) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val profile = try { MySQLHelper.getPwdProfileData(uid) } catch (e: Exception) { null }
 
             withContext(Dispatchers.Main) {
@@ -157,7 +134,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                             if (expiryDate != null && expiryDate.before(Date())) {
                                 accessIsExpired = true
                                 expiryTitle.text = "Temporary Verification Expired"
-                                expiryDateText.text = "Please visit the CHSW (Clinic) to reactivate."
+                                expiryDateText.text = "Please visit the CHSW (Clinic) to reactivate features."
                                 if (connectedDeviceID != null) disconnectFromDevice(false)
                             } else {
                                 expiryTitle.text = "Access Expiry"
@@ -168,21 +145,13 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                         expirySection.visibility = View.GONE
                     }
 
-                    // Button is only enabled if: Connected AND Not Expired
+                    // Consolidated Button State
                     if (connectedDeviceID != null && !accessIsExpired) {
                         enableSOSButton()
                     } else {
-                        // Determine why it is disabled for the Toast message
-                        val reason = when {
-                            accessIsExpired -> "Account Access Expired"
-                            connectedDeviceID == null -> "Please connect to a wheelchair first"
-                            else -> "System Unavailable"
-                        }
+                        val reason = if (accessIsExpired) "Account Expired" else "Please Connect to a Wheelchair"
                         disableSOSButton(reason)
                     }
-
-                    if (!accessIsExpired && connectedDeviceID != null) enableSOSButton()
-                    else disableSOSButton(if (accessIsExpired) "Verification Expired" else "Connect to Wheelchair")
 
                     emergencyBanner.visibility = if (profile.emergencyContactPerson.isNullOrBlank()) View.VISIBLE else View.GONE
                 }
@@ -192,12 +161,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     private fun enableSOSButton() {
         assistanceButton.isEnabled = true
-
         assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
         assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
-
-        assistanceButtonBackground.text = ""
-
+        assistanceButtonBackground.text = "" // Hide "Connect to Wheelchair" text
         if (!isAlertSent) {
             assistanceButton.text = "SOS"
             assistanceButton.setTextColor(Color.WHITE)
@@ -206,66 +172,47 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     private fun disableSOSButton(reason: String) {
         assistanceButton.isEnabled = false
-        assistanceButton.text = "SOS"
-        assistanceButton.setTextColor(Color.WHITE) // Force text to be visible
 
-        // Use contrasting grays so you can see the two separate circles
-        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#7a7979")) // Dark Gray
-        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F5F5F5")) // Light Gray ring
+        // Use high-contrast grays so inner button is visible
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#616161")) // Deep Gray
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F5F5F5")) // Very Light Gray
+
+        // Force inner button to stay on top
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            assistanceButton.translationZ = 10f
+        }
+
+        assistanceButtonBackground.text = "CONNECT TO A WHEELCHAIR"
+        assistanceButtonBackground.setTextColor(Color.parseColor("#757575"))
+
+        // Ensure the background is not interactive
+        assistanceButtonBackground.isClickable = false
+        assistanceButtonBackground.isFocusable = false
 
         assistanceButton.text = "SOS"
         assistanceButton.setTextColor(Color.WHITE)
-
-        // FIX: Keep the inner button "above" the outer one in 3D space
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            assistanceButton.translationZ = 10f // This forces it to stay on top
-        }
-
-        // Keep ring enabled for the Toast
-        assistanceButtonBackground.isEnabled = true
-        assistanceButtonBackground.setOnClickListener {
-            Toast.makeText(requireContext(), reason, Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun restoreConnectionFromDatabase() {
-        val uid = currentUserID ?: return
-        viewLifecycleOwner.lifecycleScope.launch {
-            val active = withContext(Dispatchers.IO) { MySQLHelper.getActiveConnectionForUser(uid) }
+        if (currentUserID == null || isRestoringConnection) return
+        isRestoringConnection = true
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            val active = withContext(Dispatchers.IO) { MySQLHelper.getActiveConnectionForUser(currentUserID!!) }
             withContext(Dispatchers.Main) {
                 if (active != null) {
                     connectedDeviceID = active.deviceID
-                    // Tell Activity to change Scan -> Disconnect
                     (activity as? LocomotorDisabilityActivity)?.updateScanTabUI(true)
                 } else {
                     connectedDeviceID = null
                     (activity as? LocomotorDisabilityActivity)?.updateScanTabUI(false)
                 }
                 updateConnectionStatusUI()
-                checkUserAccessStatus() // Now it will correctly see the connectedDeviceID
+                checkUserAccessStatus() // Refresh SOS button color
+                isRestoringConnection = false
             }
         }
     }
-
-//    private fun startConnectionTimer(durationMs: Long) {
-//        connectionTimer?.cancel()
-//        connectionTimer = object : CountDownTimer(durationMs, 1000) {
-//            override fun onTick(ms: Long) {
-//                val mins = (ms / 1000) / 60
-//                val secs = (ms / 1000) % 60
-//                if (isAdded) { // Ensure fragment is still attached
-//                    connectionStatusTextView.text = "Connected to: $connectedDeviceID\nTime left: ${String.format("%02d:%02d", mins, secs)}"
-//                }
-//            }
-//            override fun onFinish() {
-//                if (isAdded) {
-//                    Toast.makeText(requireContext(), "Time limit reached.", Toast.LENGTH_LONG).show()
-//                    disconnectFromDevice(false)
-//                }
-//            }
-//        }.start()
-//    }
 
     private fun disconnectFromDevice(showToast: Boolean = true) {
         val devId = connectedDeviceID ?: return
@@ -276,6 +223,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                     connectedDeviceID = null
                     updateConnectionStatusUI()
                     checkUserAccessStatus()
+                    (activity as? LocomotorDisabilityActivity)?.updateScanTabUI(false)
                     if (showToast) Toast.makeText(requireContext(), "Disconnected.", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -285,14 +233,12 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private fun updateConnectionStatusUI() {
         if (!isAdded) return
         if (connectedDeviceID != null) {
-            connectionStatusTextView.text = "Connected to Wheelchair: $connectedDeviceID"
+            connectionStatusTextView.text = "Connected to: $connectedDeviceID"
             connectionStatusTextView.setTextColor(Color.parseColor("#4CAF50"))
         } else {
-            connectionStatusTextView.text = "Not connected to a wheelchair."
+            connectionStatusTextView.text = "Not connected to a wheelchair"
             connectionStatusTextView.setTextColor(Color.GRAY)
         }
-        // Update Bottom Nav via Activity if needed
-        //(activity as? LocomotorDisabledMainActivity)?.updateScanTabTitle(connectedDeviceID != null)
     }
 
     private fun setupHoldToActivateButton() {
@@ -372,79 +318,100 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         triggerSuccessVibration()
     }
 
-    private fun sendEmergencyAlert() {
-        val uid = currentUserID ?: return
-        val name = currentUserFullName ?: "User"
-        val dev = connectedDeviceID ?: return
-
+    private fun requestAssistanceWithDevice(deviceID: String, userID: String, fullName: String) {
         viewLifecycleOwner.lifecycleScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                MySQLHelper.insertAssistanceRequestFromDevice(requireContext(), uid, name, dev, 0.0, 0.0, "Unknown")
+            // 1. Fetch the Wheelchair's actual location from the DB (restored from past code)
+            val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) {
+                MySQLHelper.getDeviceLastLocation(deviceID)
             }
-            if (!success && isAdded) Toast.makeText(requireContext(), "Alert failed.", Toast.LENGTH_SHORT).show()
+
+            // FALLBACK LOGIC: If no location is found, use 0.0 so the SOS still goes through
+            val lat = deviceLocation?.latitude ?: 0.0
+            val lng = deviceLocation?.longitude ?: 0.0
+            val floor = deviceLocation?.floorLevel ?: "Location Unknown"
+
+            Log.d("Assistance", "Sending Alert for $fullName. Device location found: ${deviceLocation != null}")
+
+            // 2. Perform the actual Database Insertion
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.insertAssistanceRequestFromDevice(
+                    requireContext(),
+                    userID,
+                    fullName,
+                    deviceID,
+                    lat,
+                    lng,
+                    floor
+                )
+            }
+
+            if (success) {
+                triggerSuccessVibration()
+                Log.d("Assistance", "SOS successful. Haptic feedback triggered.")
+            } else {
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Server Error: Could not send alert.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun sendEmergencyAlert() {
+        val uid = currentUserID
+        val name = currentUserFullName
+        val devId = connectedDeviceID
+
+        if (uid != null && name != null) {
+            if (devId != null) {
+                // This triggers the heavy lifting function above
+                requestAssistanceWithDevice(devId, uid, name)
+            } else {
+                // Case: User somehow triggered SOS without being connected to a wheelchair
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Alert sent using phone location (Manual SOS)", Toast.LENGTH_LONG).show()
+                }
+                Log.d("Assistance", "Manual SOS triggered without wheelchair connection.")
+            }
+        } else {
+            if (isAdded) {
+                Toast.makeText(requireContext(), "Error: User details missing. Please log in again.", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
     private fun triggerSuccessVibration() {
         val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-        }
-    }
-
-    private fun initializeUserName(view: View) {
-        view.findViewById<TextView>(R.id.user_fullname).text = "${currentUserFullName}"
-    }
-
-    private fun showDurationSelectionDialog(deviceID: String) {
-        val options = arrayOf("30 minutes", "1 hour", "2 hours")
-        val values = longArrayOf(1800000, 3600000, 7200000)
-
-        AlertDialog.Builder(requireContext())
-            .setTitle("Select Duration")
-            .setItems(options) { _, which -> connectToDevice(deviceID, values[which]) }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun connectToDevice(deviceID: String, duration: Long) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                MySQLHelper.updateDeviceConnectionStatus(deviceID, currentUserID, "expiry_date_string_here")
-            }
-            if (success && isAdded) {
-                connectedDeviceID = deviceID
-//                startConnectionTimer(duration)
-                updateConnectionStatusUI()
-                checkUserAccessStatus()
-                (activity as? LocomotorDisabilityActivity)?.updateScanTabUI(true)
-            }
+            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.EFFECT_HEAVY_CLICK))
         }
     }
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
-//    private fun restoreConnectionState(deviceID: String, expiryTime: Long) {
-//        connectedDeviceID = deviceID
-//        val remainingTime = expiryTime - System.currentTimeMillis()
-//        if (remainingTime > 0) startConnectionTimer(remainingTime)
-//        else disconnectFromDevice(false)
-//    }
+    // --- Polling & Dispatch Logic ---
 
-    private fun registerFCMToken() { /* Keep existing logic but use requireContext() */ }
+    private fun refreshAvailableOfficersCount() {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val count = MySQLHelper.getAvailableOfficersCount()
 
-    // --- Officer Dispatch Tracking ---
+            withContext(Dispatchers.Main) {
+                if (isAdded) {
+                    availableOfficersText.text = count.toString()
+                }
+            }
+        }
+    }
 
     private val incidentPollRunnable = object : Runnable {
         override fun run() {
             if (!isPollingIncident || !isAdded) return
             pollOngoingIncident()
+            refreshAvailableOfficersCount() // ADD THIS LINE
             incidentPollHandler.postDelayed(this, 5000)
         }
     }
 
     private fun startIncidentPolling() {
-        if (isPollingIncident) return
         isPollingIncident = true
         incidentPollHandler.post(incidentPollRunnable)
     }
@@ -457,13 +424,10 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private fun pollOngoingIncident() {
         val uid = currentUserID ?: return
         viewLifecycleOwner.lifecycleScope.launch {
-            val incident = withContext(Dispatchers.IO) {
-                MySQLHelper.getOngoingIncidentForUser(uid)
-            }
+            val incident = withContext(Dispatchers.IO) { MySQLHelper.getOngoingIncidentForUser(uid) }
             if (!isAdded) return@launch
 
             if (incident != null) {
-                // Officer has responded — show dispatch card
                 if (currentIncident == null) startGpsUpdates()
                 currentIncident = incident
                 officerDispatchName.text = "${incident.officerName} is dispatched"
@@ -507,56 +471,56 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     }
 
     private fun startGpsUpdates() {
-        if (locationCallback != null) return
+        if (locationCallback != null) return // Already running
         val ctx = context ?: return
 
+        // 1. Check for Permissions
         if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
+            != PackageManager.PERMISSION_GRANTED) {
+            // Request permission if not granted
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001)
             return
         }
 
         val fusedClient = LocationServices.getFusedLocationProviderClient(ctx)
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
 
+        // 2. Create Location Request (High accuracy, updates every 5 seconds)
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+            .setMinUpdateDistanceMeters(1.0f) // Only update if they move 1 meter
+            .build()
+
+        // 3. Define what happens when a new location is found
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val loc = result.lastLocation ?: return
                 val uid = currentUserID ?: return
+
+                // Send the phone's live coordinates to the DB for the Officer to see
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                     MySQLHelper.upsertLiveGPS(uid, loc.latitude, loc.longitude, loc.accuracy)
                 }
             }
         }
+
+        // 4. Start the updates
         fusedClient.requestLocationUpdates(request, locationCallback!!, Looper.getMainLooper())
     }
 
     private fun stopGpsUpdates() {
         val ctx = context ?: return
+
+        // 1. Stop the phone's hardware from tracking GPS (Saves battery)
         locationCallback?.let {
             LocationServices.getFusedLocationProviderClient(ctx).removeLocationUpdates(it)
         }
         locationCallback = null
-        // Clean up own GPS entry on a detached-safe scope
+
+        // 2. Clean up your entry in the Database (Saves privacy)
         val uid = currentUserID ?: return
+        // Use a separate scope here to ensure the delete happens even if fragment is closing
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             MySQLHelper.deleteLiveGPS(uid)
         }
     }
 
-//    fun handleQrTabClick() {
-//        if (connectedDeviceID == null) launchQrScanner()
-//        else {
-//            AlertDialog.Builder(requireContext())
-//                .setTitle("Disconnect")
-//                .setMessage("Disconnect from $connectedDeviceID?")
-//                .setPositiveButton("Yes") { _, _ -> disconnectFromDevice() }
-//                .setNegativeButton("No", null).show()
-//        }
-//    }
-
-//    private fun launchQrScanner() {
-//        qrCodeScannerLauncher.launch(ScanOptions().setPrompt("Scan Wheelchair QR Code"))
-//    }
 }

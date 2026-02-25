@@ -31,7 +31,7 @@ class SecurityOfficerViewModel : ViewModel() {
     fun fetchUserCount() {
         viewModelScope.launch {
             val count = withContext(Dispatchers.IO) {
-                MySQLHelper.getUserCount()
+                MySQLHelper.getTotalPwdUserCount()
             }
             _userCount.postValue(count)
         }
@@ -40,7 +40,7 @@ class SecurityOfficerViewModel : ViewModel() {
     fun fetchDeviceCount() {
         viewModelScope.launch {
             val count = withContext(Dispatchers.IO) {
-                MySQLHelper.getDeviceCount()
+                MySQLHelper.getInUseWheelchairCount()
             }
             _deviceCount.postValue(count)
         }

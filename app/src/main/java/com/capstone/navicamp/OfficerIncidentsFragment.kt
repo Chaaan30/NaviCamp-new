@@ -1,6 +1,8 @@
 package com.capstone.navicamp
 
+import android.app.Activity.RESULT_OK
 import android.app.DatePickerDialog
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -75,7 +77,13 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
             context = requireContext(),
             incidents = emptyList(),
             onMapClick = { incident ->
-                Toast.makeText(requireContext(), "Location: ${incident.coordinates}", Toast.LENGTH_SHORT).show()
+                // Redirect to map activity with coordinates
+                val intent = Intent(requireContext(), MapActivity::class.java).apply {
+                    putExtra("LATITUDE", incident.coordinates.split(",")[0].trim().toDoubleOrNull() ?: 0.0)
+                    putExtra("LONGITUDE", incident.coordinates.split(",")[1].trim().toDoubleOrNull() ?: 0.0)
+                    putExtra("FULL_NAME", incident.userName)
+                }
+                startActivity(intent)
             },
             onResolveClick = { incident ->
                 resolveIncident(incident)
@@ -165,19 +173,25 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
 
     private fun filterIncidents() {
         filteredIncidents = allIncidents.filter { incident ->
+            // 1. Check Status
             val matchesStatus = when (selectedStatusFilter) {
                 "All Status" -> true
                 "Ongoing" -> incident.status.equals("ongoing", ignoreCase = true)
                 "Resolved" -> incident.status.equals("resolved", ignoreCase = true)
                 else -> true
             }
+
+            // 2. Check Date (Handled via helper functions)
             val matchesDate = when (selectedDateFilter) {
                 "All Time" -> true
                 "Today" -> isToday(incident.timeOfAlert)
+                "This Week" -> isThisWeek(incident.timeOfAlert)
+                "This Month" -> isThisMonth(incident.timeOfAlert)
+                "This Year" -> isThisYear(incident.timeOfAlert)
                 "Custom Range" -> isInCustomRange(incident.timeOfAlert)
-                // Add other date helpers here...
                 else -> true
             }
+
             matchesStatus && matchesDate
         }
         updateIncidentsList()
@@ -201,38 +215,71 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     }
 
     private fun showExportOptionsDialog() {
-        val options = arrayOf("CSV", "PDF", "Excel")
+        val options = arrayOf("CSV", "Excel")
         AlertDialog.Builder(requireContext())
             .setTitle("Export Options")
             .setItems(options) { _, which ->
-                val format = when (which) {
-                    0 -> "csv"
-                    1 -> "pdf"
-                    else -> "excel"
+                when (which) {
+                    0 -> exportIncidents("csv")
+                    1 -> exportIncidents("excel")
                 }
-                exportIncidents(format)
             }
             .show()
     }
 
     private fun exportIncidents(format: String) {
-        selectedExportFormat = format
+        val dataToExport = filteredIncidents.map { incident ->
+            listOf(
+                incident.alertId,
+                incident.userId,
+                incident.deviceId,
+                incident.userName,
+                incident.coordinates,
+                incident.floorLevel,
+                incident.status,
+                incident.timeOfAlert,
+                incident.resolvedOn ?: "",
+                incident.officerName ?: "",
+                incident.incidentDescription
+            )
+        }
+
         val dateStamp = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
 
+        // Store the format for use in onActivityResult
+        selectedExportFormat = format
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ (API 30+): Use SAF
             val (mimeType, extension) = when (format) {
-                "csv" -> "text/csv" to "csv"
-                "pdf" -> "application/pdf" to "pdf"
-                else -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" to "xlsx"
+                "csv" -> Pair("text/csv", "csv")
+                "excel" -> Pair("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx")
+                else -> Pair("text/csv", "csv")
             }
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+
+            val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
-                type = mimeType
+                this.type = mimeType
                 putExtra(Intent.EXTRA_TITLE, "assistance_data_${dateStamp}.${extension}")
             }
-            startActivityForResult(intent, CREATE_FILE_REQUEST_CODE)
+            startActivityForResult(createFileIntent,
+                OfficerIncidentsFragment.Companion.CREATE_FILE_REQUEST_CODE
+            )
         } else {
-            Toast.makeText(requireContext(), "Exporting $format...", Toast.LENGTH_SHORT).show()
+            // Android 10 and below
+            when (format) {
+                "csv" -> {
+                    val file = exportIncidentDataToCSV(requireContext(), dataToExport)
+                    if (file != null) {
+                        Toast.makeText(requireContext(), "CSV exported successfully to ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(requireContext(), "CSV export failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                "excel" -> {
+                    Toast.makeText(requireContext(), "${format.uppercase()} export not implemented for Android 10 and below", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -251,13 +298,70 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
         } catch (e: Exception) { false }
     }
 
-    private fun isInCustomRange(dateString: String): Boolean {
-        if (customStartDate == null || customEndDate == null) return false
+    private fun isThisWeek(dateString: String): Boolean {
         return try {
             val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val incidentDate = format.parse(dateString)
-            incidentDate != null && incidentDate.time >= customStartDate!!.timeInMillis && incidentDate.time <= customEndDate!!.timeInMillis
-        } catch (e: Exception) { false }
+            val today = Calendar.getInstance()
+            val incidentCal = Calendar.getInstance()
+
+            if (incidentDate != null) {
+                incidentCal.time = incidentDate
+                today.get(Calendar.YEAR) == incidentCal.get(Calendar.YEAR) &&
+                        today.get(Calendar.WEEK_OF_YEAR) == incidentCal.get(Calendar.WEEK_OF_YEAR)
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isThisMonth(dateString: String): Boolean {
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val incidentDate = format.parse(dateString)
+            val today = Calendar.getInstance()
+            val incidentCal = Calendar.getInstance()
+
+            if (incidentDate != null) {
+                incidentCal.time = incidentDate
+                today.get(Calendar.YEAR) == incidentCal.get(Calendar.YEAR) &&
+                        today.get(Calendar.MONTH) == incidentCal.get(Calendar.MONTH)
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isThisYear(dateString: String): Boolean {
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val incidentDate = format.parse(dateString)
+            val today = Calendar.getInstance()
+            val incidentCal = Calendar.getInstance()
+
+            if (incidentDate != null) {
+                incidentCal.time = incidentDate
+                today.get(Calendar.YEAR) == incidentCal.get(Calendar.YEAR)
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isInCustomRange(dateString: String): Boolean {
+        if (customStartDate == null || customEndDate == null) return false
+
+        return try {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val incidentDate = format.parse(dateString)
+
+            if (incidentDate != null) {
+                incidentDate.time >= customStartDate!!.timeInMillis &&
+                        incidentDate.time <= customEndDate!!.timeInMillis
+            } else false
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun showCustomDateRangePicker(view: View) {
@@ -270,5 +374,63 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
                 selectDateFilter(view, "Custom Range")
             }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OfficerIncidentsFragment.Companion.CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+            val uri = data?.data
+            val dataToExport = filteredIncidents.map { incident ->
+                listOf(
+                    incident.alertId,
+                    incident.userId,
+                    incident.deviceId,
+                    incident.userName,
+                    incident.coordinates,
+                    incident.floorLevel,
+                    incident.status,
+                    incident.timeOfAlert,
+                    incident.resolvedOn ?: "",
+                    incident.officerName ?: "",
+                    incident.incidentDescription
+                )
+            }
+
+            val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
+            val officerName = sharedPreferences.getString("fullName", "Officer") ?: "Officer"
+
+            if (filteredIncidents.isEmpty()) {
+                Toast.makeText(requireContext(), "Nothing to export (List is empty)", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (uri != null) {
+                try {
+                    when (selectedExportFormat) {
+                        "csv" -> {
+                            CsvExportUtils.exportIncidentDataToCsv(requireContext(), uri, dataToExport, officerName)
+                            Toast.makeText(requireContext(), "CSV exported successfully", Toast.LENGTH_LONG).show()
+                        }
+                        "excel" -> {
+                            ExcelExportUtils.exportIncidentDataToExcel(requireContext(), uri, dataToExport, officerName)
+                            Toast.makeText(requireContext(), "Excel exported successfully", Toast.LENGTH_LONG).show()
+                        }
+                        else -> {
+                            Toast.makeText(requireContext(), "Unknown export format", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Export failed: No file selected", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadIncidents()
     }
 }

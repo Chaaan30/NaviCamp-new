@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FAF9F6">
+    android:background="#FFFFFF">
 
     <!-- Welcome Header (Fixed Height) -->
     <LinearLayout
@@ -17,14 +17,14 @@
             android:layout_height="wrap_content"
             android:text="Hello,"
             android:textSize="16sp"
-            android:fontFamily="@font/inter"
+            android:fontFamily="@font/inter_medium"
             android:textColor="#666666"/>
         <TextView
             android:id="@+id/secoff_fullname"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="[Safety Officer]"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:fontFamily="@font/inter_bold"
             android:textColor="#000000" />
     </LinearLayout>
@@ -51,13 +51,56 @@
             android:id="@+id/assistance_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="4dp">
+            android:padding="4dp"
+            android:fillViewport="true">
 
-            <LinearLayout
-                android:id="@+id/assistance_layout"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:layout_height="wrap_content">
+
+                <!-- This will show the actual cards -->
+                <LinearLayout
+                    android:id="@+id/assistance_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <!-- NEW: Empty State Placeholder -->
+                <LinearLayout
+                    android:id="@+id/empty_state_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="20dp"
+                    android:visibility="gone"> <!-- Hidden by default -->
+
+                    <ImageView
+                        android:layout_width="200dp"
+                        android:layout_height="200dp"
+                        android:src="@drawable/img_empty_assistance"
+                        android:contentDescription="No requests" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Everything is quiet."
+                        android:textSize="18sp"
+                        android:fontFamily="@font/inter_bold"
+                        android:textColor="#1F2020"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="No active assistance requests at the moment."
+                        android:textSize="14sp"
+                        android:fontFamily="@font/inter"
+                        android:gravity="center"
+                        android:textColor="#666666"/>
+                </LinearLayout>
+            </FrameLayout>
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>
 
@@ -102,7 +145,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Registered Users"
+                        android:text="Locomotor Disabled Users Online"
                         android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:fontFamily="@font/inter" />
@@ -136,7 +179,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="IoT Devices"
+                        android:text="In-Use IoT Wheelchairs"
                         android:textColor="#FFFFFF"
                         android:gravity="center"
                         android:fontFamily="@font/inter" />

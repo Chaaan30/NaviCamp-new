@@ -9,8 +9,8 @@
 
     <ImageView
         android:id="@+id/verification_illustration"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="160dp"
         android:contentDescription="Verification illustration"
@@ -20,12 +20,12 @@
         android:id="@+id/verification_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="30dp"
         android:fontFamily="@font/inter_bold"
         android:gravity="center"
         android:text="Verification Required"
         android:textColor="@color/darkGray"
-        android:textSize="20dp" />
+        android:textSize="25dp" />
 
     <TextView
         android:id="@+id/verification_description"
@@ -37,7 +37,7 @@
         android:fontFamily="@font/inter"
         android:gravity="center"
         android:textColor="@color/gray"
-        android:textSize="12sp" />
+        android:textSize="16sp" />
 
     <Space
         android:layout_width="match_parent"
@@ -49,12 +49,11 @@
         xmlns:app="http://schemas.android.com/apk/res-auto"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="56dp"
         android:layout_marginBottom="40dp"
         android:backgroundTint="@color/primaryColor"
         android:fontFamily="@font/inter_bold"
-        android:text="Scan Safety Officer Verification QR"
-        android:textAllCaps="false"
+        android:text="SCAN VERIFICATION QR"
         android:textColor="@android:color/white"
         android:textSize="11sp"
         app:cornerRadius="8dp" />
