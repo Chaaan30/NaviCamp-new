@@ -27,6 +27,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     private lateinit var emptyStateLayout: LinearLayout
     private lateinit var onDutySwitch: SwitchCompat
     private var suppressOnDutySwitchCallback = false
+    private var officerFullName: String = "Officer"
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -68,7 +69,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         // 5. Initial Data Fetch
         initializeUserName(view)
         initializeOnDutySwitch()
-        viewModel.fetchPendingItems()
+        viewModel.fetchPendingItems(officerFullName)
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
     }
@@ -93,6 +94,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     private fun initializeUserName(view: View) {
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
         val fullName = sharedPreferences.getString("fullName", "Officer")
+        officerFullName = fullName ?: "Officer"
         // Fixed: ID was changed to home_secoff_fullname in XML
         view.findViewById<TextView>(R.id.secoff_fullname)?.text = fullName
     }
@@ -213,6 +215,10 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
             assistanceTypeBadge.setBackgroundResource(R.drawable.badge_manual_assistance)
         }
 
+        // Resolved requests without report should route to report flow.
+        val isResolved = item.status.equals("resolved", ignoreCase = true)
+        respondButton.text = if (isResolved) "Make a Report" else "Respond"
+
         respondButton.setOnClickListener {
             val intent = Intent(requireContext(), MapActivity::class.java).apply {
                 putExtra("LOCATION_ID", item.locationID)
@@ -228,7 +234,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
 
     private fun setupSmartPollingListeners() {
         smartPollingManager.onDataUpdate = {
-            viewModel.fetchPendingItems()
+            viewModel.fetchPendingItems(officerFullName)
             viewModel.fetchUserCount()
             viewModel.fetchDeviceCount()
         }

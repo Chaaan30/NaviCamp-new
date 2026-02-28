@@ -146,7 +146,7 @@ object MySQLHelper {
         }
     }
 
-    fun getPendingItems(): List<LocationItem> {
+    fun getPendingItems(currentOfficerName: String? = null): List<LocationItem> {
         val pendingItems = mutableListOf<LocationItem>()
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -159,26 +159,56 @@ object MySQLHelper {
                 return pendingItems
             }
 
-            val query = """
-                SELECT 
-                    l.locationID,
-                    l.userID,
-                    l.deviceID,
-                    u.fullName,
-                    l.floorLevel,
-                    i.status,
-                    l.latitude,
-                    l.longitude,
-                    l.dateTime,
-                    i.officerResponded,
-                    i.relocatedLocation
-                FROM incident_logs_table i
-                JOIN location_table l ON i.locationID = l.locationID
-                JOIN user_table u ON l.userID = u.userID
-                WHERE i.status = 'pending' OR i.status = 'ongoing'
-                ORDER BY i.alertDateTime DESC
-            """.trimIndent()
+            val query = if (!currentOfficerName.isNullOrBlank()) {
+                """
+                    SELECT 
+                        l.locationID,
+                        l.userID,
+                        l.deviceID,
+                        u.fullName,
+                        l.floorLevel,
+                        i.status,
+                        l.latitude,
+                        l.longitude,
+                        l.dateTime,
+                        i.officerResponded,
+                        i.relocatedLocation
+                    FROM incident_logs_table i
+                    JOIN location_table l ON i.locationID = l.locationID
+                    JOIN user_table u ON l.userID = u.userID
+                    WHERE i.status IN ('pending', 'ongoing')
+                       OR (
+                           i.status = 'resolved'
+                           AND i.officerResponded = ?
+                           AND (i.relocatedLocation IS NULL OR i.relocatedLocation = '')
+                       )
+                    ORDER BY FIELD(i.status, 'pending', 'ongoing', 'resolved'), i.alertDateTime DESC
+                """.trimIndent()
+            } else {
+                """
+                    SELECT 
+                        l.locationID,
+                        l.userID,
+                        l.deviceID,
+                        u.fullName,
+                        l.floorLevel,
+                        i.status,
+                        l.latitude,
+                        l.longitude,
+                        l.dateTime,
+                        i.officerResponded,
+                        i.relocatedLocation
+                    FROM incident_logs_table i
+                    JOIN location_table l ON i.locationID = l.locationID
+                    JOIN user_table u ON l.userID = u.userID
+                    WHERE i.status IN ('pending', 'ongoing')
+                    ORDER BY FIELD(i.status, 'pending', 'ongoing', 'resolved'), i.alertDateTime DESC
+                """.trimIndent()
+            }
             statement = connection.prepareStatement(query)
+            if (!currentOfficerName.isNullOrBlank()) {
+                statement.setString(1, currentOfficerName)
+            }
             resultSet = statement.executeQuery()
 
             while (resultSet.next()) {
@@ -768,6 +798,48 @@ object MySQLHelper {
                     officerName,
                     relocatedLocation
                 )
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    suspend fun submitIncidentReport(
+        locationID: String,
+        relocatedLocation: String,
+        actionFA: String? = null,
+        actionINFO: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        try {
+            connection = getConnection()
+            if (connection == null) return@withContext false
+
+            val hasOtherFields = !actionFA.isNullOrBlank() || !actionINFO.isNullOrBlank()
+            val query = if (hasOtherFields) {
+                "UPDATE incident_logs_table SET relocatedLocation = ?, actionFA = ?, actionINFO = ? WHERE locationID = ?"
+            } else {
+                "UPDATE incident_logs_table SET relocatedLocation = ? WHERE locationID = ?"
+            }
+            statement = connection.prepareStatement(query)
+            statement.setString(1, relocatedLocation)
+            if (hasOtherFields) {
+                statement.setString(2, actionFA ?: "")
+                statement.setString(3, actionINFO ?: "")
+                statement.setString(4, locationID)
+            } else {
+                statement.setString(2, locationID)
+            }
+
+            val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                SmartPollingManager.getInstance().triggerFastUpdate()
             }
             rowsAffected > 0
         } catch (e: SQLException) {

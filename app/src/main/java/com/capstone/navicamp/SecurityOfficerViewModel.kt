@@ -19,10 +19,10 @@ class SecurityOfficerViewModel : ViewModel() {
     val deviceCount: LiveData<Int> get() = _deviceCount
 
 
-    fun fetchPendingItems() {
+    fun fetchPendingItems(currentOfficerName: String? = null) {
         viewModelScope.launch {
             val items = withContext(Dispatchers.IO) {
-                MySQLHelper.getPendingItems()
+                MySQLHelper.getPendingItems(currentOfficerName)
             }
             _pendingItems.postValue(items)
         }
