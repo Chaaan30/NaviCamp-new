@@ -36,6 +36,7 @@ import android.widget.TextView
 class RegisterBottomSheet : BottomSheetDialogFragment() {
 
     private lateinit var campusAffiliationSpinner: Spinner
+    private lateinit var departmentSpinner: Spinner
     private lateinit var userTypeSpinner: Spinner
     private lateinit var progressBar: ProgressBar
     private lateinit var fullNameEditText: EditText
@@ -57,8 +58,10 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private var generatedOtp: String? = null
     private var isOtpSent: Boolean = false
     private var campusAffiliationSelectionTouched = false
+    private var departmentSelectionTouched = false
     private var systemRoleSelectionTouched = false
     private var isUpdatingSystemRoleOptions = false
+    private var isUpdatingDepartmentOptions = false
 
     private data class PasswordRuleResult(
         val score: Int,
@@ -72,6 +75,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.bottom_sheet_register, container, false)
 
         campusAffiliationSpinner = view.findViewById(R.id.campus_affiliation_spinner)
+        departmentSpinner = view.findViewById(R.id.department_spinner)
         userTypeSpinner = view.findViewById(R.id.user_type_spinner)
         fullNameEditText = view.findViewById(R.id.fullname)
         emailEditText = view.findViewById(R.id.email)
@@ -104,6 +108,13 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             false
         }
 
+        departmentSpinner.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                departmentSelectionTouched = true
+            }
+            false
+        }
+
 
         // Set input filter for contact number to accept only 11 digits
         contactNumberEditText.filters =
@@ -115,6 +126,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             })
 
         setupCampusAffiliationSpinner()
+        updateDepartmentOptions("Campus Affiliation")
         updateSystemRoleOptions("Campus Affiliation")
         setupPasswordRequirementWatcher()
 
@@ -180,6 +192,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         campusAffiliationSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedAffiliation = parent.getItemAtPosition(position).toString()
+                updateDepartmentOptions(selectedAffiliation)
                 updateSystemRoleOptions(selectedAffiliation)
                 if (campusAffiliationSelectionTouched && position == 0) {
                     Toast.makeText(
@@ -193,6 +206,35 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
             override fun onNothingSelected(parent: AdapterView<*>) {
                 updateSystemRoleOptions("Campus Affiliation")
             }
+        }
+    }
+
+    private fun updateDepartmentOptions(campusAffiliation: String) {
+        val departmentArrayRes = when (campusAffiliation) {
+            "Student" -> R.array.departments_student
+            "Employee" -> R.array.departments_employee
+            else -> R.array.departments_default
+        }
+
+        isUpdatingDepartmentOptions = true
+        departmentSpinner.adapter = createRegisterSpinnerAdapter(departmentArrayRes)
+        departmentSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (isUpdatingDepartmentOptions) {
+                    isUpdatingDepartmentOptions = false
+                    return
+                }
+
+                if (departmentSelectionTouched && position == 0) {
+                    Toast.makeText(
+                        context,
+                        "Please select from the Department choices",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
         }
     }
 
@@ -239,6 +281,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         val confirmPassword = confirmPasswordEditText.text.toString()
         val otp = otpEditText.text.toString()
         val campusAffiliation = campusAffiliationSpinner.selectedItem.toString()
+        val department = departmentSpinner.selectedItem.toString()
         val systemRole = userTypeSpinner.selectedItem.toString()
 
         // Validation
@@ -254,6 +297,11 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
 
         if (systemRole == "System Role") {
             Toast.makeText(context, "Please select a valid system role", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (department == "Department") {
+            Toast.makeText(context, "Please select a department", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -331,6 +379,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                         userID,
                         fullName,
                         campusAffiliation,
+                        department,
                         email,
                         contactNumber,
                         hashedPassword,

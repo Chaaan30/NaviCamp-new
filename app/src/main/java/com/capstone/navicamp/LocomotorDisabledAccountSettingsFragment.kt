@@ -35,6 +35,8 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
     private lateinit var editFullName: EditText
     private lateinit var schoolIdText: TextView
     private lateinit var editSchoolId: EditText
+    private lateinit var departmentText: TextView
+    private lateinit var editDepartmentSpinner: Spinner
     private lateinit var emailText: TextView
     private lateinit var contactNumberText: TextView
     private lateinit var editContactNumber: EditText
@@ -99,6 +101,8 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         editFullName = view.findViewById(R.id.pwd_edit_name)
         schoolIdText = view.findViewById(R.id.pwd_display_id)
         editSchoolId = view.findViewById(R.id.pwd_edit_school_id)
+        departmentText = view.findViewById(R.id.pwd_display_department)
+        editDepartmentSpinner = view.findViewById(R.id.pwd_edit_department_spinner)
         emailText = view.findViewById(R.id.pwd_display_email)
         contactNumberText = view.findViewById(R.id.pwd_display_contact)
         editContactNumber = view.findViewById(R.id.pwd_edit_contact)
@@ -153,6 +157,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         schoolIdText.text = sharedPreferences.getString("schoolID", "")
         emailText.text = sharedPreferences.getString("email", "")
         contactNumberText.text = sharedPreferences.getString("contactNumber", "")
+        departmentText.text = sharedPreferences.getString("department", "")
         emergencyNameText.text = sharedPreferences.getString("emergencyContactName", "")
         emergencyNumberText.text = sharedPreferences.getString("emergencyContactNumber", "")
         userTypeText.text = sharedPreferences.getString("userType", "")
@@ -164,6 +169,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         // Initial Visibility
         editFullName.visibility = View.GONE
         editSchoolId.visibility = View.GONE
+        editDepartmentSpinner.visibility = View.GONE
         editEmail.visibility = View.GONE
         editContactNumber.visibility = View.GONE
         editEmergencyName.visibility = View.GONE
@@ -181,6 +187,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         val currentFull = fullNameText.text.toString()
         val currentSchoolId = schoolIdText.text.toString()
+        val currentDepartment = departmentText.text.toString()
         val currentEmail = emailText.text.toString()
         val currentContact = contactNumberText.text.toString()
         val currentEmerName = emergencyNameText.text.toString()
@@ -199,6 +206,10 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         editContactNumber.apply { visibility = View.VISIBLE; setText(currentContact) }
         contactNumberText.visibility = View.GONE
 
+        setupDepartmentSpinner(userTypeText.text.toString(), currentDepartment)
+        editDepartmentSpinner.visibility = View.VISIBLE
+        departmentText.visibility = View.GONE
+
         editEmergencyName.apply { visibility = View.VISIBLE; setText(currentEmerName) }
         emergencyNameText.visibility = View.GONE
 
@@ -215,6 +226,13 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         val otp = editOtp.text.toString().trim()
         val currentEmail = emailText.text.toString().trim()
         val newContact = editContactNumber.text.toString().trim()
+        val selectedDepartment = editDepartmentSpinner.selectedItem?.toString()?.trim().orEmpty()
+        val currentDepartment = departmentText.text.toString().trim()
+        val finalDepartment = if (selectedDepartment.isNotBlank() && selectedDepartment != "Department") {
+            selectedDepartment
+        } else {
+            currentDepartment
+        }
         val newEmerName = editEmergencyName.text.toString().trim()
         val newEmerNumber = editEmergencyNumber.text.toString().trim()
 
@@ -229,6 +247,10 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
             Toast.makeText(requireContext(), "Verify new email first", Toast.LENGTH_SHORT).show()
             return
         }
+        if (finalDepartment.isBlank()) {
+            Toast.makeText(requireContext(), "Please select a department", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (newContact.length != 11 || (newEmerNumber.isNotBlank() && newEmerNumber.length != 11)) {
             Toast.makeText(requireContext(), "Phone numbers must be 11 digits", Toast.LENGTH_SHORT).show()
             return
@@ -241,7 +263,8 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
             val result = withContext(Dispatchers.IO) {
                 MySQLHelper.updateUserWithUserID(
                     newFull, newSchool, if (isOtpConfirmed) newEmail else currentEmail,
-                    newContact, newEmerName, newEmerNumber, userID!!, updatedOn
+                    newContact, newEmerName, newEmerNumber, userID!!, updatedOn,
+                    newDepartment = finalDepartment
                 )
             }
 
@@ -252,6 +275,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                 editor.putString("schoolID", newSchool)
                 editor.putString("email", if (isOtpConfirmed) newEmail else currentEmail)
                 editor.putString("contactNumber", newContact)
+                editor.putString("department", finalDepartment)
                 editor.putString("emergencyContactName", newEmerName)
                 editor.putString("emergencyContactNumber", newEmerNumber)
                 editor.apply()
@@ -271,6 +295,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         editFullName.visibility = View.GONE
         editSchoolId.visibility = View.GONE
+        editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editEmail.visibility = View.GONE
         editContactNumber.visibility = View.GONE
@@ -282,6 +307,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         fullNameText.visibility = View.VISIBLE
         schoolIdText.visibility = View.VISIBLE
+        departmentText.visibility = View.VISIBLE
         emailText.visibility = View.VISIBLE
         contactNumberText.visibility = View.VISIBLE
         emergencyNameText.visibility = View.VISIBLE
@@ -361,6 +387,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                 schoolIdText.text = dbData["schoolID"]
                 emailText.text = dbData["email"]
                 contactNumberText.text = dbData["contactNumber"]
+                departmentText.text = dbData["department"]
                 emergencyNameText.text = dbData["emergencyName"]
                 emergencyNumberText.text = dbData["emergencyNumber"]
                 userTypeText.text = dbData["userType"]
@@ -373,12 +400,34 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                     putString("fullName", dbData["fullName"])
                     putString("email", dbData["email"])
                     putString("contactNumber", dbData["contactNumber"])
+                    putString("department", dbData["department"])
                     putString("emergencyContactName", dbData["emergencyName"])
                     putString("emergencyContactNumber", dbData["emergencyNumber"])
                     apply()
                 }
             }
         }
+    }
+
+    private fun setupDepartmentSpinner(userType: String, selectedDepartment: String) {
+        val normalizedUserType = userType.trim().lowercase()
+        val departmentArrayRes = if (normalizedUserType.contains("employee")) {
+            R.array.departments_employee
+        } else {
+            R.array.departments_student
+        }
+
+        val adapter = ArrayAdapter(
+            requireContext(),
+            R.layout.spinner_register_selected_item,
+            resources.getStringArray(departmentArrayRes).toList()
+        ).apply {
+            setDropDownViewResource(R.layout.spinner_register_dropdown_item)
+        }
+
+        editDepartmentSpinner.adapter = adapter
+        val index = adapter.getPosition(selectedDepartment).takeIf { it >= 0 } ?: 0
+        editDepartmentSpinner.setSelection(index)
     }
 
     private fun setNonEditableFieldsDimmed(dim: Boolean) {

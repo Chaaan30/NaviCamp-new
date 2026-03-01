@@ -93,6 +93,22 @@
             <EditText android:id="@+id/edit_contact_number" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
             <View style="@style/Divider" />
 
+            <!-- DEPARTMENT -->
+            <TextView style="@style/SettingLabel" android:text="DEPARTMENT" />
+            <TextView android:id="@+id/department_text" style="@style/SettingValue" android:text="-" />
+            <Spinner
+                android:id="@+id/edit_department_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/spinner_background_with_arrow"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:popupBackground="@android:color/white"
+                android:spinnerMode="dropdown"
+                android:visibility="gone" />
+            <View style="@style/Divider" />
+
             <!-- USER TYPE -->
             <TextView style="@style/SettingLabel" android:text="USER TYPE" />
             <TextView android:id="@+id/user_type_text" style="@style/SettingValue" android:text="Student/Employee" />

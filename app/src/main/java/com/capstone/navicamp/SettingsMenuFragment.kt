@@ -23,13 +23,20 @@ class SettingsMenuFragment : Fragment(R.layout.fragment_settings_menu) {
         view.findViewById<TextView>(R.id.txt_full_name).text = fullName
 
         profileSection.setOnClickListener {
-            // Logic A: PWD Flow (Student/Employee + Temporary/Permanent)
-            val isPwdUser = (userType == "Student" || userType == "Employee") &&
-                    (systemRole == "Temporary" || systemRole == "Permanent")
+            val normalizedUserType = userType?.trim()?.lowercase().orEmpty()
+            val normalizedSystemRole = systemRole?.trim()?.lowercase().orEmpty()
 
-            // Logic B: Officer Flow (Employee + Safety Officer/Admin)
-            val isOfficerUser = (userType == "Employee") &&
-                    (systemRole == "Safety Officer" || systemRole == "Admin")
+            // Logic A: PWD Flow (Student/Employee + Temporary/Permanent)
+            val isPwdUser = (normalizedUserType == "student" || normalizedUserType == "employee") &&
+                    (normalizedSystemRole == "temporary" || normalizedSystemRole == "permanent")
+
+            // Logic B: Officer/Admin flow - supports DB role variants.
+            val isOfficerUser =
+                normalizedSystemRole.contains("admin") ||
+                        normalizedSystemRole.contains("officer") ||
+                        normalizedUserType.contains("safety officer") ||
+                        normalizedUserType.contains("security officer") ||
+                        normalizedUserType.contains("admin")
 
             when {
                 isPwdUser -> {

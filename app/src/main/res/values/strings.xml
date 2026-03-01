@@ -32,6 +32,40 @@
         <item>Safety Officer</item>
     </string-array>
 
+    <string-array name="departments_default">
+        <item>Department</item>
+    </string-array>
+
+    <string-array name="departments_student">
+        <item>Department</item>
+        <item>CAS</item>
+        <item>CCIS</item>
+        <item>CHS</item>
+        <item>CMET</item>
+        <item>CN</item>
+        <item>ETYCB</item>
+        <item>MIA</item>
+        <item>MITL</item>
+        <item>SHS</item>
+    </string-array>
+
+    <string-array name="departments_employee">
+        <item>Department</item>
+        <item>CDMO</item>
+        <item>CHSW</item>
+        <item>IFO</item>
+        <item>Security Services</item>
+        <item>CAS</item>
+        <item>CCIS</item>
+        <item>CHS</item>
+        <item>CMET</item>
+        <item>CN</item>
+        <item>ETYCB</item>
+        <item>MIA</item>
+        <item>MITL</item>
+        <item>SHS</item>
+    </string-array>
+
     <string-array name="filter_types">
         <item>Year</item>
         <item>Month</item>

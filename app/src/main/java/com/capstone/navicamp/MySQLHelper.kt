@@ -174,6 +174,14 @@ object MySQLHelper {
                         i.officerResponded,
                         i.relocatedLocation
                     FROM incident_logs_table i
+                    JOIN (
+                        SELECT
+                            locationID,
+                            MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
+                        FROM incident_logs_table
+                        GROUP BY locationID
+                    ) latest ON latest.locationID = i.locationID
+                        AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
                     WHERE i.status IN ('pending', 'ongoing')
@@ -199,6 +207,14 @@ object MySQLHelper {
                         i.officerResponded,
                         i.relocatedLocation
                     FROM incident_logs_table i
+                    JOIN (
+                        SELECT
+                            locationID,
+                            MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
+                        FROM incident_logs_table
+                        GROUP BY locationID
+                    ) latest ON latest.locationID = i.locationID
+                        AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
                     WHERE i.status IN ('pending', 'ongoing')
@@ -1101,6 +1117,7 @@ object MySQLHelper {
         userID: String,
         fullName: String,
         campusAffiliation: String,
+        department: String,
         email: String,
         contactNumber: String,
         password: String,
@@ -1136,18 +1153,19 @@ object MySQLHelper {
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
 
             val insertUserQuery = """
-                INSERT INTO user_table (userID, fullName, userType, email, contactNumber, password, proofPicture, createdOn)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO user_table (userID, fullName, userType, department, email, contactNumber, password, proofPicture, createdOn)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
             userStatement = connection.prepareStatement(insertUserQuery)
             userStatement.setString(1, userID)
             userStatement.setString(2, fullName)
             userStatement.setString(3, campusAffiliation)
-            userStatement.setString(4, email)
-            userStatement.setString(5, contactNumber)
-            userStatement.setString(6, password)
-            userStatement.setString(7, null)
-            userStatement.setString(8, currentDateTime)
+            userStatement.setString(4, department)
+            userStatement.setString(5, email)
+            userStatement.setString(6, contactNumber)
+            userStatement.setString(7, password)
+            userStatement.setString(8, null)
+            userStatement.setString(9, currentDateTime)
             val userRowsAffected = userStatement.executeUpdate()
             if (userRowsAffected <= 0) {
                 connection.rollback()
@@ -1277,7 +1295,8 @@ object MySQLHelper {
         newEmergencyName: String,
         newEmergencyNumber: String,
         userID: String,
-        updatedOn: String
+        updatedOn: String,
+        newDepartment: String = ""
     ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -1302,6 +1321,9 @@ object MySQLHelper {
                 if (newContactNumber.isNotBlank()) {
                     query.append(", u.contactNumber = ?")
                 }
+                if (newDepartment.isNotBlank()) {
+                    query.append(", u.department = ?")
+                }
                 if (newEmergencyName.isNotBlank()) {
                     query.append(", p.emergencyContactPerson  = ?")
                 }
@@ -1325,6 +1347,9 @@ object MySQLHelper {
                 if (newContactNumber.isNotBlank()) {
                     statement.setString(index++, newContactNumber)
                 }
+                if (newDepartment.isNotBlank()) {
+                    statement.setString(index++, newDepartment)
+                }
                 if (newEmergencyName.isNotBlank()) {
                     statement.setString(index++, newEmergencyName)
                 }
@@ -1336,7 +1361,7 @@ object MySQLHelper {
                 Log.d("MySQLHelper", "Executing query: $query")
                 Log.d(
                     "MySQLHelper",
-                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newSchoolID=$newSchoolID, newEmail=$newEmail, newContactNumber=$newContactNumber, newEmergencyName=$newEmergencyName, newEmergencyNumber=$newEmergencyNumber, userID=$userID"
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newSchoolID=$newSchoolID, newEmail=$newEmail, newContactNumber=$newContactNumber, newDepartment=$newDepartment, newEmergencyName=$newEmergencyName, newEmergencyNumber=$newEmergencyNumber, userID=$userID"
                 )
                 val rowsAffected = statement.executeUpdate()
                 Log.d("MySQLHelper", "Rows affected: $rowsAffected")
@@ -1357,7 +1382,8 @@ object MySQLHelper {
         newEmail: String,
         newContactNumber: String,
         userID: String,
-        updatedOn: String
+        updatedOn: String,
+        newDepartment: String = ""
     ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -1379,6 +1405,9 @@ object MySQLHelper {
                 if (newContactNumber.isNotBlank()) {
                     query.append(", contactNumber = ?")
                 }
+                if (newDepartment.isNotBlank()) {
+                    query.append(", department = ?")
+                }
                 query.append(" WHERE userID = ?")
 
                 statement = connection.prepareStatement(query.toString())
@@ -1393,12 +1422,15 @@ object MySQLHelper {
                 if (newContactNumber.isNotBlank()) {
                     statement.setString(index++, newContactNumber)
                 }
+                if (newDepartment.isNotBlank()) {
+                    statement.setString(index++, newDepartment)
+                }
                 statement.setString(index, userID)
 
                 Log.d("MySQLHelper", "Executing query: $query")
                 Log.d(
                     "MySQLHelper",
-                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, userID=$userID"
+                    "Parameters: updatedOn=$updatedOn, newFullName=$newFullName, newEmail=$newEmail, newContactNumber=$newContactNumber, newDepartment=$newDepartment, userID=$userID"
                 )
                 val rowsAffected = statement.executeUpdate()
                 Log.d("MySQLHelper", "Rows affected: $rowsAffected")
@@ -1898,12 +1930,12 @@ object MySQLHelper {
             }
 
             val selectQuery = """
-                SELECT u.userID, d.deviceID, l.locationID, l.dateTime
+                SELECT l.userID, l.deviceID, l.locationID, l.dateTime
                 FROM location_table l
-                JOIN user_table u ON u.userID = l.userID
-                JOIN devices_table d ON d.userID = u.userID
-                WHERE l.locationID NOT IN (
-                    SELECT locationID FROM incident_logs_table
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM incident_logs_table i
+                    WHERE i.locationID = l.locationID
                 )
             """.trimIndent()
 
@@ -1980,8 +2012,17 @@ object MySQLHelper {
                     i.officerResponded,
                     i.relocatedLocation
                 FROM incident_logs_table i
+                JOIN (
+                    SELECT
+                        locationID,
+                        MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
+                    FROM incident_logs_table
+                    GROUP BY locationID
+                ) latest ON latest.locationID = i.locationID
+                    AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                 JOIN user_table u ON i.userID = u.userID
                 JOIN location_table l ON i.locationID = l.locationID
+                WHERE i.status <> 'false alarm'
             """.trimIndent()
 
             statement = connection.prepareStatement(query)
@@ -2482,11 +2523,16 @@ object MySQLHelper {
             }
 
             val query = """
-                SELECT u.fcm_token FROM user_table u
-                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                SELECT DISTINCT u.fcm_token
+                FROM user_table u
+                LEFT JOIN safety_officer_profiles_table s ON u.userID = s.userID
                 WHERE u.verified = 1
                 AND u.fcm_token IS NOT NULL
                 AND u.fcm_token != ''
+                AND (
+                    s.userID IS NOT NULL
+                    OR LOWER(COALESCE(u.userType, '')) LIKE '%admin%'
+                )
             """
             statement = connection.prepareStatement(query)
             resultSet = statement.executeQuery()
@@ -2576,6 +2622,49 @@ object MySQLHelper {
             connection?.close()
         }
     }
+
+    suspend fun getDeviceCoordinatesByLocationID(locationID: String): Pair<Double, Double>? =
+        withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            var resultSet: ResultSet? = null
+
+            return@withContext try {
+                connection = getConnection()
+                if (connection == null) return@withContext null
+
+                val query = """
+                    SELECT d.latitude, d.longitude
+                    FROM location_table l
+                    JOIN devices_table d ON d.deviceID = l.deviceID
+                    WHERE l.locationID = ?
+                    LIMIT 1
+                """.trimIndent()
+
+                statement = connection.prepareStatement(query)
+                statement.setString(1, locationID)
+                resultSet = statement.executeQuery()
+
+                if (resultSet.next()) {
+                    val latitude = (resultSet.getObject("latitude") as? Number)?.toDouble()
+                    val longitude = (resultSet.getObject("longitude") as? Number)?.toDouble()
+                    if (latitude != null && longitude != null) {
+                        Pair(latitude, longitude)
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            } catch (e: SQLException) {
+                Log.e("MySQLHelper", "Error fetching device coordinates for locationID=$locationID: ${e.message}")
+                null
+            } finally {
+                resultSet?.close()
+                statement?.close()
+                connection?.close()
+            }
+        }
 
     fun getVerifiedLocomotorUsersFiltered(
         userType: String?,
@@ -3379,7 +3468,7 @@ object MySQLHelper {
             // Corrected columns based on your DB screenshot:
             // emergencyContactPerson and emergencyContactNumber
             val query = """
-            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.createdOn,
+            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.department, u.createdOn,
                    p.schoolID, p.emergencyContactPerson, p.emergencyContactNumber, p.disabilityType, p.verifiedBy, p.verificationDate
             FROM user_table u
             LEFT JOIN pwd_profiles_table p ON u.userID = p.userID
@@ -3399,6 +3488,7 @@ object MySQLHelper {
                     data["email"] = resultSet.getString("email") ?: ""
                     data["contactNumber"] = resultSet.getString("contactNumber") ?: ""
                     data["userType"] = resultSet.getString("userType") ?: ""
+                    data["department"] = resultSet.getString("department") ?: ""
                     // Map DB names to the keys your Activity expects
                     data["emergencyName"] = resultSet.getString("emergencyContactPerson") ?: ""
                     data["emergencyNumber"] = resultSet.getString("emergencyContactNumber") ?: ""
@@ -3422,7 +3512,7 @@ object MySQLHelper {
     suspend fun getOfficerProfile(userID: String): Map<String, String>? {
         return withContext(Dispatchers.IO) {
             val query = """
-            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.createdOn,
+            SELECT u.fullName, u.email, u.contactNumber, u.userType, u.department, u.createdOn,
                    o.position AS systemRole
             FROM user_table u
             LEFT JOIN safety_officer_profiles_table o ON u.userID = o.userID
@@ -3441,6 +3531,7 @@ object MySQLHelper {
                     data["email"] = resultSet.getString("email") ?: ""
                     data["contactNumber"] = resultSet.getString("contactNumber") ?: ""
                     data["userType"] = resultSet.getString("userType") ?: ""
+                    data["department"] = resultSet.getString("department") ?: ""
                     data["systemRole"] = resultSet.getString("systemRole") ?: ""
 //                    data["verifiedBy"] = resultSet.getString("verifiedBy") ?: ""
 //                    data["verificationDate"] = resultSet.getString("verificationDate") ?: ""

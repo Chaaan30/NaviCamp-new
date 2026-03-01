@@ -50,6 +50,7 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var reportSection: LinearLayout
     private lateinit var reportLocationChips: FlexboxLayout
     private lateinit var reportOtherSection: LinearLayout
+    private lateinit var reportOtherLocation: EditText
     private lateinit var reportActionFA: EditText
     private lateinit var reportActionInfo: EditText
     private lateinit var submitReportButton: Button
@@ -103,6 +104,7 @@ class AssistanceModalDialog : DialogFragment() {
         reportSection = view.findViewById(R.id.report_section)
         reportLocationChips = view.findViewById(R.id.report_location_chips)
         reportOtherSection = view.findViewById(R.id.report_other_section)
+        reportOtherLocation = view.findViewById(R.id.report_other_location)
         reportActionFA = view.findViewById(R.id.report_action_fa)
         reportActionInfo = view.findViewById(R.id.report_action_info)
         submitReportButton = view.findViewById(R.id.submit_report_button)
@@ -345,6 +347,9 @@ class AssistanceModalDialog : DialogFragment() {
             setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
         }
 
+        // Hide officer status card — no longer relevant once resolved
+        officerStatusCard.visibility = View.GONE
+
         // Hide action buttons, show post-resolve buttons
         actionButtonsContainer.visibility = View.GONE
         postResolveButtons.visibility = View.VISIBLE
@@ -374,6 +379,7 @@ class AssistanceModalDialog : DialogFragment() {
             reportOtherSection.visibility = View.VISIBLE
         } else {
             reportOtherSection.visibility = View.GONE
+            reportOtherLocation.setText("")
             reportActionFA.setText("")
             reportActionInfo.setText("")
         }
@@ -389,8 +395,26 @@ class AssistanceModalDialog : DialogFragment() {
             return
         }
 
-        val actionFA = if (location == "Other") reportActionFA.text.toString().trim() else null
-        val actionInfo = if (location == "Other") reportActionInfo.text.toString().trim() else null
+        // Resolve actual relocation value when "Other" is selected
+        val relocatedLocation: String
+        val actionFA: String?
+        val actionInfo: String?
+
+        if (location == "Other") {
+            val customLocation = reportOtherLocation.text.toString().trim()
+            if (customLocation.isBlank()) {
+                reportOtherLocation.error = "Please enter a relocation location"
+                reportOtherLocation.requestFocus()
+                return
+            }
+            relocatedLocation = customLocation
+            actionFA = reportActionFA.text.toString().trim().ifBlank { null }
+            actionInfo = reportActionInfo.text.toString().trim().ifBlank { null }
+        } else {
+            relocatedLocation = location
+            actionFA = null
+            actionInfo = null
+        }
 
         submitReportButton.isEnabled = false
         loadingProgress.visibility = View.VISIBLE
@@ -399,7 +423,7 @@ class AssistanceModalDialog : DialogFragment() {
             val success = withContext(Dispatchers.IO) {
                 MySQLHelper.submitIncidentReport(
                     locationID = locationID ?: "",
-                    relocatedLocation = location,
+                    relocatedLocation = relocatedLocation,
                     actionFA = actionFA,
                     actionINFO = actionInfo
                 )
@@ -546,6 +570,17 @@ class AssistanceModalDialog : DialogFragment() {
             (resources.displayMetrics.widthPixels * 0.9).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
+        // Cap height so content scrolls instead of overflowing off-screen
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.85).toInt()
+        dialog?.window?.decorView?.post {
+            val current = dialog?.window?.decorView?.height ?: 0
+            if (current > maxHeight) {
+                dialog?.window?.setLayout(
+                    (resources.displayMetrics.widthPixels * 0.9).toInt(),
+                    maxHeight
+                )
+            }
+        }
     }
 
     companion object {
