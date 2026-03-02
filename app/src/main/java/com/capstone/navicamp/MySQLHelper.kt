@@ -184,13 +184,13 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
-                    WHERE i.status IN ('pending', 'ongoing')
+                    WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                        OR (
-                           i.status = 'resolved'
+                           LOWER(TRIM(i.status)) = 'resolved'
                            AND i.officerResponded = ?
                            AND (i.relocatedLocation IS NULL OR i.relocatedLocation = '')
                        )
-                    ORDER BY FIELD(i.status, 'pending', 'ongoing', 'resolved'), i.alertDateTime DESC
+                    ORDER BY FIELD(LOWER(TRIM(i.status)), 'ongoing', 'pending', 'resolved'), i.alertDateTime DESC
                 """.trimIndent()
             } else {
                 """
@@ -217,8 +217,8 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
-                    WHERE i.status IN ('pending', 'ongoing')
-                    ORDER BY FIELD(i.status, 'pending', 'ongoing', 'resolved'), i.alertDateTime DESC
+                    WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
+                    ORDER BY FIELD(LOWER(TRIM(i.status)), 'ongoing', 'pending', 'resolved'), i.alertDateTime DESC
                 """.trimIndent()
             }
             statement = connection.prepareStatement(query)
@@ -603,7 +603,7 @@ object MySQLHelper {
     fun getSystemRoleByUserID(userID: String): String? {
         val position = getSafetyOfficerPositionByUserID(userID)
         if (!position.isNullOrBlank()) {
-            return "Safety Officer"
+            return position.trim()
         }
         return getDisabilityTypeByUserID(userID)
     }

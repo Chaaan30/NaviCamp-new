@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -143,10 +144,15 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
 
     // This moves the logic from your old Activity to the Fragment
     private fun updateAssistanceCards(pendingItems: List<LocationItem>) {
-        assistanceSectionTitle.text = "People currently in need of assistance (${pendingItems.size}):"
+        val sortedItems = pendingItems.sortedWith(
+            compareBy<LocationItem> { statusPriority(it.status) }
+                .thenByDescending { it.dateTime }
+        )
+
+        assistanceSectionTitle.text = "People currently in need of assistance (${sortedItems.size}):"
         assistanceLayout.removeAllViews()
 
-        if (pendingItems.isEmpty()) {
+        if (sortedItems.isEmpty()) {
             // empty state
             emptyStateLayout.visibility = View.VISIBLE
             assistanceLayout.visibility = View.GONE
@@ -161,12 +167,21 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val dateFormat = SimpleDateFormat("MMMM-dd-yyyy", Locale.getDefault())
         val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
-        for (item in pendingItems.take(5)) { // Limit to 5 for home screen performance
+        for (item in sortedItems) {
             val cardView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.assistance_card, assistanceLayout, false)
 
             setupAssistanceCard(cardView, item, inputFormat, dateFormat, timeFormat)
             assistanceLayout.addView(cardView)
+        }
+    }
+
+    private fun statusPriority(status: String?): Int {
+        return when (status?.trim()?.lowercase()) {
+            "ongoing" -> 0
+            "pending" -> 1
+            "resolved" -> 2
+            else -> 3
         }
     }
 
@@ -182,6 +197,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val createdOnTimeTextView = cardView.findViewById<TextView>(R.id.created_on_time_text)
         val floorLevelTextView = cardView.findViewById<TextView>(R.id.floor_level_text)
         val officerRespondedTextView = cardView.findViewById<TextView>(R.id.officer_responded_text)
+        val assistanceStatusTextView = cardView.findViewById<TextView>(R.id.assistance_status_text)
         val respondButton = cardView.findViewById<Button>(R.id.respond_button)
         val assistanceTypeBadge = cardView.findViewById<TextView>(R.id.assistance_type_badge)
 
@@ -218,6 +234,22 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         // Resolved requests without report should route to report flow.
         val isResolved = item.status.equals("resolved", ignoreCase = true)
         respondButton.text = if (isResolved) "Make a Report" else "Respond"
+
+        val normalizedStatus = item.status.trim().lowercase()
+        when (normalizedStatus) {
+            "ongoing" -> {
+                assistanceStatusTextView.text = "Status: ONGOING"
+                assistanceStatusTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.blue))
+            }
+            "resolved" -> {
+                assistanceStatusTextView.text = "Status: RESOLVED (REPORT PENDING)"
+                assistanceStatusTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.orange))
+            }
+            else -> {
+                assistanceStatusTextView.text = "Status: PENDING"
+                assistanceStatusTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.orange))
+            }
+        }
 
         respondButton.setOnClickListener {
             val intent = Intent(requireContext(), MapActivity::class.java).apply {

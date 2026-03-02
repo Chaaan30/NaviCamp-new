@@ -136,6 +136,18 @@
             android:fontFamily="@font/inter"
             android:gravity="center_vertical"/>
 
+        <TextView
+            android:id="@+id/assistance_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/orange"
+            android:fontFamily="@font/inter_bold"
+            android:gravity="center_vertical"
+            android:text="Status: PENDING"/>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/respond_button"
             android:layout_width="match_parent"
