@@ -258,56 +258,55 @@
                         android:textColor="@color/black"
                         android:textColorHint="@color/gray"
                         android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:fontFamily="@font/inter_bold"
-                        android:text="First Aid Action:"
-                        android:textColor="@color/darkGray"
-                        android:textSize="13sp" />
-
-                    <EditText
-                        android:id="@+id/report_action_fa"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        android:background="@drawable/edit_text_background_bordered"
-                        android:fontFamily="@font/inter"
-                        android:hint="Describe the first aid action..."
-                        android:inputType="textMultiLine"
-                        android:minHeight="48dp"
-                        android:padding="12dp"
-                        android:textColor="@color/black"
-                        android:textColorHint="@color/gray"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="4dp"
-                        android:fontFamily="@font/inter_bold"
-                        android:text="Further information for treatment:"
-                        android:textColor="@color/darkGray"
-                        android:textSize="13sp" />
-
-                    <EditText
-                        android:id="@+id/report_action_info"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:background="@drawable/edit_text_background_bordered"
-                        android:fontFamily="@font/inter"
-                        android:hint="Describe further treatment information..."
-                        android:inputType="textMultiLine"
-                        android:minHeight="48dp"
-                        android:padding="12dp"
-                        android:textColor="@color/black"
-                        android:textColorHint="@color/gray"
-                        android:textSize="14sp" />
-
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="First Aid Action:"
+                    android:textColor="@color/darkGray"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/report_action_fa"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/edit_text_background_bordered"
+                    android:fontFamily="@font/inter"
+                    android:hint="Describe the first aid action..."
+                    android:inputType="textMultiLine"
+                    android:minHeight="48dp"
+                    android:padding="12dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Further information for treatment:"
+                    android:textColor="@color/darkGray"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/report_action_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/edit_text_background_bordered"
+                    android:fontFamily="@font/inter"
+                    android:hint="Describe further treatment information..."
+                    android:inputType="textMultiLine"
+                    android:minHeight="48dp"
+                    android:padding="12dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray"
+                    android:textSize="14sp" />
 
                 <!-- Submit Report Button -->
                 <Button

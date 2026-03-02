@@ -190,7 +190,10 @@ class LoginBottomSheet : BottomSheetDialogFragment() {
     private fun isSafetyOfficerRole(role: String?): Boolean {
         if (role.isNullOrBlank()) return false
         val normalized = role.trim().lowercase()
-        return normalized.contains("safety") || normalized.contains("security") || normalized.contains("officer")
+        return normalized.contains("safety") ||
+            normalized.contains("security") ||
+            normalized.contains("officer") ||
+            normalized.contains("admin")
     }
 
     private fun isDisabledRole(role: String?): Boolean {

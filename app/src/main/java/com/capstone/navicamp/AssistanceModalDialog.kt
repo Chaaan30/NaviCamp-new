@@ -380,8 +380,6 @@ class AssistanceModalDialog : DialogFragment() {
         } else {
             reportOtherSection.visibility = View.GONE
             reportOtherLocation.setText("")
-            reportActionFA.setText("")
-            reportActionInfo.setText("")
         }
 
         submitReportButton.isEnabled = true
@@ -395,10 +393,24 @@ class AssistanceModalDialog : DialogFragment() {
             return
         }
 
+        val actionFAText = reportActionFA.text.toString().trim()
+        if (actionFAText.isBlank()) {
+            Toast.makeText(requireContext(), "First Aid Action shouldn't be blank.", Toast.LENGTH_SHORT).show()
+            reportActionFA.requestFocus()
+            return
+        }
+
+        val actionInfoText = reportActionInfo.text.toString().trim()
+        if (actionInfoText.isBlank()) {
+            Toast.makeText(requireContext(), "Further information shouldn't be blank.", Toast.LENGTH_SHORT).show()
+            reportActionInfo.requestFocus()
+            return
+        }
+
         // Resolve actual relocation value when "Other" is selected
         val relocatedLocation: String
-        val actionFA: String?
-        val actionInfo: String?
+        val actionFA = actionFAText
+        val actionInfo = actionInfoText
 
         if (location == "Other") {
             val customLocation = reportOtherLocation.text.toString().trim()
@@ -408,12 +420,8 @@ class AssistanceModalDialog : DialogFragment() {
                 return
             }
             relocatedLocation = customLocation
-            actionFA = reportActionFA.text.toString().trim().ifBlank { null }
-            actionInfo = reportActionInfo.text.toString().trim().ifBlank { null }
         } else {
             relocatedLocation = location
-            actionFA = null
-            actionInfo = null
         }
 
         submitReportButton.isEnabled = false

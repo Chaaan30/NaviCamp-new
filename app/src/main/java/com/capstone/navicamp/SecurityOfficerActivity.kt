@@ -19,6 +19,8 @@ import kotlinx.coroutines.withContext
 class SecurityOfficerActivity : AppCompatActivity() {
 
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var prefs: android.content.SharedPreferences
+    private var userID: String = ""
     private var currentPosition: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,8 +31,8 @@ class SecurityOfficerActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_navigation)
         bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        val prefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-        val userID = prefs.getString("userID", "") ?: ""
+        prefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        userID = prefs.getString("userID", "") ?: ""
 
         if (userID.isEmpty()) {
             // If no one is logged in, redirect to LoginActivity
@@ -45,7 +47,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
         bottomNav = findViewById(R.id.bottom_navigation)
         bottomNav.labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
 
-        currentPosition = prefs.getString("systemRole", "") ?: ""
+        currentPosition = normalizeRole(prefs.getString("systemRole", ""))
         setupBottomNavVisibility(currentPosition)
 
         // set default fragment
@@ -87,14 +89,13 @@ class SecurityOfficerActivity : AppCompatActivity() {
             }
 
             if (dbProfile != null) {
-                val realPositionFromDB = dbProfile["systemRole"] ?: ""
+                val realPositionFromDB = normalizeRole(dbProfile["systemRole"])
 
                 // If the role in DB is different than what Login saved/Activity has:
                 if (realPositionFromDB != currentPosition) {
                     currentPosition = realPositionFromDB
 
                     // Update SharedPreferences locally so we remember this for next time
-                    val prefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
                     prefs.edit().putString("systemRole", realPositionFromDB).apply()
 
                     // Update the Bottom Nav instantly
@@ -108,7 +109,25 @@ class SecurityOfficerActivity : AppCompatActivity() {
 
     private fun setupBottomNavVisibility(position: String?) {
         val verifyItem = bottomNav.menu.findItem(R.id.nav_admin_verify_account)
-        verifyItem?.isVisible = position.equals("Admin", ignoreCase = true)
+        verifyItem?.isVisible = normalizeRole(position).contains("admin")
+    }
+
+    private fun normalizeRole(role: String?): String {
+        return role?.trim()?.lowercase().orEmpty()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::prefs.isInitialized) {
+            val cachedRole = normalizeRole(prefs.getString("systemRole", ""))
+            if (cachedRole != currentPosition) {
+                currentPosition = cachedRole
+                setupBottomNavVisibility(currentPosition)
+            }
+        }
+        if (userID.isNotBlank()) {
+            syncUserRoleFromDatabase(userID)
+        }
     }
 
     override fun onBackPressed() {
