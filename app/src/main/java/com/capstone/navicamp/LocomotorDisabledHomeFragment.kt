@@ -56,6 +56,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private var pendingTimer: CountDownTimer? = null
     private var isSOSPending = false
     private var lastTickProgress = 0
+    private var hasHandledSliderCancel = false
 
     // State Variables
     private var connectedDeviceID: String? = null
@@ -107,7 +108,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                 startSOSPendingFlow()
             } else if (isSOSPending) {
                 // Logic: If they tap the button AGAIN while counting down, send it immediately
-                pendingTimer?.onFinish()
+                finalizePendingSOSAndSend()
             }
         }
 
@@ -124,7 +125,8 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                 }
 
                 // 3. Success Haptic
-                if (progress >= 95) {
+                if (progress >= 95 && isSOSPending && !hasHandledSliderCancel) {
+                    hasHandledSliderCancel = true
                     triggerHaptic("CONFIRM") // Distinct "thud" for success
                     resetUItoInitialState()
                     Toast.makeText(requireContext(), "SOS Cancelled", Toast.LENGTH_SHORT).show()
@@ -133,10 +135,11 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
                 lastTickProgress = 0
+                hasHandledSliderCancel = false
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                if (sosSlider.progress < 95) {
+                if (!hasHandledSliderCancel && sosSlider.progress < 95) {
                     sosSlider.progress = 0
                     sosSliderText.alpha = 1.0f
                     // Short vibration to show it snapped back/failed
@@ -342,16 +345,27 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
             }
 
             override fun onFinish() {
-                isSOSPending = false
-                isAlertSent = true
-                sosProgressBar.visibility = View.GONE
-                sosSlider.visibility = View.GONE
-                assistanceButton.text = "" // Will be set by playSuccessAnimation
-
-                sendEmergencyAlert() // Actual DB call
-                playSuccessAnimation()
+                finalizePendingSOSAndSend()
             }
         }.start()
+    }
+
+    private fun finalizePendingSOSAndSend() {
+        if (!isSOSPending || isAlertSent) return
+
+        pendingTimer?.cancel()
+        pendingTimer = null
+
+        isSOSPending = false
+        isAlertSent = true
+        sosProgressBar.visibility = View.GONE
+        sosSliderContainer.visibility = View.GONE
+        sosSlider.visibility = View.GONE
+        sosInstructionText.text = "Wait for an officer to respond"
+        assistanceButton.text = "" // Will be set by playSuccessAnimation
+
+        sendEmergencyAlert() // Actual DB call
+        playSuccessAnimation()
     }
 
     private fun forceResetButtonState() {
@@ -360,6 +374,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         isAlertSent = false
 
         sosProgressBar.visibility = View.GONE
+        sosSliderContainer.visibility = View.GONE
         sosSlider.visibility = View.GONE
         sosHeaderText.text = "Emergency help needed?"
 
@@ -414,7 +429,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     }
 
     private fun playSuccessAnimation() {
-        assistanceButton.text = "Help is on the way"
+        assistanceButton.text = "ALERT SENT"
         assistanceButton.textSize = 20f
         ValueAnimator.ofFloat(1.0f, 1.05f).apply {
             duration = 800
@@ -580,7 +595,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                 currentIncident = null
                 officerDispatchCard.visibility = View.GONE
 
-                // If SOS button is stuck on "Help is on the way", check if incident is fully resolved
+                // If SOS button is stuck on "ALERT SENT", check if incident is fully resolved
                 if (isAlertSent) {
                     val stillActive = withContext(Dispatchers.IO) {
                         MySQLHelper.hasActiveIncidentForUser(uid)
