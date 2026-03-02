@@ -3,6 +3,9 @@ package com.capstone.navicamp
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,23 +13,24 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.CoroutineScope
+import com.google.android.flexbox.FlexboxLayout
+import com.google.android.material.card.MaterialCardView
+import android.view.animation.AnimationUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.google.android.material.card.MaterialCardView
-import android.view.animation.AnimationUtils
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 
 class AssistanceModalDialog : DialogFragment() {
 
@@ -37,16 +41,28 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var officerStatusCard: MaterialCardView
     private lateinit var officerStatusText: TextView
     private lateinit var loadingProgress: ProgressBar
-    private lateinit var selectedLocationCard: MaterialCardView
-    private lateinit var selectedLocationText: TextView
-    private lateinit var submitFalseAlarmButton: Button
-    private lateinit var cancelFalseAlarmButton: Button
+    private lateinit var closeButton: Button
+
+    // Post-resolve views
+    private lateinit var postResolveButtons: LinearLayout
+    private lateinit var makeReportButton: Button
+    private lateinit var postResolveCloseButton: Button
+    private lateinit var reportSection: LinearLayout
+    private lateinit var reportLocationChips: FlexboxLayout
+    private lateinit var reportOtherSection: LinearLayout
+    private lateinit var reportOtherLocation: EditText
+    private lateinit var reportActionFA: EditText
+    private lateinit var reportActionInfo: EditText
+    private lateinit var submitReportButton: Button
+    private lateinit var actionButtonsContainer: LinearLayout
+
     private var locationID: String? = null
-    private var loadingDialog: AlertDialog? = null
     private var alertID: String? = null
     private var hasOfficerResponded = false
-    private var selectedRelocatedLocation: String? = null
-    private var isFalseAlarmMode = false
+    private var isResolved = false
+    private var selectedReportLocation: String? = null
+
+    private val reportLocationOptions = listOf("Gym", "Field", "Student Lounge", "Clinic", "Other")
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -58,27 +74,17 @@ class AssistanceModalDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize views
         initializeViews(view)
-        
-        // Add entrance animation - bottom to top fade to match FAB arrow up
+
         val slideUpFadeIn = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_up_fade_in)
         view.startAnimation(slideUpFadeIn)
 
-        // Get data from arguments
         locationID = arguments?.getString("LOCATION_ID")
         alertID = arguments?.getString("ALERT_ID")
 
-        // Populate initial data
         populateViewData(view)
-        
-        // Show loading and hide all buttons initially
         showLoadingState()
-        
-        // Check officer status
         checkOfficerStatus(view)
-        
-        // Setup click listeners
         setupClickListeners()
     }
 
@@ -87,13 +93,23 @@ class AssistanceModalDialog : DialogFragment() {
         resolveButton = view.findViewById(R.id.resolve_button)
         respondProgress = view.findViewById(R.id.respond_progress)
         falseAlarmButton = view.findViewById(R.id.false_alarm_button)
-        submitFalseAlarmButton = view.findViewById(R.id.submit_false_alarm_button)
-        cancelFalseAlarmButton = view.findViewById(R.id.cancel_false_alarm_button)
         officerStatusCard = view.findViewById(R.id.officer_status_card)
         officerStatusText = view.findViewById(R.id.officer_status_text)
         loadingProgress = view.findViewById(R.id.respond_progress)
-        selectedLocationCard = view.findViewById(R.id.selected_location_card)
-        selectedLocationText = view.findViewById(R.id.selected_location_text)
+        closeButton = view.findViewById(R.id.close_button)
+
+        postResolveButtons = view.findViewById(R.id.post_resolve_buttons)
+        makeReportButton = view.findViewById(R.id.make_report_button)
+        postResolveCloseButton = view.findViewById(R.id.post_resolve_close_button)
+        reportSection = view.findViewById(R.id.report_section)
+        reportLocationChips = view.findViewById(R.id.report_location_chips)
+        reportOtherSection = view.findViewById(R.id.report_other_section)
+        reportOtherLocation = view.findViewById(R.id.report_other_location)
+        reportActionFA = view.findViewById(R.id.report_action_fa)
+        reportActionInfo = view.findViewById(R.id.report_action_info)
+        submitReportButton = view.findViewById(R.id.submit_report_button)
+
+        actionButtonsContainer = respondButton.parent as LinearLayout
     }
 
     private fun populateViewData(view: View) {
@@ -108,8 +124,7 @@ class AssistanceModalDialog : DialogFragment() {
         view.findViewById<TextView>(R.id.full_name_text).text = fullName
         view.findViewById<TextView>(R.id.date_time_text).text = formatDateTime(dateTime)
         view.findViewById<TextView>(R.id.status_badge).text = status?.uppercase()
-        
-        // Style status badge based on status
+
         val statusBadge = view.findViewById<TextView>(R.id.status_badge)
         when (status?.lowercase()) {
             "pending" -> {
@@ -130,18 +145,22 @@ class AssistanceModalDialog : DialogFragment() {
     private fun checkOfficerStatus(view: View) {
         lifecycleScope.launch {
             val officerName: String? = withContext(Dispatchers.IO) {
-                // Always fetch the latest officer status from database
                 MySQLHelper.getOfficerNameByLocationID(locationID)
             }
 
-            // Hide loading and update UI
             hideLoadingState()
             updateOfficerStatusUI(officerName)
-            
-            // Also update the status badge based on current status
+
             val currentStatus = arguments?.getString("STATUS")
+
+            // If this is a resolved request the officer is returning to for reporting
+            if (currentStatus?.lowercase() == "resolved") {
+                isResolved = true
+                showPostResolveState()
+                return@launch
+            }
+
             if (officerName != null && currentStatus == "pending") {
-                // Update status badge to reflect that someone has responded
                 view.findViewById<TextView>(R.id.status_badge)?.apply {
                     text = "ONGOING"
                     background = ContextCompat.getDrawable(requireContext(), R.drawable.badge_ongoing)
@@ -155,29 +174,27 @@ class AssistanceModalDialog : DialogFragment() {
         if (!officerName.isNullOrEmpty()) {
             hasOfficerResponded = true
             officerStatusCard.visibility = View.VISIBLE
-            
+
             if (officerName == UserSingleton.fullName) {
-                // Current officer has responded
                 officerStatusText.text = "You are responding to this assistance request"
                 officerStatusCard.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.lightBlue))
-                
-                // Show control buttons, hide respond button
-                showOfficerControls()
-                hideRespondButton()
+
+                if (!isResolved) {
+                    showOfficerControls()
+                    hideRespondButton()
+                }
             } else {
-                // Another officer has responded
                 officerStatusText.text = "Officer $officerName is responding to this request"
                 officerStatusCard.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.lightGray))
-                
-                // Hide all control buttons including respond button
                 hideAllControls()
             }
         } else {
-            // No officer has responded
             hasOfficerResponded = false
             officerStatusCard.visibility = View.GONE
-            showRespondButton()
-            hideOfficerControls()
+            if (!isResolved) {
+                showRespondButton()
+                hideOfficerControls()
+            }
         }
     }
 
@@ -185,8 +202,7 @@ class AssistanceModalDialog : DialogFragment() {
         respondButton.visibility = View.GONE
         resolveButton.visibility = View.VISIBLE
         falseAlarmButton.visibility = View.VISIBLE
-        
-        // Add slide-up animation for controls
+
         val slideUpControls = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_up_fade_in_controls)
         resolveButton.startAnimation(slideUpControls)
         falseAlarmButton.startAnimation(slideUpControls)
@@ -205,106 +221,230 @@ class AssistanceModalDialog : DialogFragment() {
         respondButton.visibility = View.GONE
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
-        submitFalseAlarmButton.visibility = View.GONE
-        cancelFalseAlarmButton.visibility = View.GONE
     }
 
     private fun showRespondButton() {
         respondButton.visibility = View.VISIBLE
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
-        submitFalseAlarmButton.visibility = View.GONE
-        cancelFalseAlarmButton.visibility = View.GONE
     }
-    
+
     private fun showLoadingState() {
         loadingProgress.visibility = View.VISIBLE
         respondButton.visibility = View.GONE
         resolveButton.visibility = View.GONE
         falseAlarmButton.visibility = View.GONE
-        submitFalseAlarmButton.visibility = View.GONE
-        cancelFalseAlarmButton.visibility = View.GONE
     }
-    
+
     private fun hideLoadingState() {
         loadingProgress.visibility = View.GONE
     }
 
     private fun setupClickListeners() {
-        respondButton.setOnClickListener {
-            respondToAssistance()
-        }
+        respondButton.setOnClickListener { respondToAssistance() }
 
-        resolveButton.setOnClickListener {
-            showLocationPicker(false)
-        }
+        // Resolve immediately (no location picker)
+        resolveButton.setOnClickListener { resolveAssistanceImmediately() }
 
-        falseAlarmButton.setOnClickListener {
-            enterFalseAlarmMode()
-        }
-        
-        submitFalseAlarmButton.setOnClickListener {
-            submitFalseAlarm()
-        }
-        
-        cancelFalseAlarmButton.setOnClickListener {
-            exitFalseAlarmMode()
-        }
-        
-        // Selected location card click to change location
-        selectedLocationCard.setOnClickListener {
-            showLocationPicker(isFalseAlarmMode)
-        }
-        
-        // Close button
-        view?.findViewById<Button>(R.id.close_button)?.setOnClickListener {
+        // False alarm immediately (no relocation)
+        falseAlarmButton.setOnClickListener { submitFalseAlarm() }
+
+        closeButton.setOnClickListener { dismiss() }
+
+        makeReportButton.setOnClickListener { showReportSection() }
+
+        postResolveCloseButton.setOnClickListener {
             dismiss()
+            activity?.finish()
         }
+
+        submitReportButton.setOnClickListener { submitReport() }
     }
-    
-    private fun showLocationPicker(forFalseAlarm: Boolean) {
-        val title = if (forFalseAlarm) "User Relocated To" else "Location Update"
-        val dialog = LocationPickerDialog.newInstance(title)
-        dialog.setOnLocationSelectedListener { location ->
-            selectedRelocatedLocation = location
-            selectedLocationText.text = location
-            selectedLocationCard.visibility = View.VISIBLE
-            
-            if (forFalseAlarm) {
-                // For false alarm: show submit and cancel buttons
-                submitFalseAlarmButton.visibility = View.VISIBLE
-                cancelFalseAlarmButton.visibility = View.VISIBLE
+
+    // --- Resolve immediately, then show post-resolve state ---
+    private fun resolveAssistanceImmediately() {
+        val officerName = UserSingleton.fullName ?: "Unknown Officer"
+        val officerUserID = requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .getString("userID", null).orEmpty()
+
+        loadingProgress.visibility = View.VISIBLE
+        resolveButton.isEnabled = false
+        falseAlarmButton.isEnabled = false
+
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.resolveIncident(
+                    locationID = locationID ?: "",
+                    status = "resolved",
+                    officerName = officerName,
+                    officerUserID = officerUserID
+                )
+            }
+
+            loadingProgress.visibility = View.GONE
+
+            if (success) {
+                isResolved = true
+                showSuccessAnimation()
+                sendDataChangeBroadcast()
+                SmartPollingManager.getInstance().triggerFastUpdate()
+                Toast.makeText(requireContext(), "Assistance resolved", Toast.LENGTH_SHORT).show()
+
+                showPostResolveState()
             } else {
-                // For resolve: submit immediately after selection
-                resolveAssistance("resolved", location)
+                resolveButton.isEnabled = true
+                falseAlarmButton.isEnabled = true
+                Toast.makeText(requireContext(), "Failed to resolve. Please try again.", Toast.LENGTH_SHORT).show()
             }
         }
-        dialog.show(parentFragmentManager, "LocationPickerDialog")
-    }
-    
-    private fun enterFalseAlarmMode() {
-        isFalseAlarmMode = true
-        // Hide resolve and false alarm buttons
-        resolveButton.visibility = View.GONE
-        falseAlarmButton.visibility = View.GONE
-        // Show cancel button immediately
-        cancelFalseAlarmButton.visibility = View.VISIBLE
-        // Show location picker
-        showLocationPicker(true)
-    }
-    
-    private fun exitFalseAlarmMode() {
-        isFalseAlarmMode = false
-        // Hide false alarm buttons and selected location
-        submitFalseAlarmButton.visibility = View.GONE
-        cancelFalseAlarmButton.visibility = View.GONE
-        selectedLocationCard.visibility = View.GONE
-        selectedRelocatedLocation = null
-        // Show resolve and false alarm buttons again
-        resolveButton.visibility = View.VISIBLE
-        falseAlarmButton.visibility = View.VISIBLE
     }
 
+    // --- False alarm: resolves immediately, no relocation ---
+    private fun submitFalseAlarm() {
+        val officerName = UserSingleton.fullName ?: "Unknown Officer"
+        val officerUserID = requireContext()
+            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            .getString("userID", null).orEmpty()
+
+        loadingProgress.visibility = View.VISIBLE
+        resolveButton.isEnabled = false
+        falseAlarmButton.isEnabled = false
+
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.resolveIncident(
+                    locationID = locationID ?: "",
+                    status = "false alarm",
+                    officerName = officerName,
+                    officerUserID = officerUserID
+                )
+            }
+
+            loadingProgress.visibility = View.GONE
+
+            if (success) {
+                showSuccessAnimation()
+                sendDataChangeBroadcast()
+                SmartPollingManager.getInstance().triggerFastUpdate()
+                Toast.makeText(requireContext(), "Marked as false alarm", Toast.LENGTH_SHORT).show()
+                dismiss()
+                activity?.finish()
+            } else {
+                resolveButton.isEnabled = true
+                falseAlarmButton.isEnabled = true
+                Toast.makeText(requireContext(), "Failed. Please try again.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // --- Show post-resolve state: Make Report + Close ---
+    private fun showPostResolveState() {
+        // Update badge to resolved
+        view?.findViewById<TextView>(R.id.status_badge)?.apply {
+            text = "RESOLVED"
+            background = ContextCompat.getDrawable(requireContext(), R.drawable.badge_resolved)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
+        }
+
+        // Hide officer status card — no longer relevant once resolved
+        officerStatusCard.visibility = View.GONE
+
+        // Hide action buttons, show post-resolve buttons
+        actionButtonsContainer.visibility = View.GONE
+        postResolveButtons.visibility = View.VISIBLE
+    }
+
+    // --- Show report section with location chips ---
+    private fun showReportSection() {
+        postResolveButtons.visibility = View.GONE
+        reportSection.visibility = View.VISIBLE
+        setupReportLocationChips()
+    }
+
+    private fun setupReportLocationChips() {
+        reportLocationChips.removeAllViews()
+        reportLocationOptions.forEach { option ->
+            val chip = createChip(option)
+            chip.setOnClickListener { selectReportLocation(option) }
+            reportLocationChips.addView(chip)
+        }
+    }
+
+    private fun selectReportLocation(location: String) {
+        selectedReportLocation = location
+        updateChipSelectionStates(reportLocationChips, location)
+
+        if (location == "Other") {
+            reportOtherSection.visibility = View.VISIBLE
+        } else {
+            reportOtherSection.visibility = View.GONE
+            reportOtherLocation.setText("")
+            reportActionFA.setText("")
+            reportActionInfo.setText("")
+        }
+
+        submitReportButton.isEnabled = true
+        submitReportButton.alpha = 1f
+    }
+
+    private fun submitReport() {
+        val location = selectedReportLocation
+        if (location.isNullOrBlank()) {
+            Toast.makeText(requireContext(), "Please select a location.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Resolve actual relocation value when "Other" is selected
+        val relocatedLocation: String
+        val actionFA: String?
+        val actionInfo: String?
+
+        if (location == "Other") {
+            val customLocation = reportOtherLocation.text.toString().trim()
+            if (customLocation.isBlank()) {
+                reportOtherLocation.error = "Please enter a relocation location"
+                reportOtherLocation.requestFocus()
+                return
+            }
+            relocatedLocation = customLocation
+            actionFA = reportActionFA.text.toString().trim().ifBlank { null }
+            actionInfo = reportActionInfo.text.toString().trim().ifBlank { null }
+        } else {
+            relocatedLocation = location
+            actionFA = null
+            actionInfo = null
+        }
+
+        submitReportButton.isEnabled = false
+        loadingProgress.visibility = View.VISIBLE
+
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                MySQLHelper.submitIncidentReport(
+                    locationID = locationID ?: "",
+                    relocatedLocation = relocatedLocation,
+                    actionFA = actionFA,
+                    actionINFO = actionInfo
+                )
+            }
+
+            loadingProgress.visibility = View.GONE
+
+            if (success) {
+                sendDataChangeBroadcast()
+                SmartPollingManager.getInstance().triggerFastUpdate()
+                Toast.makeText(requireContext(), "Report submitted successfully.", Toast.LENGTH_SHORT).show()
+                dismiss()
+                activity?.finish()
+            } else {
+                submitReportButton.isEnabled = true
+                Toast.makeText(requireContext(), "Failed to submit report. Try again.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // --- Respond ---
     private fun respondToAssistance() {
         respondProgress.visibility = View.VISIBLE
         respondButton.isEnabled = false
@@ -312,8 +452,7 @@ class AssistanceModalDialog : DialogFragment() {
         val officerName = UserSingleton.fullName ?: "Unknown Officer"
         val officerUserID = requireContext()
             .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            .getString("userID", null)
-            .orEmpty()
+            .getString("userID", null).orEmpty()
 
         lifecycleScope.launch {
             val success = withContext(Dispatchers.IO) {
@@ -329,19 +468,11 @@ class AssistanceModalDialog : DialogFragment() {
             respondButton.isEnabled = true
 
             if (success) {
-                // Update UI to show officer has responded
                 updateOfficerStatusUI(officerName)
-                
-                // Show success animation
                 showSuccessAnimation()
-                
-                // Send broadcast and trigger updates
                 sendDataChangeBroadcast()
                 SmartPollingManager.getInstance().triggerFastUpdate()
-
-                // Start officer GPS tracking for the disabled user to see
                 (activity as? MapActivity)?.onOfficerResponded()
-                
                 Toast.makeText(requireContext(), "You are now responding to this assistance request", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(requireContext(), "Failed to respond. Please try again.", Toast.LENGTH_SHORT).show()
@@ -349,53 +480,51 @@ class AssistanceModalDialog : DialogFragment() {
         }
     }
 
-    private fun resolveAssistance(status: String, description: String? = null) {
-        val officerName = UserSingleton.fullName ?: "Unknown Officer"
-        val officerUserID = requireContext()
-            .getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
-            .getString("userID", null)
-            .orEmpty()
+    // --- Chip helpers (reused from LocationPickerDialog pattern) ---
+    private fun createChip(text: String): TextView {
+        return TextView(requireContext()).apply {
+            this.text = text
+            textSize = 13f
+            setTextColor(ContextCompat.getColor(context, R.color.primaryColor))
+            background = ContextCompat.getDrawable(context, R.drawable.chip_selector_background)
+            isSelected = false
+            isClickable = true
+            isFocusable = true
 
-        lifecycleScope.launch {
-            val success = withContext(Dispatchers.IO) {
-                MySQLHelper.resolveIncident(
-                    locationID = locationID ?: "",
-                    status = status,
-                    officerName = officerName,
-                    relocatedLocation = description,
-                    officerUserID = officerUserID
+            try {
+                typeface = ResourcesCompat.getFont(context, R.font.inter_bold)
+            } catch (_: Exception) {
+                setTypeface(typeface, Typeface.BOLD)
+            }
+
+            layoutParams = FlexboxLayout.LayoutParams(
+                FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                FlexboxLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, dpToPx(8), dpToPx(8))
+            }
+        }
+    }
+
+    private fun updateChipSelectionStates(container: FlexboxLayout, selectedText: String) {
+        for (i in 0 until container.childCount) {
+            val chip = container.getChildAt(i) as? TextView ?: continue
+            val selected = chip.text.toString() == selectedText
+            chip.isSelected = selected
+            chip.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (selected) R.color.white else R.color.primaryColor
                 )
-            }
-
-            if (success) {
-                showSuccessAnimation()
-                sendDataChangeBroadcast()
-                SmartPollingManager.getInstance().triggerFastUpdate()
-                
-                val message = if (status == "false alarm") "Marked as false alarm" else "Assistance resolved"
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-                
-                // Close dialog and finish activity
-                dismiss()
-                activity?.finish()
-            } else {
-                Toast.makeText(requireContext(), "Failed to $status. Please try again.", Toast.LENGTH_SHORT).show()
-            }
+            )
         }
     }
 
-    private fun submitFalseAlarm() {
-        val location = selectedRelocatedLocation
-        
-        if (location.isNullOrEmpty()) {
-            Toast.makeText(requireContext(), "Please select a location for the false alarm", Toast.LENGTH_LONG).show()
-            showLocationPicker(true)
-            return
-        }
-        
-        resolveAssistance("false alarm", location)
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 
+    // --- Utility ---
     private fun showSuccessAnimation() {
         val successView = view?.findViewById<View>(R.id.success_indicator)
         successView?.let {
@@ -417,8 +546,8 @@ class AssistanceModalDialog : DialogFragment() {
                 val inputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
                 val outputFormat = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
                 val date = inputFormat.parse(dateTime)
-                outputFormat.format(date)
-            } catch (e: Exception) {
+                outputFormat.format(date!!)
+            } catch (_: Exception) {
                 dateTime
             }
         } else {
@@ -428,25 +557,30 @@ class AssistanceModalDialog : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
-        
-        // Remove default background and title bar
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        
-        // Set dialog properties
         dialog.setCancelable(true)
         dialog.setCanceledOnTouchOutside(true)
-        
         return dialog
     }
 
     override fun onStart() {
         super.onStart()
-        // Set dialog size to be responsive
         dialog?.window?.setLayout(
             (resources.displayMetrics.widthPixels * 0.9).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
+        // Cap height so content scrolls instead of overflowing off-screen
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.85).toInt()
+        dialog?.window?.decorView?.post {
+            val current = dialog?.window?.decorView?.height ?: 0
+            if (current > maxHeight) {
+                dialog?.window?.setLayout(
+                    (resources.displayMetrics.widthPixels * 0.9).toInt(),
+                    maxHeight
+                )
+            }
+        }
     }
 
     companion object {
@@ -467,10 +601,10 @@ class AssistanceModalDialog : DialogFragment() {
             args.putString("DATE_TIME", dateTime)
             args.putString("STATUS", status)
             args.putString("ALERT_ID", alertID)
-            
+
             val fragment = AssistanceModalDialog()
             fragment.arguments = args
             return fragment
         }
     }
-} 
+}

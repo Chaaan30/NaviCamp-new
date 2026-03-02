@@ -203,7 +203,8 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     }
 
     private fun updateSummaryCards() {
-        totalIncidentsCount.text = allIncidents.size.toString()
+        val pendingCount = allIncidents.count { it.status.equals("pending", ignoreCase = true) }
+        totalIncidentsCount.text = pendingCount.toString()
         resolvedIncidentsCount.text = allIncidents.count { it.status.equals("resolved", ignoreCase = true) }.toString()
     }
 

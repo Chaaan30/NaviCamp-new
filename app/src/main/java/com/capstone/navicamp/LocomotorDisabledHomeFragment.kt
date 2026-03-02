@@ -13,6 +13,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -43,6 +45,18 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private lateinit var officerDispatchCard: MaterialCardView
     private lateinit var officerDispatchName: TextView
     private lateinit var availableOfficersText: TextView
+    private lateinit var sosProgressBar: ProgressBar
+    private lateinit var sosSlider: SeekBar
+    private lateinit var sosInstructionText: TextView
+    private lateinit var sosHeaderText: TextView
+    private lateinit var sosSliderContainer: View
+    private lateinit var sosSliderText: TextView
+    private lateinit var monitoringCard: MaterialCardView
+
+    private var pendingTimer: CountDownTimer? = null
+    private var isSOSPending = false
+    private var lastTickProgress = 0
+    private var hasHandledSliderCancel = false
 
     // State Variables
     private var connectedDeviceID: String? = null
@@ -60,9 +74,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     private val resetHandler = Handler(Looper.getMainLooper())
     private lateinit var resetRunnable: Runnable
-    private var countDownTimer: CountDownTimer? = null
+    // private var countDownTimer: CountDownTimer? = null
 
-    private val animationStages = listOf(1 to 200, 2 to 220, 3 to 240, 4 to 260, 5 to 286)
+    // private val animationStages = listOf(1 to 200, 2 to 220, 3 to 240, 4 to 260, 5 to 286)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -78,9 +92,61 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         officerDispatchCard = view.findViewById(R.id.officer_dispatch_card)
         officerDispatchName = view.findViewById(R.id.officer_dispatch_name)
         availableOfficersText = view.findViewById(R.id.available_officers_count_text)
+        sosProgressBar = view.findViewById(R.id.sos_circular_progress)
+        sosSlider = view.findViewById(R.id.sos_slide_to_cancel)
+        sosInstructionText = view.findViewById(R.id.instruction_text)
+        sosHeaderText = view.findViewById(R.id.emergency_pending_text)
+        sosSliderContainer = view.findViewById(R.id.sos_slider_container)
+        sosSliderText = view.findViewById(R.id.sos_slider_text)
+        monitoringCard = view.findViewById(R.id.available_officers_card)
 
         assistanceButtonBackground.isClickable = false
         assistanceButtonBackground.isFocusable = false
+
+        assistanceButton.setOnClickListener {
+            if (!isAlertSent && !isSOSPending && assistanceButton.isEnabled) {
+                startSOSPendingFlow()
+            } else if (isSOSPending) {
+                // Logic: If they tap the button AGAIN while counting down, send it immediately
+                finalizePendingSOSAndSend()
+            }
+        }
+
+        sosSlider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                // 1. Fade out the text (as we did before)
+                val alpha = 1 - (progress.toFloat() / 100)
+                sosSliderText.alpha = alpha
+
+                // 2. Subtle Tick Haptic: Trigger every 15% of movement
+                if (Math.abs(progress - lastTickProgress) > 15) {
+                    triggerHaptic("TICK")
+                    lastTickProgress = progress
+                }
+
+                // 3. Success Haptic
+                if (progress >= 95 && isSOSPending && !hasHandledSliderCancel) {
+                    hasHandledSliderCancel = true
+                    triggerHaptic("CONFIRM") // Distinct "thud" for success
+                    resetUItoInitialState()
+                    Toast.makeText(requireContext(), "SOS Cancelled", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                lastTickProgress = 0
+                hasHandledSliderCancel = false
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                if (!hasHandledSliderCancel && sosSlider.progress < 95) {
+                    sosSlider.progress = 0
+                    sosSliderText.alpha = 1.0f
+                    // Short vibration to show it snapped back/failed
+                    triggerHaptic("TICK")
+                }
+            }
+        })
 
         // 2. Data Initialization
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
@@ -90,7 +156,6 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         resetRunnable = Runnable { forceResetButtonState() }
 
         // 3. UI Setup
-        setupHoldToActivateButton()
         view.findViewById<TextView>(R.id.user_fullname).text = "${currentUserFullName}!"
 
         // 4. Restore Database State (Critical Assistance Feature)
@@ -103,6 +168,11 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         refreshStateManually()
     }
 
+    override fun onPause() {
+        super.onPause()
+        pendingTimer?.cancel() // Stop the SOS countdown if they exit the app
+    }
+
     fun refreshStateManually() {
         if (!isAdded) return
         checkUserAccessStatus()
@@ -112,7 +182,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     override fun onDestroyView() {
         super.onDestroyView()
         connectionTimer?.cancel()
-        countDownTimer?.cancel()
+        pendingTimer?.cancel()
         resetHandler.removeCallbacks(resetRunnable)
         stopIncidentPolling()
         stopGpsUpdates()
@@ -163,9 +233,12 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         assistanceButton.isEnabled = true
         assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
         assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
+
         assistanceButtonBackground.text = "" // Hide "Connect to Wheelchair" text
-        if (!isAlertSent) {
+
+        if (!isAlertSent && !isSOSPending) {
             assistanceButton.text = "SOS"
+            assistanceButton.textSize = 50f
             assistanceButton.setTextColor(Color.WHITE)
         }
     }
@@ -241,68 +314,122 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         }
     }
 
-    private fun setupHoldToActivateButton() {
-        assistanceButton.setOnTouchListener { _, event ->
-            if (isAlertSent || !assistanceButton.isEnabled) return@setOnTouchListener true
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> { startHoldAnimation(); true }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { cancelHoldAnimation(); true }
-                else -> false
-            }
-        }
-    }
+    private fun startSOSPendingFlow() {
+        isSOSPending = true
 
-    private fun startHoldAnimation() {
-        countDownTimer = object : CountDownTimer(5100, 1000) {
-            override fun onTick(ms: Long) {
-                val sec = 5 - (ms / 1000)
-                if (sec in 1..5) {
-                    assistanceButton.text = sec.toString()
-                    animateButtonSize(dpToPx(animationStages[sec.toInt() - 1].second))
-                }
+        val targetSizePx = dpToPx(286)
+
+        val layoutParams = assistanceButton.layoutParams
+        layoutParams.width = targetSizePx
+        layoutParams.height = targetSizePx
+        assistanceButton.layoutParams = layoutParams
+
+        // UI Changes
+        sosHeaderText.text = "SOS pending..."
+        sosInstructionText.text = "Tap the button to send SOS now\nor slide to cancel"
+        sosProgressBar.visibility = View.VISIBLE
+        sosSliderContainer.visibility = View.VISIBLE // Show the whole container
+        sosSliderText.alpha = 1.0f
+        sosSlider.visibility = View.VISIBLE
+        sosSlider.progress = 0
+
+        // 5-Second Timer
+        pendingTimer = object : CountDownTimer(5000, 50) {
+            override fun onTick(millisUntilFinished: Long) {
+                val secondsLeft = (millisUntilFinished / 1000) + 1
+                assistanceButton.text = secondsLeft.toString()
+
+                // Update circular progress (0 to 100)
+                val progress = ((5000 - millisUntilFinished).toFloat() / 5000 * 100).toInt()
+                sosProgressBar.progress = progress
             }
+
             override fun onFinish() {
-                isAlertSent = true
-                sendEmergencyAlert()
-                playSuccessAnimation()
-                resetHandler.postDelayed(resetRunnable, 30 * 60 * 1000)
+                finalizePendingSOSAndSend()
             }
         }.start()
     }
 
-    private fun cancelHoldAnimation() {
-        if (!isAlertSent) {
-            countDownTimer?.cancel()
-            assistanceButton.text = "SOS"
-            animateButtonSize(dpToPx(174))
-        }
+    private fun finalizePendingSOSAndSend() {
+        if (!isSOSPending || isAlertSent) return
+
+        pendingTimer?.cancel()
+        pendingTimer = null
+
+        isSOSPending = false
+        isAlertSent = true
+        sosProgressBar.visibility = View.GONE
+        sosSliderContainer.visibility = View.GONE
+        sosSlider.visibility = View.GONE
+        sosInstructionText.text = "Wait for an officer to respond"
+        assistanceButton.text = "" // Will be set by playSuccessAnimation
+
+        sendEmergencyAlert() // Actual DB call
+        playSuccessAnimation()
     }
 
     private fun forceResetButtonState() {
+        pendingTimer?.cancel()
+        isSOSPending = false
         isAlertSent = false
+
+        sosProgressBar.visibility = View.GONE
+        sosSliderContainer.visibility = View.GONE
+        sosSlider.visibility = View.GONE
+        sosHeaderText.text = "Emergency help needed?"
+
         assistanceButton.text = "SOS"
         assistanceButton.textSize = 50f
         assistanceButton.scaleX = 1.0f
         assistanceButton.scaleY = 1.0f
         assistanceButton.clearAnimation()
-        animateButtonSize(dpToPx(174))
+
+        monitoringCard.visibility = View.VISIBLE
         checkUserAccessStatus()
     }
 
-    private fun animateButtonSize(newSizePx: Int) {
-        val animator = ValueAnimator.ofInt(assistanceButton.width, newSizePx)
-        animator.duration = 200
-        animator.addUpdateListener {
-            val v = it.animatedValue as Int
-            assistanceButton.layoutParams.width = v
-            assistanceButton.layoutParams.height = v
-            assistanceButton.requestLayout()
-        }
-        animator.start()
+    private fun resetUItoInitialState() {
+        triggerHaptic("CONFIRM")
+
+        // 1. Stop the countdown timer immediately
+        pendingTimer?.cancel()
+        isSOSPending = false
+        isAlertSent = false
+
+        // 2. Reset Button Size (Shrink back to 174dp)
+        val originalSizePx = dpToPx(174)
+        val params = assistanceButton.layoutParams
+        params.width = originalSizePx
+        params.height = originalSizePx
+        assistanceButton.layoutParams = params
+
+        // Ensure any animations (like pulsating) are stopped
+        assistanceButton.clearAnimation()
+        assistanceButton.scaleX = 1.0f
+        assistanceButton.scaleY = 1.0f
+
+        // 3. Reset Text and Styles
+        assistanceButton.text = "SOS"
+        assistanceButton.textSize = 50f
+        sosHeaderText.text = "Emergency help needed?"
+        sosInstructionText.text = "Press the button below to alert a safety officer in the campus"
+
+        // 4. Reset Visibility
+        sosProgressBar.visibility = View.GONE
+        sosProgressBar.progress = 0
+        sosSliderContainer.visibility = View.GONE
+        sosSlider.visibility = View.GONE
+        sosSlider.progress = 0
+        sosSliderText.alpha = 1.0f
+
+        monitoringCard.visibility = View.VISIBLE
+
+        // 5. Important: Re-run the access check to set correct colors (Red vs Gray)
+        checkUserAccessStatus()
     }
 
     private fun playSuccessAnimation() {
-        assistanceButton.text = "Help is on the way"
+        assistanceButton.text = "ALERT SENT"
         assistanceButton.textSize = 20f
         ValueAnimator.ofFloat(1.0f, 1.05f).apply {
             duration = 800
@@ -386,6 +513,27 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         }
     }
 
+    private fun triggerHaptic(type: String) {
+        val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            when (type) {
+                "CONFIRM" -> {
+                    // A strong, distinct double pulse for success
+                    val effect = VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 150), intArrayOf(0, 255, 0, 255), -1)
+                    vibrator.vibrate(effect)
+                }
+                "TICK" -> {
+                    // A very light, short tick for sliding
+                    vibrator.vibrate(VibrationEffect.createOneShot(15, VibrationEffect.DEFAULT_AMPLITUDE))
+                }
+            }
+        } else {
+            // Fallback for older devices
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(if (type == "CONFIRM") 300 else 15)
+        }
+    }
+
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
     // --- Polling & Dispatch Logic ---
@@ -447,7 +595,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                 currentIncident = null
                 officerDispatchCard.visibility = View.GONE
 
-                // If SOS button is stuck on "Help is on the way", check if incident is fully resolved
+                // If SOS button is stuck on "ALERT SENT", check if incident is fully resolved
                 if (isAlertSent) {
                     val stillActive = withContext(Dispatchers.IO) {
                         MySQLHelper.hasActiveIncidentForUser(uid)

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Dark Gray color to match your screenshot -->
+    <solid android:color="#DF860A" />
+    <!-- High radius to make it look like a capsule -->
+    <corners android:radius="100dp" />
+</shape>

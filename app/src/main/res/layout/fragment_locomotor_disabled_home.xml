@@ -49,6 +49,7 @@
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/emergency_pending_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/inter_bold"
@@ -65,7 +66,7 @@
                     android:layout_marginTop="10dp"
                     android:fontFamily="@font/inter"
                     android:gravity="center"
-                    android:text="Press and hold the button below for 5 seconds to alert a safety officer in the campus"
+                    android:text="Press and hold the button below to alert a safety officer in the campus"
                     android:textColor="#575757"
                     android:textSize="14sp" />
 
@@ -75,17 +76,24 @@
                     android:layout_height="320dp"
                     android:layout_marginTop="25dp">
 
+                    <ProgressBar
+                        android:id="@+id/sos_circular_progress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="400dp"
+                        android:layout_height="400dp"
+                        android:layout_gravity="center"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/circular_progress_bar"
+                        android:translationZ="12dp"
+                        android:visibility="gone" />
+
                     <Button
                         android:id="@+id/assistance_button_background"
                         android:layout_width="286dp"
                         android:layout_height="286dp"
                         android:layout_gravity="center"
-                        android:fontFamily="sans-serif-black"
-                        android:textSize="20sp"
-                        android:textColor="#FFFFFF"
                         android:background="@drawable/assist_button_rounded_background"
-                        android:clickable="false"
-                        android:focusable="false"
                         android:stateListAnimator="@null"
                         app:backgroundTint="#E9C7CD" />
 
@@ -100,6 +108,43 @@
                         android:textColor="@android:color/white"
                         android:textSize="50sp"
                         app:backgroundTint="#EE2D4C" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:id="@+id/sos_slider_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:layout_marginHorizontal="32dp"
+                    android:layout_marginTop="20dp"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_slider_track" />
+
+                    <TextView
+                        android:id="@+id/sos_slider_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="SLIDE TO CANCEL SOS"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/inter_bold" />
+
+                    <SeekBar
+                        android:id="@+id/sos_slide_to_cancel"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:progressDrawable="@android:color/transparent"
+                        android:thumb="@drawable/ic_slider_thumb"
+                        android:thumbOffset="0dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:splitTrack="false"
+                        android:max="100" />
                 </FrameLayout>
 
                 <!-- 3. CONNECTION STATUS -->

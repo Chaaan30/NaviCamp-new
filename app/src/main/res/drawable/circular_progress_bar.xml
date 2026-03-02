@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The Background Ring (The empty part) -->
+    <item android:id="@android:id/background">
+        <shape
+            android:innerRadiusRatio="3"
+            android:shape="ring"
+            android:thickness="15dp"
+            android:useLevel="false">
+            <solid android:color="#F5F5F5" />
+        </shape>
+    </item>
+
+    <!-- The Progress Ring (The part that fills up) -->
+    <item android:id="@android:id/progress">
+        <rotate
+            android:fromDegrees="270"
+            android:pivotX="50%"
+            android:pivotY="50%"
+            android:toDegrees="270">
+            <shape
+                android:innerRadiusRatio="3"
+                android:shape="ring"
+                android:thickness="15dp"
+                android:useLevel="true">
+                <gradient
+                    android:endColor="#FF9800"
+                    android:startColor="#FFB74D"
+                    android:type="sweep" />
+            </shape>
+        </rotate>
+    </item>
+</layer-list>

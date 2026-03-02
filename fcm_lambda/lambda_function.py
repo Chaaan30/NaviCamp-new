@@ -30,19 +30,26 @@ def get_db_connection():
         raise e
 
 def get_security_officer_tokens():
-    """Get all FCM tokens for verified Security Officers (via safety_officer_profiles_table)"""
+    """Get FCM tokens for verified responders (officers + admins)."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             query = """
-                SELECT u.fcm_token FROM user_table u
-                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
-                WHERE u.verified = 1 AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
+                SELECT DISTINCT u.fcm_token
+                FROM user_table u
+                LEFT JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.verified = 1
+                  AND u.fcm_token IS NOT NULL
+                  AND u.fcm_token != ''
+                  AND (
+                        s.userID IS NOT NULL
+                        OR LOWER(COALESCE(u.userType, '')) LIKE '%admin%'
+                  )
             """
             cursor.execute(query)
             tokens = [row['fcm_token'] for row in cursor.fetchall()]
-            logger.info(f"Found {len(tokens)} Security Officer FCM tokens")
+            logger.info(f"Found {len(tokens)} responder/admin FCM tokens")
             return tokens
     except Exception as e:
         logger.error(f"Error getting security officer tokens: {str(e)}")
@@ -203,24 +210,32 @@ def handle_assistance_request(body):
     }
     tokens = get_security_officer_tokens()
     if not tokens:
-        return create_error_response("No security officers available to notify")
+        return create_error_response("No responders/admins available to notify")
     success_count = send_fcm_notification(tokens, title, message_body, data)
-    return create_success_response(f"Sent assistance request to {success_count}/{len(tokens)} officers.")
+    return create_success_response(f"Sent assistance request to {success_count}/{len(tokens)} responders/admins.")
 
 def get_other_security_officer_tokens(responding_officer_id):
-    """Get all FCM tokens for verified Security Officers, excluding the responding officer"""
+    """Get all responder/admin tokens, excluding the responding officer."""
     connection = None
     try:
         connection = get_db_connection()
         with connection.cursor() as cursor:
             query = """
-                SELECT u.fcm_token FROM user_table u
-                INNER JOIN safety_officer_profiles_table s ON u.userID = s.userID
-                WHERE u.verified = 1 AND u.fcm_token IS NOT NULL AND u.fcm_token != '' AND u.userID != %s
+                SELECT DISTINCT u.fcm_token
+                FROM user_table u
+                LEFT JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.verified = 1
+                  AND u.fcm_token IS NOT NULL
+                  AND u.fcm_token != ''
+                  AND u.userID != %s
+                  AND (
+                        s.userID IS NOT NULL
+                        OR LOWER(COALESCE(u.userType, '')) LIKE '%admin%'
+                  )
             """
             cursor.execute(query, (responding_officer_id,))
             tokens = [row['fcm_token'] for row in cursor.fetchall()]
-            logger.info(f"Found {len(tokens)} other officers to notify.")
+            logger.info(f"Found {len(tokens)} other responders/admins to notify.")
             return tokens
     except Exception as e:
         logger.error(f"Error getting other security officer tokens: {str(e)}")
@@ -270,7 +285,7 @@ def handle_officer_response(body):
     
     officer_name = officer_details.get('fullName', 'An officer')
     
-    # Notify other officers that this officer is responding
+    # Notify other responders/admins that this officer is responding
     other_officer_tokens = get_other_security_officer_tokens(officer_id)
     officers_notified = 0
     if other_officer_tokens:
@@ -300,7 +315,7 @@ def handle_officer_response(body):
     # Create response message
     messages = [f"Response from {officer_name} recorded."]
     if officers_notified > 0:
-        messages.append(f"Notified {officers_notified} other officer(s).")
+        messages.append(f"Notified {officers_notified} other responder/admin user(s).")
     if user_notified > 0:
         messages.append(f"Notified user that help is coming.")
     elif user_id:
@@ -330,7 +345,7 @@ def handle_assistance_resolved(body):
     floor = assistance_details.get('floorLevel', 'unknown location') if assistance_details else 'unknown location'
     alert_id = assistance_details.get('alertID', 'Unknown') if assistance_details else 'Unknown'
     
-    # Notify all security officers EXCEPT the one who resolved it
+    # Notify all responders/admins EXCEPT the one who resolved it
     if officer_id:
         officer_tokens = get_other_security_officer_tokens(officer_id)
     else:
@@ -350,9 +365,9 @@ def handle_assistance_resolved(body):
     
     # Create response message
     if officers_notified > 0:
-        return create_success_response(f"Assistance resolved. Notified {officers_notified} other officer(s).")
+        return create_success_response(f"Assistance resolved. Notified {officers_notified} other responder/admin user(s).")
     else:
-        return create_success_response("Assistance resolved. No other officers to notify.")
+        return create_success_response("Assistance resolved. No other responder/admin users to notify.")
 
 def create_success_response(message):
     """Create a successful response"""

@@ -98,6 +98,25 @@
             <EditText android:id="@+id/pwd_edit_contact" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
             <View style="@style/Divider" />
 
+            <!-- DEPARTMENT -->
+            <TextView style="@style/SettingLabel" android:text="DEPARTMENT" />
+            <TextView
+                android:id="@+id/pwd_display_department"
+                style="@style/SettingValue"
+                android:text="-" />
+            <Spinner
+                android:id="@+id/pwd_edit_department_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/spinner_background_with_arrow"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:popupBackground="@android:color/white"
+                android:spinnerMode="dropdown"
+                android:visibility="gone" />
+            <View style="@style/Divider" />
+
             <!-- EMERGENCY CONTACT NAME -->
             <TextView style="@style/SettingLabel" android:text="EMERGENCY CONTACT NAME" />
             <TextView android:id="@+id/pwd_display_emergencycontactname" style="@style/SettingValue" android:text="Firstname Lastname" />
