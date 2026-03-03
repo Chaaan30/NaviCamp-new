@@ -14,8 +14,6 @@
 **STEP 3:**
 inside of config.properties place the aws access key and secret access key then save it
 
-![image](https://github.com/user-attachments/assets/7878ce0e-a828-4eef-8a1b-d8566f5dbffb)
-
 ```
 aws.accessKeyId=YOUR_AWS_ACCESS_KEY_ID
 aws.secretKey=YOUR_AWS_SECRET_ACCESS_KEY
