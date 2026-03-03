@@ -172,7 +172,9 @@ object MySQLHelper {
                         l.longitude,
                         l.dateTime,
                         i.officerResponded,
-                        i.relocatedLocation
+                        i.relocatedLocation,
+                        p.emergencyContactPerson,
+                        p.emergencyContactNumber
                     FROM incident_logs_table i
                     JOIN (
                         SELECT
@@ -184,6 +186,7 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
+                    LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                     WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                        OR (
                            LOWER(TRIM(i.status)) = 'resolved'
@@ -247,7 +250,9 @@ object MySQLHelper {
                     resultSet.getString("dateTime") ?: "",
                     resultSet.getString("officerResponded") ?: "",
                     resultSet.getString("deviceID") ?: "",
-                    assistanceType
+                    assistanceType,
+                    resultSet.getString("emergencyContactPerson"),
+                    resultSet.getString("emergencyContactNumber")
                 )
                 pendingItems.add(locationItem)
             }
@@ -1664,10 +1669,13 @@ object MySQLHelper {
                     l.longitude,
                     l.dateTime,
                     i.officerResponded,
-                    i.relocatedLocation
+                    i.relocatedLocation,
+                    p.emergencyContactPerson,
+                    p.emergencyContactNumber
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
+                LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                 WHERE l.locationID = ?
                 ORDER BY i.alertDateTime DESC
                 LIMIT 1
@@ -1696,7 +1704,9 @@ object MySQLHelper {
                     longitude = resultSet.getDouble("longitude"),
                     dateTime = resultSet.getString("dateTime") ?: "",
                     officerName = resultSet.getString("officerResponded") ?: "",
-                    assistanceType = assistanceType
+                    assistanceType = assistanceType,
+                    emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
+                    emergencyContactNumber = resultSet.getString("emergencyContactNumber")
                 )
             } else {
                 throw SQLException("Location item not found.")
@@ -2577,9 +2587,12 @@ object MySQLHelper {
                 l.longitude, 
                 l.dateTime, 
                 i.officerResponded,
-                i.relocatedLocation
+                i.relocatedLocation,
+                p.emergencyContactPerson,
+                p.emergencyContactNumber
             FROM location_table l 
             LEFT JOIN incident_logs_table i ON l.locationID = i.locationID
+            LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
             WHERE l.locationID = ?
             ORDER BY i.alertDateTime DESC
             LIMIT 1
@@ -2608,7 +2621,9 @@ object MySQLHelper {
                     longitude = resultSet.getDouble("longitude"),
                     dateTime = resultSet.getString("dateTime"),
                     officerName = resultSet.getString("officerResponded") ?: "",
-                    assistanceType = assistanceType
+                    assistanceType = assistanceType,
+                    emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
+                    emergencyContactNumber = resultSet.getString("emergencyContactNumber")
                 )
             } else {
                 null

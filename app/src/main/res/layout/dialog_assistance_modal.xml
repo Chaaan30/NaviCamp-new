@@ -110,16 +110,45 @@
                             android:layout_marginEnd="12dp"
                             app:tint="@color/primaryColor" />
 
-                        <TextView
-                            android:id="@+id/full_name_text"
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="John Doe"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/black"
-                            android:fontFamily="@font/inter_bold" />
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/full_name_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="John Doe"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/black"
+                                android:fontFamily="@font/inter_bold" />
+
+                            <TextView
+                                android:id="@+id/emergency_contact_person_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="Emergency Contact Person:"
+                                android:textSize="13sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/emergency_contact_number_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Emergency Contact Number:"
+                                android:textSize="13sp"
+                                android:textColor="@color/darkGray"
+                                android:fontFamily="@font/inter"
+                                android:visibility="gone" />
+
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/user_id_text"

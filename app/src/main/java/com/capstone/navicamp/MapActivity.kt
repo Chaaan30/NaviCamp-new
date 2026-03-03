@@ -109,7 +109,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     latestLocationItem.fullName,
                     formatDateTime(latestLocationItem.dateTime),
                     latestLocationItem.status,
-                    "" // alertID - keeping empty as before
+                    "", // alertID - keeping empty as before
+                    latestLocationItem.emergencyContactPerson,
+                    latestLocationItem.emergencyContactNumber
                 )
                 modalDialog.show(supportFragmentManager, "AssistanceModal")
             }

@@ -42,6 +42,8 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var officerStatusText: TextView
     private lateinit var loadingProgress: ProgressBar
     private lateinit var closeButton: Button
+    private lateinit var emergencyContactPersonText: TextView
+    private lateinit var emergencyContactNumberText: TextView
 
     // Post-resolve views
     private lateinit var postResolveButtons: LinearLayout
@@ -97,6 +99,8 @@ class AssistanceModalDialog : DialogFragment() {
         officerStatusText = view.findViewById(R.id.officer_status_text)
         loadingProgress = view.findViewById(R.id.respond_progress)
         closeButton = view.findViewById(R.id.close_button)
+        emergencyContactPersonText = view.findViewById(R.id.emergency_contact_person_text)
+        emergencyContactNumberText = view.findViewById(R.id.emergency_contact_number_text)
 
         postResolveButtons = view.findViewById(R.id.post_resolve_buttons)
         makeReportButton = view.findViewById(R.id.make_report_button)
@@ -116,6 +120,8 @@ class AssistanceModalDialog : DialogFragment() {
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
         val userID = arguments?.getString("USER_ID")
         val fullName = arguments?.getString("FULL_NAME")
+        val emergencyContactPerson = arguments?.getString("EMERGENCY_CONTACT_PERSON")
+        val emergencyContactNumber = arguments?.getString("EMERGENCY_CONTACT_NUMBER")
         val dateTime = arguments?.getString("DATE_TIME")
         val status = arguments?.getString("STATUS")
 
@@ -124,6 +130,20 @@ class AssistanceModalDialog : DialogFragment() {
         view.findViewById<TextView>(R.id.full_name_text).text = fullName
         view.findViewById<TextView>(R.id.date_time_text).text = formatDateTime(dateTime)
         view.findViewById<TextView>(R.id.status_badge).text = status?.uppercase()
+
+        if (!emergencyContactPerson.isNullOrBlank()) {
+            emergencyContactPersonText.text = "Emergency Contact Person: $emergencyContactPerson"
+            emergencyContactPersonText.visibility = View.VISIBLE
+        } else {
+            emergencyContactPersonText.visibility = View.GONE
+        }
+
+        if (!emergencyContactNumber.isNullOrBlank()) {
+            emergencyContactNumberText.text = "Emergency Contact Number: $emergencyContactNumber"
+            emergencyContactNumberText.visibility = View.VISIBLE
+        } else {
+            emergencyContactNumberText.visibility = View.GONE
+        }
 
         val statusBadge = view.findViewById<TextView>(R.id.status_badge)
         when (status?.lowercase()) {
@@ -599,7 +619,9 @@ class AssistanceModalDialog : DialogFragment() {
             fullName: String,
             dateTime: String,
             status: String,
-            alertID: String
+            alertID: String,
+            emergencyContactPerson: String? = null,
+            emergencyContactNumber: String? = null
         ): AssistanceModalDialog {
             val args = Bundle()
             args.putString("FLOOR_LEVEL", floorLevel)
@@ -609,6 +631,8 @@ class AssistanceModalDialog : DialogFragment() {
             args.putString("DATE_TIME", dateTime)
             args.putString("STATUS", status)
             args.putString("ALERT_ID", alertID)
+            args.putString("EMERGENCY_CONTACT_PERSON", emergencyContactPerson)
+            args.putString("EMERGENCY_CONTACT_NUMBER", emergencyContactNumber)
 
             val fragment = AssistanceModalDialog()
             fragment.arguments = args
