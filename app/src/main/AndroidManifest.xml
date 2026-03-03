@@ -86,7 +86,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCSehCywL8-tJQ_7k7RoA3QdFckFjVIJhs" />
+            android:value="${MAPS_API_KEY}" />
 
         <receiver
             android:name=".DataChangeReceiver"

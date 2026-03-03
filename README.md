@@ -3,6 +3,16 @@
 
 # IMPORTANT PLEASE SEE
 
+## Google Maps API Key (Local only)
+
+Add this line to your local `local.properties` (do not commit):
+
+```
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY
+```
+
+The app manifest now reads the Maps key from `local.properties` using a Gradle manifest placeholder.
+
 **STEP 1:** inside the project files of android studio then go to app/src/main/assets (if assets folder does not exist make one)
 
 ![image](https://github.com/user-attachments/assets/fbad2fcc-82c1-4faf-8b03-db6a95ba2687)

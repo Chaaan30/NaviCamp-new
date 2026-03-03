@@ -8,17 +8,27 @@ plugins {
     id("dagger.hilt.android.plugin")
 }
 
+import java.util.Properties
+
 android {
     namespace = "com.capstone.navicamp"
     compileSdk = 35
 
     defaultConfig {
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { localProperties.load(it) }
+        }
+        val mapsApiKey = localProperties.getProperty("MAPS_API_KEY", "")
+
         applicationId = "com.capstone.navicamp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
