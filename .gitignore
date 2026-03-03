@@ -17,6 +17,9 @@ local.properties
 # Ignore config.properties file
 app/src/main/assets/config.properties
 
+# Ignore local release artifacts (APKs, metadata, baseline profiles)
+app/release/
+
 # Lambda deployment files
 lambda-layer/
 *.zip
