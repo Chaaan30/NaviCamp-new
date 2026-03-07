@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.fragment.app.Fragment
+import com.google.android.material.textfield.TextInputLayout
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,6 +54,11 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
     private lateinit var verificationDateText: TextView
     private lateinit var dateCreatedText: TextView
     private lateinit var btnAction: Button
+    private lateinit var editFullNameLayout: TextInputLayout
+    private lateinit var editSchoolIdLayout: TextInputLayout
+    private lateinit var editContactNumberLayout: TextInputLayout
+    private lateinit var editEmergencyNameLayout: TextInputLayout
+    private lateinit var editEmergencyNumberLayout: TextInputLayout
 
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
@@ -118,6 +124,11 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         verificationDateText = view.findViewById(R.id.pwd_display_verification_date)
 
         dateCreatedText = view.findViewById(R.id.pwd_display_created_date)
+        editFullNameLayout = view.findViewById(R.id.pwd_edit_name_layout)
+        editSchoolIdLayout = view.findViewById(R.id.pwd_edit_school_id_layout)
+        editContactNumberLayout = view.findViewById(R.id.pwd_edit_contact_layout)
+        editEmergencyNameLayout = view.findViewById(R.id.pwd_edit_emergencycontactname_layout)
+        editEmergencyNumberLayout = view.findViewById(R.id.pwd_edit_emergencycontactnumber_layout)
         btnAction = view.findViewById(R.id.btnAction)
 
         // 3. Load Initial Data
@@ -167,17 +178,15 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         dateCreatedText.text = sharedPreferences.getString("createdOn", "")
 
         // Initial Visibility
-        editFullName.visibility = View.GONE
-        editSchoolId.visibility = View.GONE
+        editFullNameLayout.visibility = View.GONE
+        editSchoolIdLayout.visibility = View.GONE
         editDepartmentSpinner.visibility = View.GONE
-        editEmail.visibility = View.GONE
-        editContactNumber.visibility = View.GONE
-        editEmergencyName.visibility = View.GONE
-        editEmergencyNumber.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
+        editContactNumberLayout.visibility = View.GONE
+        editEmergencyNameLayout.visibility = View.GONE
+        editEmergencyNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
-        confirmOtpButton.visibility = View.GONE
     }
 
     private fun enterEditMode() {
@@ -193,27 +202,32 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         val currentEmerName = emergencyNameText.text.toString()
         val currentEmerNumber = emergencyNumberText.text.toString()
 
-        editFullName.apply { visibility = View.VISIBLE; setText(currentFull) }
+        editFullNameLayout.visibility = View.VISIBLE
+        editFullName.setText(currentFull)
         fullNameText.visibility = View.GONE
 
-        editSchoolId.apply { visibility = View.VISIBLE; setText(currentSchoolId) }
+        editSchoolIdLayout.visibility = View.VISIBLE
+        editSchoolId.setText(currentSchoolId)
         schoolIdText.visibility = View.GONE
 
         emailEditContainer.visibility = View.VISIBLE
-        editEmail.apply { visibility = View.VISIBLE; setText(currentEmail) }
+        editEmail.setText(currentEmail)
         emailText.visibility = View.GONE
 
-        editContactNumber.apply { visibility = View.VISIBLE; setText(currentContact) }
+        editContactNumberLayout.visibility = View.VISIBLE
+        editContactNumber.setText(currentContact)
         contactNumberText.visibility = View.GONE
 
         setupDepartmentSpinner(userTypeText.text.toString(), currentDepartment)
         editDepartmentSpinner.visibility = View.VISIBLE
         departmentText.visibility = View.GONE
 
-        editEmergencyName.apply { visibility = View.VISIBLE; setText(currentEmerName) }
+        editEmergencyNameLayout.visibility = View.VISIBLE
+        editEmergencyName.setText(currentEmerName)
         emergencyNameText.visibility = View.GONE
 
-        editEmergencyNumber.apply { visibility = View.VISIBLE; setText(currentEmerNumber) }
+        editEmergencyNumberLayout.visibility = View.VISIBLE
+        editEmergencyNumber.setText(currentEmerNumber)
         emergencyNumberText.visibility = View.GONE
 
         sendOtpButton.visibility = View.VISIBLE
@@ -240,7 +254,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         val userID = sharedPreferences.getString("userID", null)
 
         // Validations
-        if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
+        if (emailEditContainer.visibility == View.VISIBLE && otp.isNotBlank()) {
             if (otp != generatedOtp) { Toast.makeText(requireContext(), "Invalid OTP", Toast.LENGTH_SHORT).show(); return }
         }
         if (newEmail != currentEmail && !isOtpConfirmed) {
@@ -293,17 +307,15 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         btnAction.text = "EDIT ACCOUNT DETAILS"
         setNonEditableFieldsDimmed(false)
 
-        editFullName.visibility = View.GONE
-        editSchoolId.visibility = View.GONE
+        editFullNameLayout.visibility = View.GONE
+        editSchoolIdLayout.visibility = View.GONE
         editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
-        editEmail.visibility = View.GONE
-        editContactNumber.visibility = View.GONE
-        editEmergencyName.visibility = View.GONE
-        editEmergencyNumber.visibility = View.GONE
+        editContactNumberLayout.visibility = View.GONE
+        editEmergencyNameLayout.visibility = View.GONE
+        editEmergencyNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
-        confirmOtpButton.visibility = View.GONE
 
         fullNameText.visibility = View.VISIBLE
         schoolIdText.visibility = View.VISIBLE

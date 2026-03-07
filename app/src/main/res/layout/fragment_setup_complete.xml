@@ -3,68 +3,81 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:padding="32dp">
+    android:background="@color/backgroundColor"
+    android:paddingHorizontal="28dp"
+    android:paddingVertical="32dp">
 
-    <ImageView
-        android:id="@+id/successIcon"
+    <!-- Green circle card around check icon -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/iconCard"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:src="@drawable/ic_check_circle_large"
+        app:cardCornerRadius="60dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/lightGreen"
+        app:strokeWidth="0dp"
         app:layout_constraintBottom_toTopOf="@+id/titleTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.3"
-        app:layout_constraintVertical_chainStyle="packed"
-        app:tint="@color/green" />
+        app:layout_constraintVertical_bias="0.25"
+        app:layout_constraintVertical_chainStyle="packed">
+
+        <ImageView
+            android:id="@+id/successIcon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check_circle_large"
+            app:tint="@color/green" />
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:fontFamily="@font/inter"
+        android:layout_marginTop="24dp"
+        android:fontFamily="@font/inter_bold"
         android:text="Setup Complete!"
         android:textColor="@color/primaryDarkColor"
-        android:textSize="28sp"
-        android:textStyle="bold"
+        android:textSize="26sp"
         app:layout_constraintBottom_toTopOf="@+id/descriptionTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/successIcon" />
+        app:layout_constraintTop_toBottomOf="@+id/iconCard" />
 
     <TextView
         android:id="@+id/descriptionTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         android:fontFamily="@font/inter"
-        android:lineSpacingExtra="4dp"
+        android:lineSpacingExtra="5dp"
         android:text="You're all set! You can run this setup again anytime from the sidebar menu after logging in."
         android:textAlignment="center"
         android:textColor="@color/gray"
-        android:textSize="16sp"
+        android:textSize="15sp"
         app:layout_constraintBottom_toTopOf="@+id/btnFinish"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/titleTextView"
-        app:layout_constraintWidth_max="320dp" />
+        app:layout_constraintWidth_max="300dp" />
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnFinish"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:background="@drawable/button_filled"
         android:fontFamily="@font/inter"
-        android:paddingVertical="12dp"
+        android:paddingVertical="14dp"
         android:text="Finish"
-        android:textColor="@color/onPrimaryColor"
+        android:textSize="15sp"
+        app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/descriptionTextView"
-        app:layout_constraintWidth_max="300dp" />
+        app:layout_constraintWidth_max="320dp"
+        style="@style/Widget.MaterialComponents.Button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout> 

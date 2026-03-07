@@ -1,269 +1,468 @@
-<LinearLayout
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:background="@drawable/rounded_bottom_sheet"
+    android:fillViewport="true"
     tools:context=".RegisterBottomSheet">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="16dp"
-        android:text="Register"
-        android:fontFamily="@font/inter_bold"
-        android:textColor="@color/primaryColor"
-        android:textSize="25dp" />
-
-    <EditText
-        android:id="@+id/fullname"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Full Name"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="16dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:singleLine="true"/>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp">
+        android:orientation="vertical"
+        android:paddingBottom="32dp">
 
-        <EditText
-            android:id="@+id/email"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Email"
-            android:fontFamily="@font/inter"
-            android:singleLine="true" />
+        <!-- Drag Handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"
+            android:background="#DDDDDD"
+            android:backgroundTint="@color/secondaryColor" />
 
-        <Button
-            android:id="@+id/send_otp"
-            android:layout_width="wrap_content"
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Send OTP"
-            android:fontFamily="@font/inter"
-            android:layout_marginStart="8dp" />
-
-        <ProgressBar
-            android:id="@+id/send_otp_progress_bar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:layout_marginStart="8dp"
-            android:indeterminate="true" />
-
-        <TextView
-            android:id="@+id/otp_timer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:orientation="vertical"
             android:gravity="center"
+            android:paddingTop="8dp"
+            android:paddingBottom="12dp"
+            android:layout_marginHorizontal="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Create Account"
+                android:fontFamily="@font/inter_bold"
+                android:textColor="@color/primaryColor"
+                android:textSize="24sp"
+                android:letterSpacing="0.01" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Fill in your details to get started"
+                android:fontFamily="@font/inter"
+                android:textColor="@color/gray"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- Full Name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="4dp"
+            android:hint="Full Name"
+            app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+            app:startIconTint="@color/primaryColor"
+            app:boxStrokeColor="@color/primaryColor"
+            app:hintTextColor="@color/primaryColor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/fullname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:inputType="textPersonName|textCapWords"
+                android:singleLine="true"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Email + Send OTP Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Email Address"
+                app:startIconDrawable="@android:drawable/ic_dialog_email"
+                app:startIconTint="@color/primaryColor"
+                app:boxStrokeColor="@color/primaryColor"
+                app:hintTextColor="@color/primaryColor"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:inputType="textEmailAddress"
+                    android:singleLine="true"
+                    android:textSize="15sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/send_otp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/inter"
+                android:text="Send OTP"
+                android:textSize="12sp"
+                android:paddingHorizontal="12dp"
+                app:cornerRadius="8dp"
+                style="@style/Widget.MaterialComponents.Button" />
+
+            <ProgressBar
+                android:id="@+id/send_otp_progress_bar"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"
+                android:indeterminate="true" />
+
+            <TextView
+                android:id="@+id/otp_timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:visibility="gone"
+                android:padding="6dp"
+                android:lineSpacingExtra="2dp"
+                android:fontFamily="@font/inter"
+                android:textSize="11sp"
+                android:textColor="@color/primaryColor" />
+        </LinearLayout>
+
+        <!-- OTP Field (hidden until OTP sent) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/otp_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:hint="Enter OTP"
             android:visibility="gone"
-            android:layout_marginStart="8dp"
-            android:padding="8dp"
-            android:lineSpacingExtra="4dp"
-            android:textSize="10sp" />
-    </LinearLayout>
+            app:boxStrokeColor="@color/primaryColor"
+            app:hintTextColor="@color/primaryColor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-    <EditText
-        android:id="@+id/otp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter OTP"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:visibility="gone"
-        android:singleLine="true" />
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/otp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:inputType="number"
+                android:singleLine="true"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-    <EditText
-        android:id="@+id/contact_number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Contact Number"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:inputType="number"
-        android:maxLength="11"
-        android:singleLine="true" />
-
-    <EditText
-        android:id="@+id/password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textPassword"
-        android:hint="Password"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:singleLine="true" />
-
-    <EditText
-        android:id="@+id/confirm_password"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="textPassword"
-        android:hint="Confirm Password"
-        android:fontFamily="@font/inter"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:singleLine="true" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:text="Password requirements (meet at least 3):"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/password_requirement_length"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:text="• 12-16 characters"
-        android:textColor="@android:color/holo_red_dark"
-        android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/password_requirement_case"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:text="• Uppercase and lowercase letters"
-        android:textColor="@android:color/holo_red_dark"
-        android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/password_requirement_number"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:text="• At least 1 number"
-        android:textColor="@android:color/holo_red_dark"
-        android:textSize="12sp" />
-
-    <TextView
-        android:id="@+id/password_requirement_symbol"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="2dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"
-        android:text="• At least 1 symbol"
-        android:textColor="@android:color/holo_red_dark"
-        android:textSize="12sp" />
-
-    <Spinner
-        android:id="@+id/campus_affiliation_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/spinner_background_with_arrow"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:spinnerMode="dropdown"
-        android:popupBackground="@android:color/white" />
-
-    <Spinner
-        android:id="@+id/department_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/spinner_background_with_arrow"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:spinnerMode="dropdown"
-        android:popupBackground="@android:color/white" />
-
-    <Spinner
-        android:id="@+id/user_type_spinner"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/spinner_background_with_arrow"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp"
-        android:spinnerMode="dropdown"
-        android:popupBackground="@android:color/white" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp">
-
-        <CheckBox
-            android:id="@+id/terms_conditions_checkbox"
-            android:layout_width="wrap_content"
+        <!-- Contact Number -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:buttonTint="?attr/colorControlActivated" />
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:hint="Contact Number"
+            app:startIconDrawable="@android:drawable/ic_menu_call"
+            app:startIconTint="@color/primaryColor"
+            app:boxStrokeColor="@color/primaryColor"
+            app:hintTextColor="@color/primaryColor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        <TextView
-            android:id="@+id/terms_conditions_label"
-            android:layout_width="wrap_content"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/contact_number"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:inputType="phone"
+                android:maxLength="11"
+                android:singleLine="true"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Password -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:hint="Password"
+            app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+            app:startIconTint="@color/primaryColor"
+            app:boxStrokeColor="@color/primaryColor"
+            app:hintTextColor="@color/primaryColor"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/primaryColor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:inputType="textPassword"
+                android:singleLine="true"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Confirm Password -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp"
+            android:hint="Confirm Password"
+            app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+            app:startIconTint="@color/primaryColor"
+            app:boxStrokeColor="@color/primaryColor"
+            app:hintTextColor="@color/primaryColor"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/primaryColor"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/confirm_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:inputType="textPassword"
+                android:singleLine="true"
+                android:textSize="15sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Password Requirements Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/inactive_stroke"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/lightGray">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter"
+                    android:text="Password requirements (meet at least 3):"
+                    android:textColor="@color/darkGray"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/password_requirement_length"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="@font/inter"
+                    android:text="• 12–16 characters"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/password_requirement_case"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/inter"
+                    android:text="• Uppercase and lowercase letters"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/password_requirement_number"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/inter"
+                    android:text="• At least 1 number"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/password_requirement_symbol"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:fontFamily="@font/inter"
+                    android:text="• At least 1 symbol"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Campus Affiliation Spinner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="4dp"
+                android:fontFamily="@font/inter"
+                android:text="Campus Affiliation"
+                android:textColor="@color/gray"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/campus_affiliation_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/spinner_background_with_arrow"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:spinnerMode="dropdown"
+                android:popupBackground="@android:color/white" />
+        </LinearLayout>
+
+        <!-- Department Spinner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="4dp"
+                android:fontFamily="@font/inter"
+                android:text="Department / College"
+                android:textColor="@color/gray"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/department_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/spinner_background_with_arrow"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:spinnerMode="dropdown"
+                android:popupBackground="@android:color/white" />
+        </LinearLayout>
+
+        <!-- User Type Spinner -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="4dp"
+                android:fontFamily="@font/inter"
+                android:text="User Type"
+                android:textColor="@color/gray"
+                android:textSize="12sp" />
+
+            <Spinner
+                android:id="@+id/user_type_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:background="@drawable/spinner_background_with_arrow"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:spinnerMode="dropdown"
+                android:popupBackground="@android:color/white" />
+        </LinearLayout>
+
+        <!-- Terms and Conditions -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp">
+
+            <CheckBox
+                android:id="@+id/terms_conditions_checkbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/primaryColor" />
+
+            <TextView
+                android:id="@+id/terms_conditions_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="@font/inter"
+                android:text="I agree to the "
+                android:textSize="13sp"
+                android:textColor="@color/darkGray" />
+
+            <TextView
+                android:id="@+id/terms_conditions_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter"
+                android:text="Terms and Conditions"
+                android:textColor="@color/primaryColor"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Register Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/create_account"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="16dp"
             android:fontFamily="@font/inter"
-            android:text="I agree to the " />
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:text="Register"
+            android:textSize="15sp"
+            app:cornerRadius="10dp"
+            style="@style/Widget.MaterialComponents.Button" />
 
-        <TextView
-            android:id="@+id/terms_conditions_text"
-            android:layout_width="wrap_content"
+        <!-- Login Button (Outlined) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/login"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="8dp"
             android:fontFamily="@font/inter"
-            android:text="Terms and Conditions"
-            android:clickable="true"
-            android:textColor="@color/custom_blue" />
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:text="I already have an account"
+            android:textColor="@color/primaryColor"
+            android:textSize="15sp"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/primaryColor"
+            app:strokeWidth="1.5dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
     </LinearLayout>
-
-    <Button
-        android:id="@+id/create_account"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Register"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
-
-    <Button
-        android:id="@+id/login"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="I have an account."
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:fontFamily="@font/inter"/>
-
-</LinearLayout>
+</androidx.core.widget.NestedScrollView>

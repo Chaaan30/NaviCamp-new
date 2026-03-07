@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import android.util.Log
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,6 +46,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
     private lateinit var passwordEditText: EditText
     private lateinit var confirmPasswordEditText: EditText
     private lateinit var otpEditText: EditText
+    private lateinit var otpLayout: TextInputLayout
     private lateinit var sendOtpButton: Button
     private lateinit var sendOtpProgressBar: ProgressBar
     private lateinit var otpTimerTextView: TextView
@@ -83,6 +85,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
         passwordEditText = view.findViewById(R.id.password)
         confirmPasswordEditText = view.findViewById(R.id.confirm_password)
         otpEditText = view.findViewById(R.id.otp)
+        otpLayout = view.findViewById(R.id.otp_layout)
         sendOtpButton = view.findViewById(R.id.send_otp)
         sendOtpProgressBar = view.findViewById(R.id.send_otp_progress_bar)
         otpTimerTextView = view.findViewById(R.id.otp_timer)
@@ -139,7 +142,7 @@ class RegisterBottomSheet : BottomSheetDialogFragment() {
                     generatedOtp = generateOtp()
                     sendOtpEmail(email, generatedOtp!!)
                     sendOtpProgressBar.visibility = View.GONE
-                    otpEditText.visibility = View.VISIBLE
+                    otpLayout.visibility = View.VISIBLE
                     startOtpTimer()
                     isOtpSent = true
                 }

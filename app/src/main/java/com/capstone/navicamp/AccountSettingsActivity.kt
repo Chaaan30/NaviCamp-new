@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import com.google.android.material.textfield.TextInputLayout
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +50,11 @@ class AccountSettingsActivity : AppCompatActivity() {
     private lateinit var pwdEditEmail: EditText
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
-
+    private lateinit var pwdEditNameLayout: TextInputLayout
+    private lateinit var pwdEditSchoolIdLayout: TextInputLayout
+    private lateinit var pwdEditContactLayout: TextInputLayout
+    private lateinit var pwdEditEmergencyNameLayout: TextInputLayout
+    private lateinit var pwdEditEmergencyNumberLayout: TextInputLayout
     private var loadingDialog: Dialog? = null
 
     // Edit mode flag
@@ -122,6 +127,11 @@ class AccountSettingsActivity : AppCompatActivity() {
         pwdDisplayCreatedDate = findViewById<TextView>(R.id.pwd_display_created_date)
 
         btnAction = findViewById<Button>(R.id.btnAction)
+        pwdEditNameLayout = findViewById(R.id.pwd_edit_name_layout)
+        pwdEditSchoolIdLayout = findViewById(R.id.pwd_edit_school_id_layout)
+        pwdEditContactLayout = findViewById(R.id.pwd_edit_contact_layout)
+        pwdEditEmergencyNameLayout = findViewById(R.id.pwd_edit_emergencycontactname_layout)
+        pwdEditEmergencyNumberLayout = findViewById(R.id.pwd_edit_emergencycontactnumber_layout)
 
         // Inside onCreate, after initializing pwdEditEmail
         pwdEditEmail.addTextChangedListener(object : android.text.TextWatcher {
@@ -150,11 +160,12 @@ class AccountSettingsActivity : AppCompatActivity() {
         pwdDisplayCreatedDate.text = createdOn
 
         // Ensure edit fields are hidden initially
-        pwdEditName.visibility = View.GONE
+        pwdEditNameLayout.visibility = View.GONE
+        pwdEditSchoolIdLayout.visibility = View.GONE
         pwdEmailEditContainer.visibility = View.GONE
-        pwdEditContact.visibility = View.GONE
-        pwdEditEmergencyName.visibility = View.GONE
-        pwdEditEmergencyNumber.visibility = View.GONE
+        pwdEditContactLayout.visibility = View.GONE
+        pwdEditEmergencyNameLayout.visibility = View.GONE
+        pwdEditEmergencyNumberLayout.visibility = View.GONE
         pwdOtpContainer.visibility = View.GONE
 
         if (userID != null) {
@@ -203,11 +214,11 @@ class AccountSettingsActivity : AppCompatActivity() {
 
                 // Hide display TextViews, show edit fields
                 pwdDisplayName.visibility = View.GONE
-                pwdEditName.visibility = View.VISIBLE
+                pwdEditNameLayout.visibility = View.VISIBLE
                 pwdEditName.setText(pwdDisplayName.text?.toString() ?: "")
 
                 pwdDisplaySchoolId.visibility = View.GONE
-                pwdEditSchoolId.visibility = View.VISIBLE
+                pwdEditSchoolIdLayout.visibility = View.VISIBLE
                 pwdEditSchoolId.setText(pwdDisplaySchoolId.text.toString())
 
                 pwdDisplayEmail.visibility = View.GONE
@@ -215,15 +226,15 @@ class AccountSettingsActivity : AppCompatActivity() {
                 pwdEditEmail.setText(pwdDisplayEmail.text?.toString() ?: "")
 
                 pwdDisplayContact.visibility = View.GONE
-                pwdEditContact.visibility = View.VISIBLE
+                pwdEditContactLayout.visibility = View.VISIBLE
                 pwdEditContact.setText(pwdDisplayContact.text?.toString() ?: "")
 
                 pwdDisplayEmergencyName.visibility = View.GONE
-                pwdEditEmergencyName.visibility = View.VISIBLE
+                pwdEditEmergencyNameLayout.visibility = View.VISIBLE
                 pwdEditEmergencyName.setText(pwdDisplayEmergencyName.text?.toString() ?: "")
 
                 pwdDisplayEmergencyNumber.visibility = View.GONE
-                pwdEditEmergencyNumber.visibility = View.VISIBLE
+                pwdEditEmergencyNumberLayout.visibility = View.VISIBLE
                 pwdEditEmergencyNumber.setText(pwdDisplayEmergencyNumber.text?.toString() ?: "")
 
                 // Allow OTP flow
@@ -329,11 +340,12 @@ class AccountSettingsActivity : AppCompatActivity() {
                         isEditMode = false
                         btnAction.text = "EDIT ACCOUNT DETAILS"
 
-                        pwdEditName.visibility = View.GONE
+                        pwdEditNameLayout.visibility = View.GONE
+                        pwdEditSchoolIdLayout.visibility = View.GONE
                         pwdEmailEditContainer.visibility = View.GONE
-                        pwdEditContact.visibility = View.GONE
-                        pwdEditEmergencyName.visibility = View.GONE
-                        pwdEditEmergencyNumber.visibility = View.GONE
+                        pwdEditContactLayout.visibility = View.GONE
+                        pwdEditEmergencyNameLayout.visibility = View.GONE
+                        pwdEditEmergencyNumberLayout.visibility = View.GONE
                         pwdOtpContainer.visibility = View.GONE
                         pwdBtnSendOtp.visibility = View.GONE
 
