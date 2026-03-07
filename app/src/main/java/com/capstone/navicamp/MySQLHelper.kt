@@ -56,6 +56,14 @@ data class OngoingIncidentInfo(
     val officerUserID: String?
 )
 
+data class ActiveAssistanceGps(
+    val userID: String,
+    val fullName: String,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Double
+)
+
 object MySQLHelper {
 
     // Database credentials
@@ -208,7 +216,9 @@ object MySQLHelper {
                         l.longitude,
                         l.dateTime,
                         i.officerResponded,
-                        i.relocatedLocation
+                        i.relocatedLocation,
+                        p.emergencyContactPerson,
+                        p.emergencyContactNumber
                     FROM incident_logs_table i
                     JOIN (
                         SELECT
@@ -220,6 +230,7 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
+                    LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                     WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                     ORDER BY FIELD(LOWER(TRIM(i.status)), 'ongoing', 'pending', 'resolved'), i.alertDateTime DESC
                 """.trimIndent()
@@ -462,6 +473,8 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
 
             if (locationRows > 0 && incidentRows > 0) {
+                upsertLiveGPS(userID, latitude, longitude, 0f)
+
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                 intent.setClassName(
                     "com.capstone.navicamp",
@@ -805,9 +818,20 @@ object MySQLHelper {
             }
             val rowsAffected = statement.executeUpdate()
             if (rowsAffected > 0) {
+                val normalizedStatus = status.trim().lowercase(Locale.US)
                 val resolvedOfficerUserID = officerUserID?.takeIf { it.isNotBlank() } ?: getUserIDByFullName(officerName)
                 if (!resolvedOfficerUserID.isNullOrBlank()) {
                     updateSafetyOfficerDispatchedStatus(resolvedOfficerUserID, false)
+                }
+
+                if (normalizedStatus == "resolved" || normalizedStatus == "false alarm") {
+                    val userID = getUserIDByLocationID(locationID)
+                    if (!userID.isNullOrBlank()) {
+                        deleteLiveGPS(userID)
+                    }
+                    if (!resolvedOfficerUserID.isNullOrBlank()) {
+                        deleteLiveGPS(resolvedOfficerUserID)
+                    }
                 }
 
                 SmartPollingManager.getInstance().triggerFastUpdate()
@@ -934,6 +958,8 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
 
             if (locationRows > 0 && incidentRows > 0) {
+                upsertLiveGPS(userID, latitude, longitude, 0f)
+
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                 intent.setClassName(
                     "com.capstone.navicamp",
@@ -1870,6 +1896,15 @@ object MySQLHelper {
             statement.setString(2, locationID)
 
             val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                val normalizedStatus = newStatus.trim().lowercase(Locale.US)
+                if (normalizedStatus == "resolved" || normalizedStatus == "false alarm") {
+                    val userID = getUserIDByLocationID(locationID)
+                    if (!userID.isNullOrBlank()) {
+                        deleteLiveGPS(userID)
+                    }
+                }
+            }
             rowsAffected > 0
         } catch (e: SQLException) {
             e.printStackTrace()
@@ -2649,9 +2684,8 @@ object MySQLHelper {
                 if (connection == null) return@withContext null
 
                 val query = """
-                    SELECT d.latitude, d.longitude
+                    SELECT l.latitude, l.longitude
                     FROM location_table l
-                    JOIN devices_table d ON d.deviceID = l.deviceID
                     WHERE l.locationID = ?
                     LIMIT 1
                 """.trimIndent()
@@ -3746,6 +3780,64 @@ object MySQLHelper {
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "getLiveGPS failed: ${e.message}")
             null
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun getActiveAssistanceLiveGps(): List<ActiveAssistanceGps> {
+        val results = mutableListOf<ActiveAssistanceGps>()
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+
+        return try {
+            connection = getConnection() ?: return emptyList()
+            ensureLiveGpsTableExists(connection)
+
+            val query = """
+                SELECT i.userID,
+                       u.fullName,
+                      COALESCE(g.latitude, l.latitude) AS latitude,
+                      COALESCE(g.longitude, l.longitude) AS longitude,
+                      COALESCE(g.accuracy, 0) AS accuracy
+                FROM incident_logs_table i
+                JOIN (
+                    SELECT userID,
+                           MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
+                    FROM incident_logs_table
+                    WHERE status IN ('pending', 'ongoing')
+                    GROUP BY userID
+                ) latest ON latest.userID = i.userID
+                       AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
+                JOIN user_table u ON u.userID = i.userID
+                  JOIN location_table l ON l.locationID = i.locationID
+                  LEFT JOIN live_gps_table g ON g.userID = i.userID
+                WHERE i.status IN ('pending', 'ongoing')
+            """.trimIndent()
+
+            stmt = connection.prepareStatement(query)
+            rs = stmt.executeQuery()
+
+            while (rs.next()) {
+                val lat = rs.getDouble("latitude")
+                val lng = rs.getDouble("longitude")
+                if (lat == 0.0 && lng == 0.0) continue
+
+                results.add(
+                    ActiveAssistanceGps(
+                        userID = rs.getString("userID") ?: continue,
+                        fullName = rs.getString("fullName") ?: "User",
+                        latitude = lat,
+                        longitude = lng,
+                        accuracy = rs.getDouble("accuracy")
+                    )
+                )
+            }
+            results
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getActiveAssistanceLiveGps failed: ${e.message}")
+            emptyList()
         } finally {
             rs?.close(); stmt?.close(); connection?.close()
         }

@@ -29,8 +29,10 @@ import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.coroutines.resume
 
 class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disabled_home) {
 
@@ -447,17 +449,22 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
     private fun requestAssistanceWithDevice(deviceID: String, userID: String, fullName: String) {
         viewLifecycleOwner.lifecycleScope.launch {
-            // 1. Fetch the Wheelchair's actual location from the DB (restored from past code)
-            val deviceLocation: MySQLHelper.DeviceLocation? = withContext(Dispatchers.IO) {
-                MySQLHelper.getDeviceLastLocation(deviceID)
+            val phoneLocation = getCurrentPhoneLocation()
+            val lat = phoneLocation?.latitude ?: 0.0
+            val lng = phoneLocation?.longitude ?: 0.0
+            val floor = "Live Phone GPS"
+
+            if (phoneLocation == null && isAdded) {
+                Toast.makeText(requireContext(), "Live phone location unavailable. Sending SOS with fallback coordinates.", Toast.LENGTH_SHORT).show()
             }
 
-            // FALLBACK LOGIC: If no location is found, use 0.0 so the SOS still goes through
-            val lat = deviceLocation?.latitude ?: 0.0
-            val lng = deviceLocation?.longitude ?: 0.0
-            val floor = deviceLocation?.floorLevel ?: "Location Unknown"
+            if (phoneLocation != null) {
+                withContext(Dispatchers.IO) {
+                    MySQLHelper.upsertLiveGPS(userID, phoneLocation.latitude, phoneLocation.longitude, phoneLocation.accuracy)
+                }
+            }
 
-            Log.d("Assistance", "Sending Alert for $fullName. Device location found: ${deviceLocation != null}")
+            Log.d("Assistance", "Sending Alert for $fullName using phone GPS. Location found: ${phoneLocation != null}")
 
             // 2. Perform the actual Database Insertion
             val success = withContext(Dispatchers.IO) {
@@ -473,6 +480,10 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
             }
 
             if (success) {
+                withContext(Dispatchers.IO) {
+                    MySQLHelper.upsertLiveGPS(userID, lat, lng, phoneLocation?.accuracy ?: 0f)
+                }
+                startGpsUpdates()
                 triggerSuccessVibration()
                 Log.d("Assistance", "SOS successful. Haptic feedback triggered.")
             } else {
@@ -601,6 +612,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
                         MySQLHelper.hasActiveIncidentForUser(uid)
                     }
                     if (!stillActive) {
+                        stopGpsUpdates()
                         resetHandler.removeCallbacks(resetRunnable)
                         forceResetButtonState()
                     }
@@ -668,6 +680,54 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         // Use a separate scope here to ensure the delete happens even if fragment is closing
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             MySQLHelper.deleteLiveGPS(uid)
+        }
+    }
+
+    private data class PhoneLocation(
+        val latitude: Double,
+        val longitude: Double,
+        val accuracy: Float
+    )
+
+    private suspend fun getCurrentPhoneLocation(): PhoneLocation? {
+        val ctx = context ?: return null
+        if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1001)
+            return null
+        }
+
+        val fusedClient = LocationServices.getFusedLocationProviderClient(ctx)
+
+        val current = suspendCancellableCoroutine<android.location.Location?> { continuation ->
+            fusedClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { continuation.resume(it) }
+                .addOnFailureListener { continuation.resume(null) }
+                .addOnCanceledListener { continuation.resume(null) }
+        }
+
+        if (current != null) {
+            return PhoneLocation(
+                latitude = current.latitude,
+                longitude = current.longitude,
+                accuracy = current.accuracy
+            )
+        }
+
+        val lastKnown = suspendCancellableCoroutine<android.location.Location?> { continuation ->
+            fusedClient.lastLocation
+                .addOnSuccessListener { continuation.resume(it) }
+                .addOnFailureListener { continuation.resume(null) }
+                .addOnCanceledListener { continuation.resume(null) }
+        }
+
+        return lastKnown?.let {
+            PhoneLocation(
+                latitude = it.latitude,
+                longitude = it.longitude,
+                accuracy = it.accuracy
+            )
         }
     }
 
