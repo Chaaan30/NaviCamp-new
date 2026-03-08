@@ -13,7 +13,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.OffsetDateTime
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Locale
@@ -36,7 +39,8 @@ class VerificationRequiredActivity : AppCompatActivity() {
         }
 
         val payload = parseVerificationQrPayload(scannedContent)
-        if (payload == null || payload.roleToken != expectedRoleTokenForRole(systemRole)) {
+        val allowedRoleTokens = acceptedRoleTokensForRole(systemRole)
+        if (payload == null || !allowedRoleTokens.contains(payload.roleToken)) {
             Toast.makeText(this, "Invalid verification QR", Toast.LENGTH_LONG).show()
             return@registerForActivityResult
         }
@@ -59,12 +63,29 @@ class VerificationRequiredActivity : AppCompatActivity() {
                 return@launch
             }
 
+            val tokenAccepted = withContext(Dispatchers.IO) {
+                MySQLHelper.consumeVerificationQrNonce(
+                    nonce = payload.nonce,
+                    staffUserID = payload.staffUserID,
+                    roleToken = payload.roleToken
+                )
+            }
+            if (!tokenAccepted) {
+                Toast.makeText(
+                    this@VerificationRequiredActivity,
+                    "This QR is already used or expired.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+
             val isUpdated = withContext(Dispatchers.IO) {
                 MySQLHelper.approveUserVerificationWithProfileAudit(
                     userID = userID,
                     staffUserID = payload.staffUserID,
                     disabledVerificationMode = payload.disabledVerificationMode,
-                    temporaryValidUntil = payload.validUntil
+                    temporaryValidUntil = payload.validUntil,
+                    promoteToAdmin = payload.roleToken == "ADMIN" && isSafetyOfficerRole(systemRole)
                 )
             }
 
@@ -78,6 +99,12 @@ class VerificationRequiredActivity : AppCompatActivity() {
             }
 
             val userPrefs = getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+            val updatedSystemRole = if (payload.roleToken == "ADMIN" && isSafetyOfficerRole(systemRole)) {
+                "Admin"
+            } else {
+                systemRole
+            }
+
             with(userPrefs.edit()) {
                 putString("userID", userID)
                 putString("fullName", fullName)
@@ -86,7 +113,7 @@ class VerificationRequiredActivity : AppCompatActivity() {
                 putString("contactNumber", contactNumber)
                 putString("createdOn", createdOn)
                 putString("updatedOn", updatedOn)
-                putString("systemRole", systemRole)
+                putString("systemRole", updatedSystemRole)
                 putBoolean("isLoggedIn", true)
                 apply()
             }
@@ -136,7 +163,7 @@ class VerificationRequiredActivity : AppCompatActivity() {
             titleText.text = "Verification Required"
             descriptionText.text =
                 "Please visit the admin safety officer for account verification. Once verified, your features will be activated."
-            scanButton.text = "Scan Safety Officer Verification QR"
+            scanButton.text = "Scan Safety Officer/Admin Verification QR"
         } else {
             titleText.text = "Verification Required"
             descriptionText.text =
@@ -161,13 +188,20 @@ class VerificationRequiredActivity : AppCompatActivity() {
         return value.contains("safety") || value.contains("security") || value.contains("officer")
     }
 
-    private fun expectedRoleTokenForRole(role: String): String {
-        return if (isSafetyOfficerRole(role)) "SAFETY_OFFICER" else "DISABLED"
+    private fun acceptedRoleTokensForRole(role: String): Set<String> {
+        val normalized = role.trim().lowercase(Locale.US)
+        return when {
+            normalized.contains("admin") -> setOf("ADMIN")
+            isSafetyOfficerRole(role) -> setOf("SAFETY_OFFICER", "ADMIN")
+            else -> setOf("DISABLED")
+        }
     }
 
     private data class VerificationQrPayload(
         val roleToken: String,
         val staffUserID: String,
+        val nonce: String,
+        val expiresAt: String,
         val disabledVerificationMode: String?,
         val validUntil: String?
     )
@@ -190,7 +224,15 @@ class VerificationRequiredActivity : AppCompatActivity() {
 
         val roleToken = values["ROLE"]?.uppercase(Locale.US) ?: return null
         val staffUserID = values["STAFF"] ?: return null
+        val nonce = values["NONCE"]?.uppercase(Locale.US) ?: return null
+        val expiresAt = values["EXP"]?.trim() ?: return null
         if (!staffUserID.matches(Regex("^\\d+$"))) {
+            return null
+        }
+        if (nonce.length < 16) {
+            return null
+        }
+        if (!isNotExpired(expiresAt)) {
             return null
         }
 
@@ -200,9 +242,22 @@ class VerificationRequiredActivity : AppCompatActivity() {
         return VerificationQrPayload(
             roleToken = roleToken,
             staffUserID = staffUserID,
+            nonce = nonce,
+            expiresAt = expiresAt,
             disabledVerificationMode = disabledVerificationMode,
             validUntil = validUntil
         )
+    }
+
+    private fun isNotExpired(expiresAt: String): Boolean {
+        return try {
+            val expiry = OffsetDateTime.parse(expiresAt, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .toZonedDateTime()
+            val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+            expiry.isAfter(now)
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun isValidDisabledVerificationPayload(payload: VerificationQrPayload): Boolean {

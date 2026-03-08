@@ -2,172 +2,682 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="@color/white">
 
-    <!-- Header Section: Pinned to Top -->
-    <RelativeLayout
+    <!-- Header -->
+    <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="5dp"
-        app:layout_constraintTop_toTopOf="parent">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/btn_back"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Back"
             android:src="@drawable/abc_ic_ab_back_material" />
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
+            android:layout_weight="1"
+            android:gravity="center"
             android:fontFamily="@font/inter_bold"
             android:text="Account Settings"
-            android:textColor="#333"
-            android:textSize="24sp" />
-    </RelativeLayout>
+            android:textColor="@color/primaryDarkColor"
+            android:textSize="20sp" />
+
+        <Space
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/header_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/inactive_stroke"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/header_divider"
         app:layout_constraintBottom_toTopOf="@+id/btnAction"
-        app:layout_constraintTop_toBottomOf="@id/header"
-        app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="-102dp">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp">
 
-            <!-- NAME -->
-            <TextView style="@style/SettingLabel" android:text="NAME" />
-            <TextView android:id="@+id/pwd_display_name" style="@style/SettingValue" android:text="Firstname Lastname" />
-            <EditText android:id="@+id/pwd_edit_name" style="@style/SettingEdit" android:hint="Enter full name" />
-            <View style="@style/Divider" />
+            <!-- Personal Information -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PERSONAL INFORMATION"
+                android:fontFamily="@font/inter_bold"
+                android:textSize="11sp"
+                android:textColor="@color/gray"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
 
-            <!-- SCHOOL ID -->
-            <TextView style="@style/SettingLabel" android:text="SCHOOL ID" />
-            <TextView android:id="@+id/pwd_display_id" style="@style/SettingValue" android:text="2020654321" />
-            <EditText android:id="@+id/pwd_edit_school_id" style="@style/SettingEdit" android:hint="Enter school ID" />
-            <View style="@style/Divider" />
-
-            <!-- EMAIL & OTP SECTION -->
-            <TextView style="@style/SettingLabel" android:text="EMAIL" />
-            <TextView android:id="@+id/pwd_display_email" style="@style/SettingValue" android:text="user@email.com" />
-
-            <LinearLayout
-                android:id="@+id/pwd_email_edit_container"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/inactive_stroke"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/backgroundColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <EditText android:id="@+id/pwd_edit_email" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="New email" />
-                    <Button android:id="@+id/pwd_btn_send_otp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Verify" style="@style/Widget.MaterialComponents.Button.TextButton" />
+                    android:orientation="vertical">
+
+                    <!-- Full Name -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Full Name"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/pwd_edit_name_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone"
+                            app:boxStrokeColor="@color/primaryColor"
+                            app:hintTextColor="@color/primaryColor"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/pwd_edit_name"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:inputType="textPersonName|textCapWords"
+                                android:singleLine="true"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- School ID -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="School ID"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_id"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/pwd_edit_school_id_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone"
+                            app:boxStrokeColor="@color/primaryColor"
+                            app:hintTextColor="@color/primaryColor"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/pwd_edit_school_id"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:inputType="number"
+                                android:singleLine="true"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Contact Number -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Contact Number"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_contact"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/pwd_edit_contact_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone"
+                            app:boxStrokeColor="@color/primaryColor"
+                            app:hintTextColor="@color/primaryColor"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/pwd_edit_contact"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:inputType="phone"
+                                android:maxLength="11"
+                                android:singleLine="true"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Emergency Contact Name -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Emergency Contact Name"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_emergencycontactname"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/pwd_edit_emergencycontactname_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone"
+                            app:boxStrokeColor="@color/primaryColor"
+                            app:hintTextColor="@color/primaryColor"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/pwd_edit_emergencycontactname"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:inputType="textPersonName|textCapWords"
+                                android:singleLine="true"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Emergency Contact Number -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Emergency Contact Number"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_emergencycontactnumber"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/pwd_edit_emergencycontactnumber_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone"
+                            app:boxStrokeColor="@color/primaryColor"
+                            app:hintTextColor="@color/primaryColor"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/pwd_edit_emergencycontactnumber"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/inter"
+                                android:inputType="phone"
+                                android:maxLength="11"
+                                android:singleLine="true"
+                                android:textSize="15sp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/pwd_otp_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-                    <EditText android:id="@+id/pwd_edit_otp" style="@style/SettingEdit" android:layout_weight="1" android:visibility="visible" android:hint="Enter OTP" android:inputType="number" />
-                    <Button android:id="@+id/pwd_btn_confirm_otp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Confirm" style="@style/Widget.MaterialComponents.Button.TextButton" />
-                </LinearLayout>
-            </LinearLayout>
-            <View style="@style/Divider" />
-
-            <!-- CONTACT NUMBER -->
-            <TextView style="@style/SettingLabel" android:text="CONTACT NUMBER" />
-            <TextView android:id="@+id/pwd_display_contact" style="@style/SettingValue" android:text="09123456789" />
-            <EditText android:id="@+id/pwd_edit_contact" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
-            <View style="@style/Divider" />
-
-            <!-- DEPARTMENT -->
-            <TextView style="@style/SettingLabel" android:text="DEPARTMENT" />
+            <!-- Email Section -->
             <TextView
-                android:id="@+id/pwd_display_department"
-                style="@style/SettingValue"
-                android:text="-" />
-            <Spinner
-                android:id="@+id/pwd_edit_department_spinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EMAIL"
+                android:fontFamily="@font/inter_bold"
+                android:textSize="11sp"
+                android:textColor="@color/gray"
+                android:letterSpacing="0.08"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/spinner_background_with_arrow"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:popupBackground="@android:color/white"
-                android:spinnerMode="dropdown"
-                android:visibility="gone" />
-            <View style="@style/Divider" />
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/inactive_stroke"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/backgroundColor">
 
-            <!-- EMERGENCY CONTACT NAME -->
-            <TextView style="@style/SettingLabel" android:text="EMERGENCY CONTACT NAME" />
-            <TextView android:id="@+id/pwd_display_emergencycontactname" style="@style/SettingValue" android:text="Firstname Lastname" />
-            <EditText android:id="@+id/pwd_edit_emergencycontactname" style="@style/SettingEdit" android:hint="Enter full name" />
-            <View style="@style/Divider" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="14dp">
 
-            <!-- EMERGENCYCONTACT NUMBER -->
-            <TextView style="@style/SettingLabel" android:text="EMERGENCY CONTACT NUMBER" />
-            <TextView android:id="@+id/pwd_display_emergencycontactnumber" style="@style/SettingValue" android:text="09123456789" />
-            <EditText android:id="@+id/pwd_edit_emergencycontactnumber" style="@style/SettingEdit" android:hint="Enter contact number" android:inputType="phone" />
-            <View style="@style/Divider" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email Address"
+                        android:fontFamily="@font/inter_bold"
+                        android:textSize="11sp"
+                        android:textColor="@color/gray" />
 
-            <!-- USER TYPE -->
-            <TextView style="@style/SettingLabel" android:text="USER TYPE" />
-            <TextView android:id="@+id/pwd_display_user_type" style="@style/SettingValue" android:text="Student/Employee" />
-            <View style="@style/Divider" />
+                    <TextView
+                        android:id="@+id/pwd_display_email"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/inter"
+                        android:textSize="15sp"
+                        android:textColor="@color/primaryDarkColor"
+                        android:paddingTop="4dp" />
 
-            <!-- DISABILITY TYPE -->
-            <TextView style="@style/SettingLabel" android:text="DISABILITY TYPE" />
-            <TextView android:id="@+id/pwd_display_disability_type" style="@style/SettingValue" android:text="Permanent/Temporary" />
-            <View style="@style/Divider" />
+                    <LinearLayout
+                        android:id="@+id/pwd_email_edit_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone">
 
-            <!-- VERIFIED BY -->
-            <TextView style="@style/SettingLabel" android:text="VERIFIED BY" />
-            <TextView android:id="@+id/pwd_display_verifiedby" style="@style/SettingValue" android:text="2020654321" />
-            <View style="@style/Divider" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-            <!-- VERIFICATION DATE -->
-            <TextView style="@style/SettingLabel" android:text="VERIFICATION DATE" />
-            <TextView android:id="@+id/pwd_display_verification_date" style="@style/SettingValue" android:text="January 1, 2024" />
-            <View style="@style/Divider" />
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/pwd_edit_email_layout"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:hint="New email address"
+                                app:boxStrokeColor="@color/primaryColor"
+                                app:hintTextColor="@color/primaryColor"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/pwd_edit_email"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/inter"
+                                    android:inputType="textEmailAddress"
+                                    android:singleLine="true"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- ACCOUNT CREATION DATE -->
-            <TextView style="@style/SettingLabel" android:text="ACCOUNT CREATION DATE" />
-            <TextView android:id="@+id/pwd_display_created_date" style="@style/SettingValue" android:text="January 1, 2024" />
-            <View style="@style/Divider" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/pwd_btn_send_otp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:fontFamily="@font/inter"
+                                android:text="Verify"
+                                android:textSize="13sp"
+                                android:paddingHorizontal="12dp"
+                                app:cornerRadius="8dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/pwd_otp_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="8dp"
+                            android:visibility="gone">
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/pwd_edit_otp_layout"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:hint="Enter OTP code"
+                                app:boxStrokeColor="@color/primaryColor"
+                                app:hintTextColor="@color/primaryColor"
+                                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/pwd_edit_otp"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/inter"
+                                    android:inputType="number"
+                                    android:singleLine="true"
+                                    android:textSize="14sp" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/pwd_btn_confirm_otp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:fontFamily="@font/inter"
+                                android:text="Confirm"
+                                android:textSize="13sp"
+                                android:paddingHorizontal="12dp"
+                                app:cornerRadius="8dp"
+                                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Account Information (read-only + department) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACCOUNT INFORMATION"
+                android:fontFamily="@font/inter_bold"
+                android:textSize="11sp"
+                android:textColor="@color/gray"
+                android:letterSpacing="0.08"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/inactive_stroke"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/backgroundColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Department (editable via spinner) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Department"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_department"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="-"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                        <Spinner
+                            android:id="@+id/pwd_edit_department_spinner"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/spinner_background_with_arrow"
+                            android:paddingStart="4dp"
+                            android:paddingEnd="4dp"
+                            android:popupBackground="@android:color/white"
+                            android:spinnerMode="dropdown"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- User Type -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="User Type"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_user_type"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Disability Type -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Disability Type"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_disability_type"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Verified By -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Verified By"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_verifiedby"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Verification Date -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Verification Date"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_verification_date"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                    </LinearLayout>
+
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />
+
+                    <!-- Account Created -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Account Created"
+                            android:fontFamily="@font/inter_bold"
+                            android:textSize="11sp"
+                            android:textColor="@color/gray" />
+                        <TextView
+                            android:id="@+id/pwd_display_created_date"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/inter"
+                            android:textSize="15sp"
+                            android:textColor="@color/primaryDarkColor"
+                            android:paddingTop="4dp" />
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Action Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnAction"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_margin="24dp"
-        android:backgroundTint="#6C8EEF"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="20dp"
         android:fontFamily="@font/inter_bold"
+        android:paddingVertical="14dp"
         android:text="EDIT ACCOUNT DETAILS"
-        android:textColor="@android:color/white"
-        app:cornerRadius="8dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="15sp"
+        app:backgroundTint="@color/primaryColor"
+        app:cornerRadius="12dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

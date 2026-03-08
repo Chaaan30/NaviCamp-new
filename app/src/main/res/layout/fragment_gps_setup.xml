@@ -3,98 +3,122 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:padding="32dp">
+    android:background="@color/backgroundColor"
+    android:paddingHorizontal="28dp"
+    android:paddingVertical="32dp">
 
-    <ImageView
-        android:id="@+id/gpsIcon"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/iconCard"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:src="@drawable/ic_location"
+        app:cardCornerRadius="60dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/lightBlue"
+        app:strokeWidth="0dp"
         app:layout_constraintBottom_toTopOf="@+id/titleTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.3"
-        app:layout_constraintVertical_chainStyle="packed"
-        app:tint="@color/primaryColor" />
+        app:layout_constraintVertical_bias="0.25"
+        app:layout_constraintVertical_chainStyle="packed">
+
+        <ImageView
+            android:id="@+id/gpsIcon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_location"
+            app:tint="@color/primaryColor" />
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:fontFamily="@font/inter"
+        android:layout_marginTop="24dp"
+        android:fontFamily="@font/inter_bold"
         android:text="Enable GPS"
         android:textColor="@color/primaryDarkColor"
         android:textSize="24sp"
-        android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@+id/descriptionTextView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gpsIcon" />
+        app:layout_constraintTop_toBottomOf="@+id/iconCard" />
 
     <TextView
         android:id="@+id/descriptionTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="12dp"
         android:fontFamily="@font/inter"
-        android:lineSpacingExtra="4dp"
+        android:lineSpacingExtra="5dp"
         android:text="Turn on device location so NaviCamp can provide accurate map guidance and emergency support."
         android:textAlignment="center"
         android:textColor="@color/gray"
-        android:textSize="16sp"
+        android:textSize="15sp"
         app:layout_constraintBottom_toTopOf="@+id/statusLayout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/titleTextView"
-        app:layout_constraintWidth_max="320dp" />
+        app:layout_constraintWidth_max="300dp" />
 
-    <LinearLayout
+    <!-- Status pill -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/statusLayout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:layout_marginTop="20dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/lightOrange"
+        app:strokeWidth="0dp"
         app:layout_constraintBottom_toTopOf="@+id/btnAction"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/descriptionTextView">
 
-        <ImageView
-            android:id="@+id/statusIcon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_location" />
-
-        <TextView
-            android:id="@+id/statusText"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/inter"
-            android:text="Enable location permission and GPS"
-            android:textColor="@color/orange"
-            android:textSize="14sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp">
 
-    </LinearLayout>
+            <ImageView
+                android:id="@+id/statusIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginEnd="8dp"
+                android:src="@drawable/ic_location"
+                app:tint="@color/orange" />
 
-    <Button
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter"
+                android:text="Enable location permission and GPS"
+                android:textColor="@color/orange"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnAction"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:background="@drawable/button_filled"
+        android:layout_marginTop="28dp"
         android:fontFamily="@font/inter"
-        android:paddingVertical="12dp"
+        android:paddingVertical="14dp"
         android:text="Allow Location Access"
-        android:textColor="@color/onPrimaryColor"
+        android:textSize="15sp"
+        app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/statusLayout"
-        app:layout_constraintWidth_max="300dp" />
+        app:layout_constraintWidth_max="320dp"
+        style="@style/Widget.MaterialComponents.Button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

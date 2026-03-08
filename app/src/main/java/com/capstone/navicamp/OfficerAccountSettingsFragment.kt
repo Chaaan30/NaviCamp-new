@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.fragment.app.Fragment
+import com.google.android.material.textfield.TextInputLayout
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,9 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
     private lateinit var editContactNumber: EditText
     private lateinit var dateCreatedText: TextView
     private lateinit var btnAction: Button
+    private lateinit var editFullNameLayout: TextInputLayout
+    private lateinit var editContactNumberLayout: TextInputLayout
+    private lateinit var otpContainer: View
 
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
@@ -96,6 +100,9 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         editContactNumber = view.findViewById(R.id.edit_contact_number)
 
         dateCreatedText = view.findViewById(R.id.date_created_text)
+        editFullNameLayout = view.findViewById(R.id.edit_full_name_layout)
+        editContactNumberLayout = view.findViewById(R.id.edit_contact_number_layout)
+        otpContainer = view.findViewById(R.id.otp_container)
         btnAction = view.findViewById(R.id.btnAction)
 
         // 3. Load Initial Data
@@ -106,8 +113,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 isOtpConfirmed = false
-                editOtp.visibility = View.GONE
-                confirmOtpButton.visibility = View.GONE
+                otpContainer.visibility = View.GONE
                 sendOtpButton.text = "Verify"
                 sendOtpButton.isEnabled = true
             }
@@ -139,13 +145,12 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         dateCreatedText.text = sharedPreferences.getString("createdOn", "")
 
         // Initial Visibility
-        editFullName.visibility = View.GONE
+        editFullNameLayout.visibility = View.GONE
         editDepartmentSpinner.visibility = View.GONE
-        editEmail.visibility = View.GONE
-        editContactNumber.visibility = View.GONE
-        editOtp.visibility = View.GONE
+        emailEditContainer.visibility = View.GONE
+        editContactNumberLayout.visibility = View.GONE
+        otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
-        confirmOtpButton.visibility = View.GONE
     }
 
     private fun enterEditMode() {
@@ -158,14 +163,23 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         val currentContact = contactNumberText.text.toString()
         val currentDepartment = departmentText.text.toString()
 
-        editFullName.apply { visibility = View.VISIBLE; setText(currentFull) }
+        editFullNameLayout.visibility = View.VISIBLE
+        editFullName.setText(currentFull)
         fullNameText.visibility = View.GONE
 
         emailEditContainer.visibility = View.VISIBLE
-        editEmail.apply { visibility = View.VISIBLE; setText(currentEmail) }
+        editEmail.setText(currentEmail)
+        editEmail.isEnabled = true
         emailText.visibility = View.GONE
 
-        editContactNumber.apply { visibility = View.VISIBLE; setText(currentContact) }
+        sendOtpButton.text = "Verify"
+        sendOtpButton.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
+        otpContainer.visibility = View.GONE
+
+        editContactNumberLayout.visibility = View.VISIBLE
+        editContactNumber.setText(currentContact)
         contactNumberText.visibility = View.GONE
 
         setupDepartmentSpinner(userTypeText.text.toString(), currentDepartment)
@@ -193,7 +207,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         val userID = sharedPreferences.getString("userID", null)
 
         // Validations
-        if (editEmail.visibility == View.VISIBLE && otp.isNotBlank()) {
+        if (emailEditContainer.visibility == View.VISIBLE && otp.isNotBlank()) {
             if (otp != generatedOtp) { Toast.makeText(requireContext(), "Invalid OTP", Toast.LENGTH_SHORT).show(); return }
         }
         if (newContact.isNotBlank() && newContact.length != 11) { Toast.makeText(requireContext(), "11 digits required", Toast.LENGTH_SHORT).show(); return }
@@ -237,14 +251,17 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         btnAction.text = "EDIT ACCOUNT DETAILS"
         setNonEditableFieldsDimmed(false)
 
-        editFullName.visibility = View.GONE
+        editFullNameLayout.visibility = View.GONE
         editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
-        editEmail.visibility = View.GONE
-        editContactNumber.visibility = View.GONE
-        editOtp.visibility = View.GONE
+        editContactNumberLayout.visibility = View.GONE
+        otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
-        confirmOtpButton.visibility = View.GONE
+        sendOtpButton.isEnabled = true
+        sendOtpButton.text = "Verify"
+        editEmail.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
 
         fullNameText.visibility = View.VISIBLE
         departmentText.visibility = View.VISIBLE
@@ -268,8 +285,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
             } else {
                 generatedOtp = (100000..999999).random().toString()
                 withContext(Dispatchers.IO) { sendOtpEmail(newEmail, generatedOtp!!) }
-                editOtp.visibility = View.VISIBLE
-                confirmOtpButton.visibility = View.VISIBLE
+                otpContainer.visibility = View.VISIBLE
                 Toast.makeText(requireContext(), "OTP sent", Toast.LENGTH_SHORT).show()
             }
         }
@@ -279,8 +295,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         if (editOtp.text.toString().trim() == generatedOtp) {
             isOtpConfirmed = true
             Toast.makeText(requireContext(), "Confirmed", Toast.LENGTH_SHORT).show()
-            editOtp.visibility = View.GONE
-            confirmOtpButton.visibility = View.GONE
+            otpContainer.visibility = View.GONE
             sendOtpButton.text = "Verified ✓"
             sendOtpButton.isEnabled = false
             editEmail.isEnabled = false

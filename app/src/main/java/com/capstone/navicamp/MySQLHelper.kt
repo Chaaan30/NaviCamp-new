@@ -56,6 +56,21 @@ data class OngoingIncidentInfo(
     val officerUserID: String?
 )
 
+data class ActiveAssistanceGps(
+    val userID: String,
+    val fullName: String,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Double
+)
+
+data class VerificationGeneratorAccess(
+    val campusAffiliation: String,
+    val department: String,
+    val position: String,
+    val isAdmin: Boolean
+)
+
 object MySQLHelper {
 
     // Database credentials
@@ -208,7 +223,9 @@ object MySQLHelper {
                         l.longitude,
                         l.dateTime,
                         i.officerResponded,
-                        i.relocatedLocation
+                        i.relocatedLocation,
+                        p.emergencyContactPerson,
+                        p.emergencyContactNumber
                     FROM incident_logs_table i
                     JOIN (
                         SELECT
@@ -220,6 +237,7 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
+                    LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                     WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                     ORDER BY FIELD(LOWER(TRIM(i.status)), 'ongoing', 'pending', 'resolved'), i.alertDateTime DESC
                 """.trimIndent()
@@ -462,6 +480,8 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
 
             if (locationRows > 0 && incidentRows > 0) {
+                upsertLiveGPS(userID, latitude, longitude, 0f)
+
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                 intent.setClassName(
                     "com.capstone.navicamp",
@@ -616,6 +636,220 @@ object MySQLHelper {
     fun isSafetyOfficerAdmin(userID: String): Boolean {
         val position = getSafetyOfficerPositionByUserID(userID) ?: return false
         return position.trim().equals("admin", ignoreCase = true)
+    }
+
+    fun getVerificationGeneratorAccess(userID: String): VerificationGeneratorAccess? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val userIDInt = userID.toIntOrNull() ?: return null
+            connection = getConnection() ?: return null
+
+            val query = """
+                SELECT
+                    u.userType AS campusAffiliation,
+                    u.department AS department,
+                    COALESCE(s.position, '') AS position
+                FROM user_table u
+                LEFT JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.userID = ?
+                LIMIT 1
+            """.trimIndent()
+
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, userIDInt)
+            resultSet = statement.executeQuery()
+
+            if (!resultSet.next()) {
+                return null
+            }
+
+            val campusAffiliation = resultSet.getString("campusAffiliation")?.trim().orEmpty()
+            val department = resultSet.getString("department")?.trim().orEmpty()
+            val position = resultSet.getString("position")?.trim().orEmpty()
+            val isAdmin = campusAffiliation.equals("Employee", ignoreCase = true) &&
+                position.equals("Admin", ignoreCase = true)
+
+            VerificationGeneratorAccess(
+                campusAffiliation = campusAffiliation,
+                department = department,
+                position = position,
+                isAdmin = isAdmin
+            )
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun validateUserPasswordByUserID(userID: String, password: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val userIDInt = userID.toIntOrNull() ?: return false
+            connection = getConnection() ?: return false
+
+            val query = "SELECT password, verified FROM user_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, userIDInt)
+            resultSet = statement.executeQuery()
+
+            if (!resultSet.next()) {
+                return false
+            }
+
+            val storedPassword = resultSet.getString("password")
+            val verified = resultSet.getInt("verified")
+            hashPassword(password) == storedPassword && verified == 1
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    suspend fun issueVerificationQrNonce(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String,
+        expiresAt: ZonedDateTime
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var createStatement: PreparedStatement? = null
+            var insertStatement: PreparedStatement? = null
+            try {
+                val staffUserIDInt = staffUserID.toIntOrNull() ?: return@withContext false
+                connection = getConnection() ?: return@withContext false
+
+                val createQuery = """
+                    CREATE TABLE IF NOT EXISTS verification_qr_tokens (
+                        tokenNonce VARCHAR(64) PRIMARY KEY,
+                        staffUserID INT NOT NULL,
+                        roleToken VARCHAR(32) NOT NULL,
+                        issuedAt DATETIME NOT NULL,
+                        expiresAt DATETIME NOT NULL,
+                        consumedAt DATETIME NULL
+                    )
+                """.trimIndent()
+                createStatement = connection.prepareStatement(createQuery)
+                createStatement.execute()
+
+                val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val expiry = expiresAt.withZoneSameInstant(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                val insertQuery = """
+                    INSERT INTO verification_qr_tokens (tokenNonce, staffUserID, roleToken, issuedAt, expiresAt, consumedAt)
+                    VALUES (?, ?, ?, ?, ?, NULL)
+                """.trimIndent()
+                insertStatement = connection.prepareStatement(insertQuery)
+                insertStatement.setString(1, nonce)
+                insertStatement.setInt(2, staffUserIDInt)
+                insertStatement.setString(3, roleToken)
+                insertStatement.setString(4, now)
+                insertStatement.setString(5, expiry)
+                insertStatement.executeUpdate() > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                insertStatement?.close()
+                createStatement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    suspend fun consumeVerificationQrNonce(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                val staffUserIDInt = staffUserID.toIntOrNull() ?: return@withContext false
+                connection = getConnection() ?: return@withContext false
+
+                val query = """
+                    UPDATE verification_qr_tokens
+                    SET consumedAt = ?
+                    WHERE tokenNonce = ?
+                      AND staffUserID = ?
+                      AND roleToken = ?
+                      AND consumedAt IS NULL
+                      AND expiresAt >= ?
+                """.trimIndent()
+
+                val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                statement = connection.prepareStatement(query)
+                statement.setString(1, now)
+                statement.setString(2, nonce)
+                statement.setInt(3, staffUserIDInt)
+                statement.setString(4, roleToken)
+                statement.setString(5, now)
+
+                statement.executeUpdate() > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    fun isVerificationQrNonceConsumed(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String
+    ): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val staffUserIDInt = staffUserID.toIntOrNull() ?: return false
+            connection = getConnection() ?: return false
+
+            val query = """
+                SELECT consumedAt
+                FROM verification_qr_tokens
+                WHERE tokenNonce = ?
+                  AND staffUserID = ?
+                  AND roleToken = ?
+                LIMIT 1
+            """.trimIndent()
+
+            statement = connection.prepareStatement(query)
+            statement.setString(1, nonce)
+            statement.setInt(2, staffUserIDInt)
+            statement.setString(3, roleToken)
+            resultSet = statement.executeQuery()
+
+            resultSet.next() && resultSet.getString("consumedAt") != null
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
     }
 
     fun getSafetyOfficerOnDutyStatus(userID: String): Boolean {
@@ -805,9 +1039,20 @@ object MySQLHelper {
             }
             val rowsAffected = statement.executeUpdate()
             if (rowsAffected > 0) {
+                val normalizedStatus = status.trim().lowercase(Locale.US)
                 val resolvedOfficerUserID = officerUserID?.takeIf { it.isNotBlank() } ?: getUserIDByFullName(officerName)
                 if (!resolvedOfficerUserID.isNullOrBlank()) {
                     updateSafetyOfficerDispatchedStatus(resolvedOfficerUserID, false)
+                }
+
+                if (normalizedStatus == "resolved" || normalizedStatus == "false alarm") {
+                    val userID = getUserIDByLocationID(locationID)
+                    if (!userID.isNullOrBlank()) {
+                        deleteLiveGPS(userID)
+                    }
+                    if (!resolvedOfficerUserID.isNullOrBlank()) {
+                        deleteLiveGPS(resolvedOfficerUserID)
+                    }
                 }
 
                 SmartPollingManager.getInstance().triggerFastUpdate()
@@ -934,6 +1179,8 @@ object MySQLHelper {
             Log.d("MySQLHelper", "Incident data inserted: $incidentRows rows affected.")
 
             if (locationRows > 0 && incidentRows > 0) {
+                upsertLiveGPS(userID, latitude, longitude, 0f)
+
                 val intent = Intent("com.capstone.navicamp.DATA_CHANGED")
                 intent.setClassName(
                     "com.capstone.navicamp",
@@ -1870,6 +2117,15 @@ object MySQLHelper {
             statement.setString(2, locationID)
 
             val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                val normalizedStatus = newStatus.trim().lowercase(Locale.US)
+                if (normalizedStatus == "resolved" || normalizedStatus == "false alarm") {
+                    val userID = getUserIDByLocationID(locationID)
+                    if (!userID.isNullOrBlank()) {
+                        deleteLiveGPS(userID)
+                    }
+                }
+            }
             rowsAffected > 0
         } catch (e: SQLException) {
             e.printStackTrace()
@@ -2222,7 +2478,8 @@ object MySQLHelper {
         userID: String,
         staffUserID: String,
         disabledVerificationMode: String? = null,
-        temporaryValidUntil: String? = null
+        temporaryValidUntil: String? = null,
+        promoteToAdmin: Boolean = false
     ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -2333,6 +2590,22 @@ object MySQLHelper {
                     checkStatement = null
 
                     if (!hasSafetyProfile) {
+                        connection.rollback()
+                        return@withContext false
+                    }
+                }
+
+                if (promoteToAdmin) {
+                    val promoteQuery = """
+                        UPDATE safety_officer_profiles_table
+                        SET position = 'Admin'
+                        WHERE userID = ?
+                    """.trimIndent()
+                    val promoteStatement = connection.prepareStatement(promoteQuery)
+                    promoteStatement.setInt(1, userIDInt)
+                    val promoted = promoteStatement.executeUpdate() > 0
+                    promoteStatement.close()
+                    if (!promoted) {
                         connection.rollback()
                         return@withContext false
                     }
@@ -2649,9 +2922,8 @@ object MySQLHelper {
                 if (connection == null) return@withContext null
 
                 val query = """
-                    SELECT d.latitude, d.longitude
+                    SELECT l.latitude, l.longitude
                     FROM location_table l
-                    JOIN devices_table d ON d.deviceID = l.deviceID
                     WHERE l.locationID = ?
                     LIMIT 1
                 """.trimIndent()
@@ -3746,6 +4018,64 @@ object MySQLHelper {
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "getLiveGPS failed: ${e.message}")
             null
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun getActiveAssistanceLiveGps(): List<ActiveAssistanceGps> {
+        val results = mutableListOf<ActiveAssistanceGps>()
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+
+        return try {
+            connection = getConnection() ?: return emptyList()
+            ensureLiveGpsTableExists(connection)
+
+            val query = """
+                SELECT i.userID,
+                       u.fullName,
+                      COALESCE(g.latitude, l.latitude) AS latitude,
+                      COALESCE(g.longitude, l.longitude) AS longitude,
+                      COALESCE(g.accuracy, 0) AS accuracy
+                FROM incident_logs_table i
+                JOIN (
+                    SELECT userID,
+                           MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
+                    FROM incident_logs_table
+                    WHERE status IN ('pending', 'ongoing')
+                    GROUP BY userID
+                ) latest ON latest.userID = i.userID
+                       AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
+                JOIN user_table u ON u.userID = i.userID
+                  JOIN location_table l ON l.locationID = i.locationID
+                  LEFT JOIN live_gps_table g ON g.userID = i.userID
+                WHERE i.status IN ('pending', 'ongoing')
+            """.trimIndent()
+
+            stmt = connection.prepareStatement(query)
+            rs = stmt.executeQuery()
+
+            while (rs.next()) {
+                val lat = rs.getDouble("latitude")
+                val lng = rs.getDouble("longitude")
+                if (lat == 0.0 && lng == 0.0) continue
+
+                results.add(
+                    ActiveAssistanceGps(
+                        userID = rs.getString("userID") ?: continue,
+                        fullName = rs.getString("fullName") ?: "User",
+                        latitude = lat,
+                        longitude = lng,
+                        accuracy = rs.getDouble("accuracy")
+                    )
+                )
+            }
+            results
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getActiveAssistanceLiveGps failed: ${e.message}")
+            emptyList()
         } finally {
             rs?.close(); stmt?.close(); connection?.close()
         }
