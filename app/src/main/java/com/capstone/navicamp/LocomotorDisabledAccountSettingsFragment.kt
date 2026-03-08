@@ -212,7 +212,14 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         emailEditContainer.visibility = View.VISIBLE
         editEmail.setText(currentEmail)
+        editEmail.isEnabled = true
         emailText.visibility = View.GONE
+
+        sendOtpButton.text = "Verify"
+        sendOtpButton.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
+        otpContainer.visibility = View.GONE
 
         editContactNumberLayout.visibility = View.VISIBLE
         editContactNumber.setText(currentContact)
@@ -316,6 +323,11 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         editEmergencyNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
+        sendOtpButton.isEnabled = true
+        sendOtpButton.text = "Verify"
+        editEmail.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
 
         fullNameText.visibility = View.VISIBLE
         schoolIdText.visibility = View.VISIBLE
@@ -409,12 +421,18 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                 dateCreatedText.text = dbData["createdOn"]
 
                 sharedPreferences.edit().apply {
+                    putString("schoolID", dbData["schoolID"])
                     putString("fullName", dbData["fullName"])
                     putString("email", dbData["email"])
                     putString("contactNumber", dbData["contactNumber"])
                     putString("department", dbData["department"])
                     putString("emergencyContactName", dbData["emergencyName"])
                     putString("emergencyContactNumber", dbData["emergencyNumber"])
+                    putString("userType", dbData["userType"])
+                    putString("disabilityType", dbData["disabilityType"])
+                    putString("verifiedBy", dbData["verifiedBy"])
+                    putString("verificationDate", dbData["verificationDate"])
+                    putString("createdOn", dbData["createdOn"])
                     apply()
                 }
             }

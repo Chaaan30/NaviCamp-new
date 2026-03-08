@@ -169,7 +169,14 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
 
         emailEditContainer.visibility = View.VISIBLE
         editEmail.setText(currentEmail)
+        editEmail.isEnabled = true
         emailText.visibility = View.GONE
+
+        sendOtpButton.text = "Verify"
+        sendOtpButton.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
+        otpContainer.visibility = View.GONE
 
         editContactNumberLayout.visibility = View.VISIBLE
         editContactNumber.setText(currentContact)
@@ -250,6 +257,11 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         editContactNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
         sendOtpButton.visibility = View.GONE
+        sendOtpButton.isEnabled = true
+        sendOtpButton.text = "Verify"
+        editEmail.isEnabled = true
+        isOtpConfirmed = false
+        generatedOtp = null
 
         fullNameText.visibility = View.VISIBLE
         departmentText.visibility = View.VISIBLE

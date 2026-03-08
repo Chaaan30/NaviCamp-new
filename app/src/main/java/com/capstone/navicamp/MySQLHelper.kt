@@ -64,6 +64,13 @@ data class ActiveAssistanceGps(
     val accuracy: Double
 )
 
+data class VerificationGeneratorAccess(
+    val campusAffiliation: String,
+    val department: String,
+    val position: String,
+    val isAdmin: Boolean
+)
+
 object MySQLHelper {
 
     // Database credentials
@@ -629,6 +636,220 @@ object MySQLHelper {
     fun isSafetyOfficerAdmin(userID: String): Boolean {
         val position = getSafetyOfficerPositionByUserID(userID) ?: return false
         return position.trim().equals("admin", ignoreCase = true)
+    }
+
+    fun getVerificationGeneratorAccess(userID: String): VerificationGeneratorAccess? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val userIDInt = userID.toIntOrNull() ?: return null
+            connection = getConnection() ?: return null
+
+            val query = """
+                SELECT
+                    u.userType AS campusAffiliation,
+                    u.department AS department,
+                    COALESCE(s.position, '') AS position
+                FROM user_table u
+                LEFT JOIN safety_officer_profiles_table s ON u.userID = s.userID
+                WHERE u.userID = ?
+                LIMIT 1
+            """.trimIndent()
+
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, userIDInt)
+            resultSet = statement.executeQuery()
+
+            if (!resultSet.next()) {
+                return null
+            }
+
+            val campusAffiliation = resultSet.getString("campusAffiliation")?.trim().orEmpty()
+            val department = resultSet.getString("department")?.trim().orEmpty()
+            val position = resultSet.getString("position")?.trim().orEmpty()
+            val isAdmin = campusAffiliation.equals("Employee", ignoreCase = true) &&
+                position.equals("Admin", ignoreCase = true)
+
+            VerificationGeneratorAccess(
+                campusAffiliation = campusAffiliation,
+                department = department,
+                position = position,
+                isAdmin = isAdmin
+            )
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun validateUserPasswordByUserID(userID: String, password: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val userIDInt = userID.toIntOrNull() ?: return false
+            connection = getConnection() ?: return false
+
+            val query = "SELECT password, verified FROM user_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setInt(1, userIDInt)
+            resultSet = statement.executeQuery()
+
+            if (!resultSet.next()) {
+                return false
+            }
+
+            val storedPassword = resultSet.getString("password")
+            val verified = resultSet.getInt("verified")
+            hashPassword(password) == storedPassword && verified == 1
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    suspend fun issueVerificationQrNonce(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String,
+        expiresAt: ZonedDateTime
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var createStatement: PreparedStatement? = null
+            var insertStatement: PreparedStatement? = null
+            try {
+                val staffUserIDInt = staffUserID.toIntOrNull() ?: return@withContext false
+                connection = getConnection() ?: return@withContext false
+
+                val createQuery = """
+                    CREATE TABLE IF NOT EXISTS verification_qr_tokens (
+                        tokenNonce VARCHAR(64) PRIMARY KEY,
+                        staffUserID INT NOT NULL,
+                        roleToken VARCHAR(32) NOT NULL,
+                        issuedAt DATETIME NOT NULL,
+                        expiresAt DATETIME NOT NULL,
+                        consumedAt DATETIME NULL
+                    )
+                """.trimIndent()
+                createStatement = connection.prepareStatement(createQuery)
+                createStatement.execute()
+
+                val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val expiry = expiresAt.withZoneSameInstant(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                val insertQuery = """
+                    INSERT INTO verification_qr_tokens (tokenNonce, staffUserID, roleToken, issuedAt, expiresAt, consumedAt)
+                    VALUES (?, ?, ?, ?, ?, NULL)
+                """.trimIndent()
+                insertStatement = connection.prepareStatement(insertQuery)
+                insertStatement.setString(1, nonce)
+                insertStatement.setInt(2, staffUserIDInt)
+                insertStatement.setString(3, roleToken)
+                insertStatement.setString(4, now)
+                insertStatement.setString(5, expiry)
+                insertStatement.executeUpdate() > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                insertStatement?.close()
+                createStatement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    suspend fun consumeVerificationQrNonce(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            var connection: Connection? = null
+            var statement: PreparedStatement? = null
+            try {
+                val staffUserIDInt = staffUserID.toIntOrNull() ?: return@withContext false
+                connection = getConnection() ?: return@withContext false
+
+                val query = """
+                    UPDATE verification_qr_tokens
+                    SET consumedAt = ?
+                    WHERE tokenNonce = ?
+                      AND staffUserID = ?
+                      AND roleToken = ?
+                      AND consumedAt IS NULL
+                      AND expiresAt >= ?
+                """.trimIndent()
+
+                val now = ZonedDateTime.now(ZoneId.of("UTC+8"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                statement = connection.prepareStatement(query)
+                statement.setString(1, now)
+                statement.setString(2, nonce)
+                statement.setInt(3, staffUserIDInt)
+                statement.setString(4, roleToken)
+                statement.setString(5, now)
+
+                statement.executeUpdate() > 0
+            } catch (e: SQLException) {
+                e.printStackTrace()
+                false
+            } finally {
+                statement?.close()
+                connection?.close()
+            }
+        }
+    }
+
+    fun isVerificationQrNonceConsumed(
+        nonce: String,
+        staffUserID: String,
+        roleToken: String
+    ): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val staffUserIDInt = staffUserID.toIntOrNull() ?: return false
+            connection = getConnection() ?: return false
+
+            val query = """
+                SELECT consumedAt
+                FROM verification_qr_tokens
+                WHERE tokenNonce = ?
+                  AND staffUserID = ?
+                  AND roleToken = ?
+                LIMIT 1
+            """.trimIndent()
+
+            statement = connection.prepareStatement(query)
+            statement.setString(1, nonce)
+            statement.setInt(2, staffUserIDInt)
+            statement.setString(3, roleToken)
+            resultSet = statement.executeQuery()
+
+            resultSet.next() && resultSet.getString("consumedAt") != null
+        } catch (e: SQLException) {
+            e.printStackTrace()
+            false
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
     }
 
     fun getSafetyOfficerOnDutyStatus(userID: String): Boolean {
@@ -2257,7 +2478,8 @@ object MySQLHelper {
         userID: String,
         staffUserID: String,
         disabledVerificationMode: String? = null,
-        temporaryValidUntil: String? = null
+        temporaryValidUntil: String? = null,
+        promoteToAdmin: Boolean = false
     ): Boolean {
         return withContext(Dispatchers.IO) {
             var connection: Connection? = null
@@ -2368,6 +2590,22 @@ object MySQLHelper {
                     checkStatement = null
 
                     if (!hasSafetyProfile) {
+                        connection.rollback()
+                        return@withContext false
+                    }
+                }
+
+                if (promoteToAdmin) {
+                    val promoteQuery = """
+                        UPDATE safety_officer_profiles_table
+                        SET position = 'Admin'
+                        WHERE userID = ?
+                    """.trimIndent()
+                    val promoteStatement = connection.prepareStatement(promoteQuery)
+                    promoteStatement.setInt(1, userIDInt)
+                    val promoted = promoteStatement.executeUpdate() > 0
+                    promoteStatement.close()
+                    if (!promoted) {
                         connection.rollback()
                         return@withContext false
                     }

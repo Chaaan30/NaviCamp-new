@@ -190,11 +190,17 @@ class AccountSettingsActivity : AppCompatActivity() {
 
                     // Sync SharedPreferences in case local cache was wrong
                     sharedPreferences.edit().apply {
+                        putString("schoolID", dbData["schoolID"])
                         putString("fullName", dbData["fullName"])
                         putString("email", dbData["email"])
                         putString("contactNumber", dbData["contactNumber"])
                         putString("emergencyContactName", dbData["emergencyName"])
                         putString("emergencyContactNumber", dbData["emergencyNumber"])
+                        putString("userType", dbData["userType"])
+                        putString("disabilityType", dbData["disabilityType"])
+                        putString("verifiedBy", dbData["verifiedBy"])
+                        putString("verificationDate", dbData["verificationDate"])
+                        putString("createdOn", dbData["createdOn"])
                         apply()
                     }
                 } else {
@@ -224,6 +230,12 @@ class AccountSettingsActivity : AppCompatActivity() {
                 pwdDisplayEmail.visibility = View.GONE
                 pwdEmailEditContainer.visibility = View.VISIBLE
                 pwdEditEmail.setText(pwdDisplayEmail.text?.toString() ?: "")
+                pwdEditEmail.isEnabled = true
+                pwdBtnSendOtp.text = "Verify"
+                pwdBtnSendOtp.isEnabled = true
+                isOtpConfirmed = false
+                generatedOtp = null
+                pwdOtpContainer.visibility = View.GONE
 
                 pwdDisplayContact.visibility = View.GONE
                 pwdEditContactLayout.visibility = View.VISIBLE
@@ -313,7 +325,7 @@ class AccountSettingsActivity : AppCompatActivity() {
                             prefsEditor.putString("fullName", newFullName)
                         }
                         if (newSchoolID.isNotBlank()) {
-                            pwdDisplayName.text = newFullName
+                            pwdDisplaySchoolId.text = newSchoolID
                             prefsEditor.putString("schoolID", newSchoolID)
                         }
                         if (isOtpConfirmed && newEmail.isNotBlank()) {
@@ -350,14 +362,16 @@ class AccountSettingsActivity : AppCompatActivity() {
                         pwdBtnSendOtp.visibility = View.GONE
 
                         pwdDisplayName.visibility = View.VISIBLE
+                        pwdDisplaySchoolId.visibility = View.VISIBLE
                         pwdDisplayEmail.visibility = View.VISIBLE
                         pwdDisplayContact.visibility = View.VISIBLE
                         pwdDisplayEmergencyName.visibility = View.VISIBLE
                         pwdDisplayEmergencyNumber.visibility = View.VISIBLE
-
-                        // Optionally restart activity to refresh other parts
-                        finish()
-                        startActivity(intent)
+                        pwdEditEmail.isEnabled = true
+                        pwdBtnSendOtp.text = "Verify"
+                        pwdBtnSendOtp.isEnabled = true
+                        isOtpConfirmed = false
+                        generatedOtp = null
 
                     } else {
                         Toast.makeText(this@AccountSettingsActivity, "Failed to update information", Toast.LENGTH_SHORT).show()
@@ -502,11 +516,17 @@ class AccountSettingsActivity : AppCompatActivity() {
 
                 // Sync SharedPreferences in the background
                 sharedPreferences.edit().apply {
+                    putString("schoolID", dbData["schoolID"])
                     putString("fullName", dbData["fullName"])
                     putString("email", dbData["email"])
                     putString("contactNumber", dbData["contactNumber"])
                     putString("emergencyContactName", dbData["emergencyName"])
                     putString("emergencyContactNumber", dbData["emergencyNumber"])
+                    putString("userType", dbData["userType"])
+                    putString("disabilityType", dbData["disabilityType"])
+                    putString("verifiedBy", dbData["verifiedBy"])
+                    putString("verificationDate", dbData["verificationDate"])
+                    putString("createdOn", dbData["createdOn"])
                     apply()
                 }
             }
