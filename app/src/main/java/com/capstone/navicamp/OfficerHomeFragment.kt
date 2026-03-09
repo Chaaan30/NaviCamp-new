@@ -1,6 +1,5 @@
 package com.capstone.navicamp
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -252,15 +251,15 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         }
 
         respondButton.setOnClickListener {
-            val intent = Intent(requireContext(), MapActivity::class.java).apply {
-                putExtra("LOCATION_ID", item.locationID)
-                putExtra("LATITUDE", item.latitude)
-                putExtra("LONGITUDE", item.longitude)
-                putExtra("FULL_NAME", item.fullName)
-                putExtra("FLOOR_LEVEL", item.floorLevel)
-                putExtra("STATUS", item.status)
-            }
-            startActivity(intent)
+            val mapFragment = MapHomeFragment.newInstance(
+                locationID = item.locationID,
+                latitude = item.latitude,
+                longitude = item.longitude,
+                fullName = item.fullName,
+                floorLevel = item.floorLevel,
+                status = item.status
+            )
+            (activity as? SecurityOfficerActivity)?.navigateToMapHome(mapFragment)
         }
     }
 
