@@ -61,7 +61,9 @@ data class ActiveAssistanceGps(
     val fullName: String,
     val latitude: Double,
     val longitude: Double,
-    val accuracy: Double
+    val accuracy: Double,
+    val status: String = "pending",
+    val locationID: String = ""
 )
 
 data class VerificationGeneratorAccess(
@@ -4038,13 +4040,23 @@ object MySQLHelper {
                        u.fullName,
                       COALESCE(g.latitude, l.latitude) AS latitude,
                       COALESCE(g.longitude, l.longitude) AS longitude,
-                      COALESCE(g.accuracy, 0) AS accuracy
+                      COALESCE(g.accuracy, 0) AS accuracy,
+                      i.status AS incidentStatus,
+                      i.locationID
                 FROM incident_logs_table i
                 JOIN (
                     SELECT userID,
                            MAX(CONCAT(alertDateTime, '|', alertID)) AS latestKey
                     FROM incident_logs_table
                     WHERE status IN ('pending', 'ongoing')
+                       OR (
+                           status = 'resolved'
+                           AND (
+                               relocatedLocation IS NULL OR TRIM(relocatedLocation) = ''
+                               OR actionFA IS NULL OR TRIM(actionFA) = ''
+                               OR actionINFO IS NULL OR TRIM(actionINFO) = ''
+                           )
+                       )
                     GROUP BY userID
                 ) latest ON latest.userID = i.userID
                        AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
@@ -4052,6 +4064,14 @@ object MySQLHelper {
                   JOIN location_table l ON l.locationID = i.locationID
                   LEFT JOIN live_gps_table g ON g.userID = i.userID
                 WHERE i.status IN ('pending', 'ongoing')
+                   OR (
+                       i.status = 'resolved'
+                       AND (
+                           i.relocatedLocation IS NULL OR TRIM(i.relocatedLocation) = ''
+                           OR i.actionFA IS NULL OR TRIM(i.actionFA) = ''
+                           OR i.actionINFO IS NULL OR TRIM(i.actionINFO) = ''
+                       )
+                   )
             """.trimIndent()
 
             stmt = connection.prepareStatement(query)
@@ -4068,7 +4088,9 @@ object MySQLHelper {
                         fullName = rs.getString("fullName") ?: "User",
                         latitude = lat,
                         longitude = lng,
-                        accuracy = rs.getDouble("accuracy")
+                        accuracy = rs.getDouble("accuracy"),
+                        status = rs.getString("incidentStatus") ?: "pending",
+                        locationID = rs.getString("locationID") ?: ""
                     )
                 )
             }

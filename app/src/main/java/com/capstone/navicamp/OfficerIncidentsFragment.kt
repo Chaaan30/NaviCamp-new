@@ -77,13 +77,15 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
             context = requireContext(),
             incidents = emptyList(),
             onMapClick = { incident ->
-                // Redirect to map activity with coordinates
-                val intent = Intent(requireContext(), MapActivity::class.java).apply {
-                    putExtra("LATITUDE", incident.coordinates.split(",")[0].trim().toDoubleOrNull() ?: 0.0)
-                    putExtra("LONGITUDE", incident.coordinates.split(",")[1].trim().toDoubleOrNull() ?: 0.0)
-                    putExtra("FULL_NAME", incident.userName)
-                }
-                startActivity(intent)
+                // Navigate to map home fragment with coordinates
+                val lat = incident.coordinates.split(",")[0].trim().toDoubleOrNull() ?: 0.0
+                val lng = incident.coordinates.split(",")[1].trim().toDoubleOrNull() ?: 0.0
+                val mapFragment = MapHomeFragment.newInstance(
+                    latitude = lat,
+                    longitude = lng,
+                    fullName = incident.userName
+                )
+                (activity as? SecurityOfficerActivity)?.navigateToMapHome(mapFragment)
             },
             onResolveClick = { incident ->
                 resolveIncident(incident)

@@ -2,9 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/nav_officer_home"
-        android:icon="@drawable/ic_bot_home"
+        android:id="@+id/nav_officer_map_home"
+        android:icon="@drawable/ic_bot_map"
         android:title="Home" />
+
+    <item
+        android:id="@+id/nav_officer_monitoring"
+        android:icon="@drawable/ic_bot_monitoring"
+        android:title="Monitoring" />
 
     <item
         android:id="@+id/nav_admin_verify_account"

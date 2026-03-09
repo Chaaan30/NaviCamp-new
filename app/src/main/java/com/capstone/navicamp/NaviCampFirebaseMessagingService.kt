@@ -179,14 +179,15 @@ class NaviCampFirebaseMessagingService : FirebaseMessagingService() {
         
         return when (type) {
             "assistance_request", "officer_response" -> {
-                // Open assistance details
-                if (locationID != null) {
-                    Intent(this, MapActivity::class.java).apply {
-                        putExtra("LOCATION_ID", locationID)
-                        putExtra("FROM_NOTIFICATION", true)
-                    }
-                } else {
-                    Intent(this, SecurityOfficerActivity::class.java)
+                // Open map home fragment via SecurityOfficerActivity
+                Intent(this, SecurityOfficerActivity::class.java).apply {
+                    locationID?.let { putExtra("LOCATION_ID", it) }
+                    data["latitude"]?.toDoubleOrNull()?.let { putExtra("LATITUDE", it) }
+                    data["longitude"]?.toDoubleOrNull()?.let { putExtra("LONGITUDE", it) }
+                    data["fullName"]?.let { putExtra("FULL_NAME", it) }
+                    data["floorLevel"]?.let { putExtra("FLOOR_LEVEL", it) }
+                    data["status"]?.let { putExtra("STATUS", it) }
+                    putExtra("FROM_NOTIFICATION", true)
                 }
             }
             "officer_coming" -> {

@@ -275,7 +275,6 @@ class AssistanceModalDialog : DialogFragment() {
 
         postResolveCloseButton.setOnClickListener {
             dismiss()
-            activity?.finish()
         }
 
         submitReportButton.setOnClickListener { submitReport() }
@@ -349,7 +348,6 @@ class AssistanceModalDialog : DialogFragment() {
                 SmartPollingManager.getInstance().triggerFastUpdate()
                 Toast.makeText(requireContext(), "Marked as false alarm", Toast.LENGTH_SHORT).show()
                 dismiss()
-                activity?.finish()
             } else {
                 resolveButton.isEnabled = true
                 falseAlarmButton.isEnabled = true
@@ -464,7 +462,6 @@ class AssistanceModalDialog : DialogFragment() {
                 SmartPollingManager.getInstance().triggerFastUpdate()
                 Toast.makeText(requireContext(), "Report submitted successfully.", Toast.LENGTH_SHORT).show()
                 dismiss()
-                activity?.finish()
             } else {
                 submitReportButton.isEnabled = true
                 Toast.makeText(requireContext(), "Failed to submit report. Try again.", Toast.LENGTH_SHORT).show()
@@ -500,7 +497,7 @@ class AssistanceModalDialog : DialogFragment() {
                 showSuccessAnimation()
                 sendDataChangeBroadcast()
                 SmartPollingManager.getInstance().triggerFastUpdate()
-                (activity as? MapActivity)?.onOfficerResponded()
+                (parentFragment as? MapHomeFragment)?.onOfficerResponded()
                 Toast.makeText(requireContext(), "You are now responding to this assistance request", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(requireContext(), "Failed to respond. Please try again.", Toast.LENGTH_SHORT).show()

@@ -22,6 +22,7 @@ class SecurityOfficerActivity : AppCompatActivity() {
     private lateinit var prefs: android.content.SharedPreferences
     private var userID: String = ""
     private var currentPosition: String = ""
+    private var skipNavListener = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,18 +51,26 @@ class SecurityOfficerActivity : AppCompatActivity() {
         currentPosition = normalizeRole(prefs.getString("systemRole", ""))
         setupBottomNavVisibility(currentPosition)
 
-        // set default fragment
+        // Set initial fragment. If launched with map extras (e.g., from notification),
+        // open map home focused on that assistance request.
         if (savedInstanceState == null) {
-            loadFragment(OfficerHomeFragment())
+            loadFragment(buildInitialFragmentFromIntent(intent))
         }
 
         syncUserRoleFromDatabase(userID)
 
         bottomNav.setOnItemSelectedListener { item ->
+            if (skipNavListener) {
+                skipNavListener = false
+                return@setOnItemSelectedListener true
+            }
             val transaction = supportFragmentManager.beginTransaction()
 
             when (item.itemId) {
-                R.id.nav_officer_home -> {
+                R.id.nav_officer_map_home -> {
+                    transaction.replace(R.id.officer_fragment_container, MapHomeFragment())
+                }
+                R.id.nav_officer_monitoring -> {
                     transaction.replace(R.id.officer_fragment_container, OfficerHomeFragment())
                 }
                 R.id.nav_admin_verify_account -> {
@@ -116,6 +125,29 @@ class SecurityOfficerActivity : AppCompatActivity() {
         return role?.trim()?.lowercase().orEmpty()
     }
 
+    private fun buildInitialFragmentFromIntent(launchIntent: Intent?): Fragment {
+        val locationID = launchIntent?.getStringExtra("LOCATION_ID")
+        val latitude = launchIntent?.extras?.get("LATITUDE") as? Number
+        val longitude = launchIntent?.extras?.get("LONGITUDE") as? Number
+        val fullName = launchIntent?.getStringExtra("FULL_NAME")
+        val floorLevel = launchIntent?.getStringExtra("FLOOR_LEVEL")
+        val status = launchIntent?.getStringExtra("STATUS")
+
+        val hasMapContext = !locationID.isNullOrBlank() || (latitude != null && longitude != null)
+        if (!hasMapContext) {
+            return MapHomeFragment()
+        }
+
+        return MapHomeFragment.newInstance(
+            locationID = locationID,
+            latitude = latitude?.toDouble(),
+            longitude = longitude?.toDouble(),
+            fullName = fullName,
+            floorLevel = floorLevel,
+            status = status
+        )
+    }
+
     override fun onResume() {
         super.onResume()
         if (::prefs.isInitialized) {
@@ -131,9 +163,9 @@ class SecurityOfficerActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        if (bottomNav.selectedItemId != R.id.nav_officer_home) {
+        if (bottomNav.selectedItemId != R.id.nav_officer_map_home) {
             // If they are NOT on Home, go to Home
-            bottomNav.selectedItemId = R.id.nav_officer_home
+            bottomNav.selectedItemId = R.id.nav_officer_map_home
         } else {
             // If they ARE on Home, close the app as usual
             super.onBackPressed()
@@ -144,5 +176,15 @@ class SecurityOfficerActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.officer_fragment_container, fragment) // Use ONE container
             .commit()
+    }
+
+    /**
+     * Navigate to the map home tab with a specific MapHomeFragment instance.
+     * Called from child fragments (e.g., assist card respond button).
+     */
+    fun navigateToMapHome(mapFragment: MapHomeFragment) {
+        loadFragment(mapFragment)
+        skipNavListener = true
+        bottomNav.selectedItemId = R.id.nav_officer_map_home
     }
 }
