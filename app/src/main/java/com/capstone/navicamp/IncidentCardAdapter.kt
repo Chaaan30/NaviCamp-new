@@ -49,7 +49,12 @@ class IncidentCardAdapter(
         val timeOfAlert: String,
         val resolvedOn: String?,
         val officerName: String?,
-        val incidentDescription: String
+        val incidentDescription: String,
+        val userType: String = "",
+        val department: String = "",
+        val actionFA: String = "",
+        val actionINFO: String = "",
+        val relocatedLocation: String = ""
     )
 
     // Date Header ViewHolder
@@ -64,10 +69,10 @@ class IncidentCardAdapter(
     inner class IncidentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         // Collapsed view elements
         private val statusIndicator: View = itemView.findViewById(R.id.status_indicator)
-        private val alertId: TextView = itemView.findViewById(R.id.alert_id)
         private val statusBadge: TextView = itemView.findViewById(R.id.status_badge)
         private val expandIcon: ImageView = itemView.findViewById(R.id.expand_icon)
         private val userName: TextView = itemView.findViewById(R.id.user_name)
+        private val assistanceTypeText: TextView = itemView.findViewById(R.id.assistance_type_text)
         private val timeAgo: TextView = itemView.findViewById(R.id.time_ago)
         private val locationSummary: TextView = itemView.findViewById(R.id.location_summary)
         
@@ -75,25 +80,25 @@ class IncidentCardAdapter(
         private val expandedContent: LinearLayout = itemView.findViewById(R.id.expanded_content)
         private val userId: TextView = itemView.findViewById(R.id.user_id)
         private val deviceId: TextView = itemView.findViewById(R.id.device_id)
-        private val detailedLocation: TextView = itemView.findViewById(R.id.detailed_location)
+        private val userType: TextView = itemView.findViewById(R.id.user_type)
+        private val department: TextView = itemView.findViewById(R.id.department)
+        private val officerName: TextView = itemView.findViewById(R.id.officer_name)
         private val relocatedToLayout: LinearLayout = itemView.findViewById(R.id.relocated_to_layout)
         private val relocatedTo: TextView = itemView.findViewById(R.id.relocated_to)
-        private val latitude: TextView = itemView.findViewById(R.id.latitude)
-        private val longitude: TextView = itemView.findViewById(R.id.longitude)
+        private val firstAidAction: TextView = itemView.findViewById(R.id.first_aid_action)
+        private val furtherInfo: TextView = itemView.findViewById(R.id.further_info)
         private val createdAt: TextView = itemView.findViewById(R.id.created_at)
         private val resolvedAt: TextView = itemView.findViewById(R.id.resolved_at)
         private val resolvedTimeLayout: LinearLayout = itemView.findViewById(R.id.resolved_time_layout)
+        private val viewOnMapButton: MaterialButton = itemView.findViewById(R.id.view_on_map_button)
 
         private var isExpanded = false
 
         fun bind(incident: IncidentData) {
             // Set collapsed view data
-            alertId.text = incident.alertId
             userName.text = incident.userName
-            
-            // Show only floor level from wheelchair in summary (not relocated location)
-            val relocatedLocationText = incident.incidentDescription.trim()
             locationSummary.text = "📍 ${incident.floorLevel}"
+            assistanceTypeText.text = incident.incidentDescription.ifBlank { "Assistance Request" }
             
             // Set status and colors
             setStatus(incident.status)
@@ -104,26 +109,26 @@ class IncidentCardAdapter(
             // Set expanded view data
             userId.text = incident.userId
             deviceId.text = incident.deviceId
-            detailedLocation.text = incident.floorLevel
+            userType.text = incident.userType.ifBlank { "-" }
+            department.text = incident.department.ifBlank { "-" }
             
-            // Handle relocated location (show only if it's not empty)
-            if (relocatedLocationText.isNotEmpty()) {
-                relocatedToLayout.visibility = View.VISIBLE
-                relocatedTo.text = relocatedLocationText
+            // Officer name
+            if (incident.officerName.isNullOrBlank()) {
+                officerName.text = "Waiting for officer acceptance..."
             } else {
-                relocatedToLayout.visibility = View.GONE
+                officerName.text = incident.officerName
             }
             
-            // Parse coordinates
-            val coords = formatCoordinates(incident.coordinates)
-            val coordParts = coords.split(",")
-            if (coordParts.size >= 2) {
-                latitude.text = coordParts[0].trim()
-                longitude.text = coordParts[1].trim()
+            // Relocated location
+            if (incident.relocatedLocation.isNotBlank()) {
+                relocatedTo.text = incident.relocatedLocation
             } else {
-                latitude.text = "N/A"
-                longitude.text = "N/A"
+                relocatedTo.text = "-"
             }
+            
+            // First aid and further info
+            firstAidAction.text = incident.actionFA.ifBlank { "-" }
+            furtherInfo.text = incident.actionINFO.ifBlank { "-" }
             
             createdAt.text = formatDateTime(incident.timeOfAlert)
             
@@ -133,6 +138,11 @@ class IncidentCardAdapter(
             } else {
                 resolvedTimeLayout.visibility = View.VISIBLE
                 resolvedAt.text = formatDateTime(incident.resolvedOn)
+            }
+            
+            // View on map button
+            viewOnMapButton.setOnClickListener {
+                onMapClick(incident)
             }
             
             // Set click listeners
@@ -148,13 +158,13 @@ class IncidentCardAdapter(
             statusBadge.text = status.uppercase()
             
             when (status.lowercase()) {
-                "ongoing", "pending" -> {
+                "pending" -> {
                     statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_red_light))
                     statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_red_dark))
                 }
-                "in_progress", "responding" -> {
-                    statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_orange_light))
-                    statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_orange_dark))
+                "ongoing", "in_progress", "responding" -> {
+                    statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_light))
+                    statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
                 }
                 "resolved", "completed" -> {
                     statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_green_light))

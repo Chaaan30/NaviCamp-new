@@ -172,7 +172,21 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     // Logic Methods (Converted from Activity)
     private fun convertToIncidentData(rawData: List<List<String>>): List<IncidentCardAdapter.IncidentData> {
         return rawData.mapNotNull { row ->
-            if (row.size >= 11) {
+            if (row.size >= 15) {
+                IncidentCardAdapter.IncidentData(
+                    alertId = row[0], userId = row[1], deviceId = row[2],
+                    userName = row[3], coordinates = row[4], floorLevel = row[5],
+                    status = row[6], timeOfAlert = row[7],
+                    resolvedOn = row[8].takeIf { it.isNotBlank() },
+                    officerName = row[9].takeIf { it.isNotBlank() },
+                    incidentDescription = row[10],
+                    userType = row[11],
+                    department = row[12],
+                    actionFA = row[13],
+                    actionINFO = row[14],
+                    relocatedLocation = row[10]
+                )
+            } else if (row.size >= 11) {
                 IncidentCardAdapter.IncidentData(
                     alertId = row[0], userId = row[1], deviceId = row[2],
                     userName = row[3], coordinates = row[4], floorLevel = row[5],

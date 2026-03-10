@@ -45,7 +45,6 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var emergencyRow: LinearLayout
     private lateinit var emergencyCombinedText: TextView
     private lateinit var phoneNumberText: TextView
-    private lateinit var tagLabel: TextView
 
     // Post-resolve views
     private lateinit var postResolveButtons: LinearLayout
@@ -104,7 +103,6 @@ class AssistanceModalDialog : DialogFragment() {
         emergencyRow = view.findViewById(R.id.emergency_row)
         emergencyCombinedText = view.findViewById(R.id.emergency_combined_text)
         phoneNumberText = view.findViewById(R.id.phone_number_text)
-        tagLabel = view.findViewById(R.id.tag_label)
 
         postResolveButtons = view.findViewById(R.id.post_resolve_buttons)
         makeReportButton = view.findViewById(R.id.make_report_button)
@@ -135,9 +133,6 @@ class AssistanceModalDialog : DialogFragment() {
         view.findViewById<TextView>(R.id.full_name_text).text = fullName
         view.findViewById<TextView>(R.id.date_time_text).text = formatDateTime(dateTime)
         view.findViewById<TextView>(R.id.status_badge).text = status?.uppercase()
-
-        // Tag label
-        tagLabel.text = "\u2726 Assistance Request/${status?.lowercase()}"
 
         // Phone number
         val phoneIcon = view.findViewById<View>(R.id.phone_icon)
@@ -205,7 +200,6 @@ class AssistanceModalDialog : DialogFragment() {
                     background = ContextCompat.getDrawable(requireContext(), R.drawable.badge_ongoing)
                     setTextColor(ContextCompat.getColor(requireContext(), R.color.blue))
                 }
-                tagLabel.text = "\u2726 Assistance Request/ongoing"
             }
         }
     }
@@ -384,9 +378,6 @@ class AssistanceModalDialog : DialogFragment() {
             background = ContextCompat.getDrawable(requireContext(), R.drawable.badge_resolved)
             setTextColor(ContextCompat.getColor(requireContext(), R.color.green))
         }
-
-        // Update tag label to resolved
-        tagLabel.text = "\u2726 Assistance Request/resolved"
 
         // Hide officer status card — no longer relevant once resolved
         officerStatusCard.visibility = View.GONE

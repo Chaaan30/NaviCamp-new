@@ -133,7 +133,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- ALL CHIPS REQUIRED BY THE KOTLIN CODE -->
                 <com.google.android.material.chip.Chip android:id="@+id/chip_all_time" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="All Time" android:checked="true" />
                 <com.google.android.material.chip.Chip android:id="@+id/chip_today" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Today" />
                 <com.google.android.material.chip.Chip android:id="@+id/chip_this_week" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="This Week" />
@@ -141,7 +140,19 @@
                 <com.google.android.material.chip.Chip android:id="@+id/chip_this_year" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="This Year" />
                 <com.google.android.material.chip.Chip android:id="@+id/chip_custom_date" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Custom" />
 
-                <View android:layout_width="1dp" android:layout_height="24dp" android:background="#CCCCCC" android:layout_marginHorizontal="8dp" android:layout_gravity="center_vertical"/>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:layout_marginTop="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
                 <com.google.android.material.chip.Chip android:id="@+id/chip_all_status" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="All Status" android:checked="true" />
                 <com.google.android.material.chip.Chip android:id="@+id/chip_pending" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Pending" />

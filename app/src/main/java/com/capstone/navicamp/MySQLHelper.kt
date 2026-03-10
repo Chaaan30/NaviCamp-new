@@ -2280,7 +2280,11 @@ object MySQLHelper {
                     i.alertDateTime,
                     i.resolvedOn,
                     i.officerResponded,
-                    i.relocatedLocation
+                    i.relocatedLocation,
+                    u.userType,
+                    u.department,
+                    i.actionFA,
+                    i.actionINFO
                 FROM incident_logs_table i
                 JOIN (
                     SELECT
@@ -2309,7 +2313,11 @@ object MySQLHelper {
                     resultSet.getString("alertDateTime") ?: "",
                     resultSet.getString("resolvedOn") ?: "",
                     resultSet.getString("officerResponded") ?: "",
-                    resultSet.getString("relocatedLocation") ?: ""
+                    resultSet.getString("relocatedLocation") ?: "",
+                    resultSet.getString("userType") ?: "",
+                    resultSet.getString("department") ?: "",
+                    resultSet.getString("actionFA") ?: "",
+                    resultSet.getString("actionINFO") ?: ""
                 )
                 data.add(row)
             }
