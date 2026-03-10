@@ -98,7 +98,7 @@ class IncidentCardAdapter(
             // Set collapsed view data
             userName.text = incident.userName
             locationSummary.text = "📍 ${incident.floorLevel}"
-            assistanceTypeText.text = incident.incidentDescription.ifBlank { "Assistance Request" }
+            assistanceTypeText.text = getAssistanceTypeLabel(incident)
             
             // Set status and colors
             setStatus(incident.status)
@@ -209,6 +209,20 @@ class IncidentCardAdapter(
                 "${description.take(30)}..."
             } else {
                 description
+            }
+        }
+
+        private fun getAssistanceTypeLabel(incident: IncidentData): String {
+            val combinedText = listOf(
+                incident.incidentDescription,
+                incident.relocatedLocation,
+                incident.actionINFO
+            ).joinToString(" ").lowercase(Locale.getDefault())
+
+            return if (combinedText.contains("fall")) {
+                "Detected Fall"
+            } else {
+                "Manual SOS"
             }
         }
 
