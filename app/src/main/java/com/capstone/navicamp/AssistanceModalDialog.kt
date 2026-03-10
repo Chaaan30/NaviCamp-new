@@ -42,8 +42,9 @@ class AssistanceModalDialog : DialogFragment() {
     private lateinit var officerStatusText: TextView
     private lateinit var loadingProgress: ProgressBar
     private lateinit var closeButton: Button
-    private lateinit var emergencyContactPersonText: TextView
-    private lateinit var emergencyContactNumberText: TextView
+    private lateinit var emergencyRow: LinearLayout
+    private lateinit var emergencyCombinedText: TextView
+    private lateinit var phoneNumberText: TextView
 
     // Post-resolve views
     private lateinit var postResolveButtons: LinearLayout
@@ -99,8 +100,9 @@ class AssistanceModalDialog : DialogFragment() {
         officerStatusText = view.findViewById(R.id.officer_status_text)
         loadingProgress = view.findViewById(R.id.respond_progress)
         closeButton = view.findViewById(R.id.close_button)
-        emergencyContactPersonText = view.findViewById(R.id.emergency_contact_person_text)
-        emergencyContactNumberText = view.findViewById(R.id.emergency_contact_number_text)
+        emergencyRow = view.findViewById(R.id.emergency_row)
+        emergencyCombinedText = view.findViewById(R.id.emergency_combined_text)
+        phoneNumberText = view.findViewById(R.id.phone_number_text)
 
         postResolveButtons = view.findViewById(R.id.post_resolve_buttons)
         makeReportButton = view.findViewById(R.id.make_report_button)
@@ -120,29 +122,41 @@ class AssistanceModalDialog : DialogFragment() {
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
         val userID = arguments?.getString("USER_ID")
         val fullName = arguments?.getString("FULL_NAME")
+        val contactNumber = arguments?.getString("CONTACT_NUMBER")
         val emergencyContactPerson = arguments?.getString("EMERGENCY_CONTACT_PERSON")
         val emergencyContactNumber = arguments?.getString("EMERGENCY_CONTACT_NUMBER")
         val dateTime = arguments?.getString("DATE_TIME")
         val status = arguments?.getString("STATUS")
 
         view.findViewById<TextView>(R.id.floor_level_text).text = floorLevel
-        view.findViewById<TextView>(R.id.user_id_text).text = "ID: $userID"
+        view.findViewById<TextView>(R.id.user_id_text).text = userID
         view.findViewById<TextView>(R.id.full_name_text).text = fullName
         view.findViewById<TextView>(R.id.date_time_text).text = formatDateTime(dateTime)
         view.findViewById<TextView>(R.id.status_badge).text = status?.uppercase()
 
-        if (!emergencyContactPerson.isNullOrBlank()) {
-            emergencyContactPersonText.text = "Emergency Contact Person: $emergencyContactPerson"
-            emergencyContactPersonText.visibility = View.VISIBLE
+        // Phone number
+        val phoneIcon = view.findViewById<View>(R.id.phone_icon)
+        if (!contactNumber.isNullOrBlank()) {
+            phoneNumberText.text = contactNumber
+            phoneNumberText.visibility = View.VISIBLE
+            phoneIcon.visibility = View.VISIBLE
+        } else if (!emergencyContactNumber.isNullOrBlank()) {
+            phoneNumberText.text = emergencyContactNumber
+            phoneNumberText.visibility = View.VISIBLE
+            phoneIcon.visibility = View.VISIBLE
         } else {
-            emergencyContactPersonText.visibility = View.GONE
+            phoneNumberText.visibility = View.GONE
+            phoneIcon.visibility = View.GONE
         }
 
-        if (!emergencyContactNumber.isNullOrBlank()) {
-            emergencyContactNumberText.text = "Emergency Contact Number: $emergencyContactNumber"
-            emergencyContactNumberText.visibility = View.VISIBLE
+        // Emergency row (combined)
+        if (!emergencyContactPerson.isNullOrBlank() || !emergencyContactNumber.isNullOrBlank()) {
+            emergencyRow.visibility = View.VISIBLE
+            val personPart = emergencyContactPerson ?: ""
+            val numberPart = if (!emergencyContactNumber.isNullOrBlank()) "($emergencyContactNumber)" else ""
+            emergencyCombinedText.text = "Emergency: $personPart $numberPart".trim()
         } else {
-            emergencyContactNumberText.visibility = View.GONE
+            emergencyRow.visibility = View.GONE
         }
 
         val statusBadge = view.findViewById<TextView>(R.id.status_badge)
@@ -508,7 +522,7 @@ class AssistanceModalDialog : DialogFragment() {
     // --- Chip helpers (reused from LocationPickerDialog pattern) ---
     private fun createChip(text: String): TextView {
         return TextView(requireContext()).apply {
-            this.text = text
+            this.text = text.uppercase()
             textSize = 13f
             setTextColor(ContextCompat.getColor(context, R.color.primaryColor))
             background = ContextCompat.getDrawable(context, R.drawable.chip_selector_background)
@@ -534,7 +548,7 @@ class AssistanceModalDialog : DialogFragment() {
     private fun updateChipSelectionStates(container: FlexboxLayout, selectedText: String) {
         for (i in 0 until container.childCount) {
             val chip = container.getChildAt(i) as? TextView ?: continue
-            val selected = chip.text.toString() == selectedText
+            val selected = chip.text.toString() == selectedText.uppercase()
             chip.isSelected = selected
             chip.setTextColor(
                 ContextCompat.getColor(
@@ -569,7 +583,7 @@ class AssistanceModalDialog : DialogFragment() {
         return if (dateTime != null) {
             try {
                 val inputFormat = SimpleDateFormat("MMMM dd, yyyy hh:mm a", Locale.getDefault())
-                val outputFormat = SimpleDateFormat("MMM dd, yyyy • hh:mm a", Locale.getDefault())
+                val outputFormat = SimpleDateFormat("MMMM dd, yyyy | hh:mm a", Locale.getDefault())
                 val date = inputFormat.parse(dateTime)
                 outputFormat.format(date!!)
             } catch (_: Exception) {
@@ -617,6 +631,7 @@ class AssistanceModalDialog : DialogFragment() {
             dateTime: String,
             status: String,
             alertID: String,
+            contactNumber: String? = null,
             emergencyContactPerson: String? = null,
             emergencyContactNumber: String? = null
         ): AssistanceModalDialog {
@@ -628,6 +643,7 @@ class AssistanceModalDialog : DialogFragment() {
             args.putString("DATE_TIME", dateTime)
             args.putString("STATUS", status)
             args.putString("ALERT_ID", alertID)
+            args.putString("CONTACT_NUMBER", contactNumber)
             args.putString("EMERGENCY_CONTACT_PERSON", emergencyContactPerson)
             args.putString("EMERGENCY_CONTACT_NUMBER", emergencyContactNumber)
 

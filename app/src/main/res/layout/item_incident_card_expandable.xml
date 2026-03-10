@@ -17,7 +17,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <!-- Status Indicator -->
+        <!-- Status Indicator Bar -->
         <View
             android:id="@+id/status_indicator"
             android:layout_width="6dp"
@@ -31,66 +31,17 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- COLLAPSED VIEW - Always Visible -->
+            <!-- COLLAPSED VIEW -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Header Row -->
+                <!-- Row 1: Full Name + Status Badge + Expand -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <!-- Alert ID -->
-                    <TextView
-                        android:id="@+id/alert_id"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="ALT001"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primaryColor"
-                        android:fontFamily="@font/inter_bold" />
-
-                    <!-- Status Badge -->
-                    <TextView
-                        android:id="@+id/status_badge"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ACTIVE"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/status_badge_background"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:textColor="@android:color/white"
-                        android:fontFamily="@font/inter_bold"
-                        android:layout_marginStart="8dp" />
-
-                    <!-- Expand/Collapse Icon - Improved Vector -->
-                    <ImageView
-                        android:id="@+id/expand_icon"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
-                        android:src="@drawable/ic_expand_more"
-                        android:layout_marginStart="8dp"
-                        android:contentDescription="Expand details"
-                        android:tint="@color/gray"
-                        android:background="?android:attr/selectableItemBackgroundBorderless"
-                        android:padding="4dp" />
-
-                </LinearLayout>
-
-                <!-- User & Time Row -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="6dp"
                     android:gravity="center_vertical">
 
                     <TextView
@@ -98,9 +49,57 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="John Doe"
-                        android:textSize="14sp"
-                        android:textColor="@color/darkGray"
+                        android:text="Full Name"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/black"
+                        android:fontFamily="@font/inter_bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/status_badge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="PENDING"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:background="@drawable/status_badge_background"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@android:color/white"
+                        android:fontFamily="@font/inter_bold"
+                        android:layout_marginStart="8dp" />
+
+                    <ImageView
+                        android:id="@+id/expand_icon"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_expand_more"
+                        android:layout_marginStart="4dp"
+                        android:contentDescription="Expand details"
+                        android:tint="@color/gray"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp" />
+
+                </LinearLayout>
+
+                <!-- Row 2: Assistance Type + Time Ago -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/assistance_type_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="[Assistance Type]"
+                        android:textSize="12sp"
+                        android:textColor="@color/gray"
                         android:fontFamily="@font/inter"
                         android:maxLines="1"
                         android:ellipsize="end" />
@@ -109,19 +108,19 @@
                         android:id="@+id/time_ago"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="2m ago"
+                        android:text="3s ago"
                         android:textSize="12sp"
                         android:textColor="@color/gray"
                         android:fontFamily="@font/inter" />
 
                 </LinearLayout>
 
-                <!-- Location Summary -->
+                <!-- Row 3: Location -->
                 <TextView
                     android:id="@+id/location_summary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📍 Floor 3 • Emergency Assistance"
+                    android:text="📍 Location"
                     android:textSize="12sp"
                     android:textColor="@color/darkGray"
                     android:fontFamily="@font/inter"
@@ -131,7 +130,7 @@
 
             </LinearLayout>
 
-            <!-- EXPANDED VIEW - Toggleable -->
+            <!-- EXPANDED VIEW -->
             <LinearLayout
                 android:id="@+id/expanded_content"
                 android:layout_width="match_parent"
@@ -145,258 +144,360 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:background="@color/lightGray"
-                    android:layout_marginBottom="16dp" />
+                    android:layout_marginBottom="12dp" />
 
-                <!-- Detailed Info in 2-Column Grid -->
+                <!-- ADDITIONAL USER DETAILS Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ADDITIONAL USER DETAILS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/black"
+                    android:fontFamily="@font/inter_bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- School ID / Wheelchair ID row -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
 
-                    <!-- Row 1: User ID & Device ID -->
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="User ID"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/user_id"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="20250006"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Device ID"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/device_id"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="ESP001"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
-
-                    </LinearLayout>
-
-                    <!-- Row 2: Detailed Location -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:orientation="vertical"
-                        android:layout_marginBottom="12dp">
+                        android:layout_marginEnd="8dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Location Details"
-                            android:textSize="10sp"
+                            android:text="SCHOOL ID"
+                            android:textSize="9sp"
                             android:textColor="@color/gray"
                             android:fontFamily="@font/inter"
                             android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/detailed_location"
-                            android:layout_width="match_parent"
+                            android:id="@+id/user_id"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="3rd Floor, Room 301, Near the elevator"
-                            android:textSize="12sp"
-                            android:textColor="@color/darkGray"
-                            android:fontFamily="@font/inter" />
+                            android:text="2021654321"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter_bold" />
 
                     </LinearLayout>
 
-                    <!-- Row 2.5: Relocated To (only shown when resolved) -->
                     <LinearLayout
-                        android:id="@+id/relocated_to_layout"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="12dp"
-                        android:visibility="gone">
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Relocated To"
-                            android:textSize="10sp"
-                            android:textColor="@color/green"
+                            android:text="WHEELCHAIR ID"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/device_id"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="202501"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter_bold" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- User Type / Department row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginEnd="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="USER TYPE"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/user_type"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="[Student / Employee]"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="DEPARTMENT"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/department"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="[Department]"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/lightGray"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- ASSISTANCE DETAILS Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ASSISTANCE DETAILS"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/black"
+                    android:fontFamily="@font/inter_bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Responding Officer / Relocated To row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginEnd="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RESPONDING OFFICER"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/officer_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Waiting for officer acceptance..."
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/relocated_to_layout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RELOCATED TO"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
                             android:fontFamily="@font/inter"
                             android:textStyle="bold" />
 
                         <TextView
                             android:id="@+id/relocated_to"
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Einstein Building - Fifth Floor - E515"
-                            android:textSize="12sp"
-                            android:textColor="@color/darkGray"
+                            android:text="-"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
                             android:fontFamily="@font/inter" />
 
                     </LinearLayout>
 
-                    <!-- Row 3: Coordinates -->
+                </LinearLayout>
+
+                <!-- First Aid Action -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FIRST AID ACTION"
+                    android:textSize="9sp"
+                    android:textColor="@color/gray"
+                    android:fontFamily="@font/inter"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/first_aid_action"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="-"
+                    android:textSize="13sp"
+                    android:textColor="@color/black"
+                    android:fontFamily="@font/inter"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Further Information for Treatment -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FURTHER INFORMATION FOR TREATMENT"
+                    android:textSize="9sp"
+                    android:textColor="@color/gray"
+                    android:fontFamily="@font/inter"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/further_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="-"
+                    android:textSize="13sp"
+                    android:textColor="@color/black"
+                    android:fontFamily="@font/inter"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/lightGray"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- TIMELINE Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TIMELINE"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/black"
+                    android:fontFamily="@font/inter_bold"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Created At / Resolved At row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginEnd="8dp">
 
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="8dp">
+                            android:text="CREATED AT"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Latitude"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/latitude"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="14.5995"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/created_at"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Longitude"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/longitude"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="120.9842"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
+                            android:text="Mar 09, 2026 18:15"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter" />
 
                     </LinearLayout>
 
-                    <!-- Row 4: Timestamps -->
                     <LinearLayout
-                        android:layout_width="match_parent"
+                        android:id="@+id/resolved_time_layout"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="12dp">
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="8dp">
+                            android:text="RESOLVED AT"
+                            android:textSize="9sp"
+                            android:textColor="@color/gray"
+                            android:fontFamily="@font/inter"
+                            android:textStyle="bold" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Created At"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/created_at"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="2025-06-08 16:45"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/resolved_time_layout"
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/resolved_at"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Resolved At"
-                                android:textSize="10sp"
-                                android:textColor="@color/gray"
-                                android:fontFamily="@font/inter"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/resolved_at"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="2025-06-08 17:30"
-                                android:textSize="12sp"
-                                android:textColor="@color/darkGray"
-                                android:fontFamily="@font/inter" />
-
-                        </LinearLayout>
+                            android:text="Mar 09, 2026 18:30"
+                            android:textSize="13sp"
+                            android:textColor="@color/black"
+                            android:fontFamily="@font/inter" />
 
                     </LinearLayout>
 
                 </LinearLayout>
+
+                <!-- View on Map Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/view_on_map_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="VIEW INCIDENT LOCATION ON MAP"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/inter_bold"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:strokeColor="@color/primaryColor"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="8dp"
+                    android:textColor="@color/primaryColor" />
 
             </LinearLayout>
 

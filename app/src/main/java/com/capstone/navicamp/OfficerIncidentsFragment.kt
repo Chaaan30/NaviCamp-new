@@ -30,6 +30,7 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     private lateinit var noIncidentsText: TextView
     private lateinit var exportButton: MaterialButton
     private lateinit var totalIncidentsCount: TextView
+    private lateinit var ongoingIncidentsCount: TextView
     private lateinit var resolvedIncidentsCount: TextView
 
     // Adapter and Data
@@ -65,6 +66,7 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
         noIncidentsText = view.findViewById(R.id.no_incidents_text)
         exportButton = view.findViewById(R.id.export_button)
         totalIncidentsCount = view.findViewById(R.id.total_incidents_count)
+        ongoingIncidentsCount = view.findViewById(R.id.ongoing_incidents_count)
         resolvedIncidentsCount = view.findViewById(R.id.resolved_incidents_count)
 
         exportButton.setOnClickListener {
@@ -109,8 +111,10 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
 
         // Status Filters
         view.findViewById<Chip>(R.id.chip_all_status).setOnClickListener { selectStatusFilter(view, "All Status") }
+        view.findViewById<Chip>(R.id.chip_pending).setOnClickListener { selectStatusFilter(view, "Pending") }
         view.findViewById<Chip>(R.id.chip_ongoing).setOnClickListener { selectStatusFilter(view, "Ongoing") }
         view.findViewById<Chip>(R.id.chip_resolved).setOnClickListener { selectStatusFilter(view, "Resolved") }
+        view.findViewById<Chip>(R.id.chip_false_alarm).setOnClickListener { selectStatusFilter(view, "False Alarm") }
     }
 
     private fun selectDateFilter(view: View, filter: String) {
@@ -130,13 +134,21 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     }
 
     private fun selectStatusFilter(view: View, filter: String) {
-        val ids = listOf(R.id.chip_all_status, R.id.chip_ongoing, R.id.chip_resolved)
+        val ids = listOf(
+            R.id.chip_all_status,
+            R.id.chip_pending,
+            R.id.chip_ongoing,
+            R.id.chip_resolved,
+            R.id.chip_false_alarm
+        )
         ids.forEach { view.findViewById<Chip>(it).isChecked = false }
 
         when (filter) {
             "All Status" -> view.findViewById<Chip>(R.id.chip_all_status).isChecked = true
+            "Pending" -> view.findViewById<Chip>(R.id.chip_pending).isChecked = true
             "Ongoing" -> view.findViewById<Chip>(R.id.chip_ongoing).isChecked = true
             "Resolved" -> view.findViewById<Chip>(R.id.chip_resolved).isChecked = true
+            "False Alarm" -> view.findViewById<Chip>(R.id.chip_false_alarm).isChecked = true
         }
         selectedStatusFilter = filter
         filterIncidents()
@@ -160,7 +172,21 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     // Logic Methods (Converted from Activity)
     private fun convertToIncidentData(rawData: List<List<String>>): List<IncidentCardAdapter.IncidentData> {
         return rawData.mapNotNull { row ->
-            if (row.size >= 11) {
+            if (row.size >= 15) {
+                IncidentCardAdapter.IncidentData(
+                    alertId = row[0], userId = row[1], deviceId = row[2],
+                    userName = row[3], coordinates = row[4], floorLevel = row[5],
+                    status = row[6], timeOfAlert = row[7],
+                    resolvedOn = row[8].takeIf { it.isNotBlank() },
+                    officerName = row[9].takeIf { it.isNotBlank() },
+                    incidentDescription = row[10],
+                    userType = row[11],
+                    department = row[12],
+                    actionFA = row[13],
+                    actionINFO = row[14],
+                    relocatedLocation = row[10]
+                )
+            } else if (row.size >= 11) {
                 IncidentCardAdapter.IncidentData(
                     alertId = row[0], userId = row[1], deviceId = row[2],
                     userName = row[3], coordinates = row[4], floorLevel = row[5],
@@ -178,8 +204,10 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
             // 1. Check Status
             val matchesStatus = when (selectedStatusFilter) {
                 "All Status" -> true
+                "Pending" -> incident.status.equals("pending", ignoreCase = true)
                 "Ongoing" -> incident.status.equals("ongoing", ignoreCase = true)
                 "Resolved" -> incident.status.equals("resolved", ignoreCase = true)
+                "False Alarm" -> incident.status.equals("false alarm", ignoreCase = true)
                 else -> true
             }
 
@@ -207,6 +235,7 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     private fun updateSummaryCards() {
         val pendingCount = allIncidents.count { it.status.equals("pending", ignoreCase = true) }
         totalIncidentsCount.text = pendingCount.toString()
+        ongoingIncidentsCount.text = allIncidents.count { it.status.equals("ongoing", ignoreCase = true) }.toString()
         resolvedIncidentsCount.text = allIncidents.count { it.status.equals("resolved", ignoreCase = true) }.toString()
     }
 

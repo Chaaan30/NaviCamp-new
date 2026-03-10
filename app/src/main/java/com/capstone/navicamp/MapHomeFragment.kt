@@ -288,6 +288,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                     formatDateTime(latestLocationItem.dateTime),
                     latestLocationItem.status,
                     "",
+                    latestLocationItem.contactNumber,
                     latestLocationItem.emergencyContactPerson,
                     latestLocationItem.emergencyContactNumber
                 )
@@ -310,6 +311,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                     formatDateTime(item.dateTime),
                     item.status,
                     "",
+                    item.contactNumber,
                     item.emergencyContactPerson,
                     item.emergencyContactNumber
                 )

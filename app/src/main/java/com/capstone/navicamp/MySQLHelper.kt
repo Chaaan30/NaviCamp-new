@@ -1919,6 +1919,7 @@ object MySQLHelper {
                     l.dateTime,
                     i.officerResponded,
                     i.relocatedLocation,
+                    u.contactNumber,
                     p.emergencyContactPerson,
                     p.emergencyContactNumber
                 FROM incident_logs_table i
@@ -1954,6 +1955,7 @@ object MySQLHelper {
                     dateTime = resultSet.getString("dateTime") ?: "",
                     officerName = resultSet.getString("officerResponded") ?: "",
                     assistanceType = assistanceType,
+                    contactNumber = resultSet.getString("contactNumber"),
                     emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
                     emergencyContactNumber = resultSet.getString("emergencyContactNumber")
                 )
@@ -2278,7 +2280,11 @@ object MySQLHelper {
                     i.alertDateTime,
                     i.resolvedOn,
                     i.officerResponded,
-                    i.relocatedLocation
+                    i.relocatedLocation,
+                    u.userType,
+                    u.department,
+                    i.actionFA,
+                    i.actionINFO
                 FROM incident_logs_table i
                 JOIN (
                     SELECT
@@ -2290,7 +2296,6 @@ object MySQLHelper {
                     AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                 JOIN user_table u ON i.userID = u.userID
                 JOIN location_table l ON i.locationID = l.locationID
-                WHERE i.status <> 'false alarm'
             """.trimIndent()
 
             statement = connection.prepareStatement(query)
@@ -2308,7 +2313,11 @@ object MySQLHelper {
                     resultSet.getString("alertDateTime") ?: "",
                     resultSet.getString("resolvedOn") ?: "",
                     resultSet.getString("officerResponded") ?: "",
-                    resultSet.getString("relocatedLocation") ?: ""
+                    resultSet.getString("relocatedLocation") ?: "",
+                    resultSet.getString("userType") ?: "",
+                    resultSet.getString("department") ?: "",
+                    resultSet.getString("actionFA") ?: "",
+                    resultSet.getString("actionINFO") ?: ""
                 )
                 data.add(row)
             }
