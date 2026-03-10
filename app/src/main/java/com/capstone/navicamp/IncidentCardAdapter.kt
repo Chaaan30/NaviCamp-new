@@ -160,6 +160,10 @@ class IncidentCardAdapter(
                     statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_green_light))
                     statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_green_dark))
                 }
+                "false alarm" -> {
+                    statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                    statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                }
                 else -> {
                     statusIndicator.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray))
                     statusBadge.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray))

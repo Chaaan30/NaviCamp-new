@@ -2292,7 +2292,6 @@ object MySQLHelper {
                     AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                 JOIN user_table u ON i.userID = u.userID
                 JOIN location_table l ON i.locationID = l.locationID
-                WHERE i.status <> 'false alarm'
             """.trimIndent()
 
             statement = connection.prepareStatement(query)
