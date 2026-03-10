@@ -1919,6 +1919,7 @@ object MySQLHelper {
                     l.dateTime,
                     i.officerResponded,
                     i.relocatedLocation,
+                    u.contactNumber,
                     p.emergencyContactPerson,
                     p.emergencyContactNumber
                 FROM incident_logs_table i
@@ -1954,6 +1955,7 @@ object MySQLHelper {
                     dateTime = resultSet.getString("dateTime") ?: "",
                     officerName = resultSet.getString("officerResponded") ?: "",
                     assistanceType = assistanceType,
+                    contactNumber = resultSet.getString("contactNumber"),
                     emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
                     emergencyContactNumber = resultSet.getString("emergencyContactNumber")
                 )

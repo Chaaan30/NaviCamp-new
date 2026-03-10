@@ -12,6 +12,7 @@ data class LocationItem(
     val officerName: String? = null,
     val deviceID: String,
     val assistanceType: String = "MANUAL", // "FALL_DETECTION" or "MANUAL"
+    val contactNumber: String? = null,
     val emergencyContactPerson: String? = null,
     val emergencyContactNumber: String? = null
 )

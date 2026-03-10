@@ -161,6 +161,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     formatDateTime(latestLocationItem.dateTime),
                     latestLocationItem.status,
                     "", // alertID - keeping empty as before
+                    latestLocationItem.contactNumber,
                     latestLocationItem.emergencyContactPerson,
                     latestLocationItem.emergencyContactNumber
                 )
