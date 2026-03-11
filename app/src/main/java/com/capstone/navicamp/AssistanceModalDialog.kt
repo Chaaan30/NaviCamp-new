@@ -120,7 +120,7 @@ class AssistanceModalDialog : DialogFragment() {
 
     private fun populateViewData(view: View) {
         val floorLevel = arguments?.getString("FLOOR_LEVEL")
-        val userID = arguments?.getString("USER_ID")
+        val schoolID = arguments?.getString("SCHOOL_ID")
         val fullName = arguments?.getString("FULL_NAME")
         val contactNumber = arguments?.getString("CONTACT_NUMBER")
         val emergencyContactPerson = arguments?.getString("EMERGENCY_CONTACT_PERSON")
@@ -129,7 +129,7 @@ class AssistanceModalDialog : DialogFragment() {
         val status = arguments?.getString("STATUS")
 
         view.findViewById<TextView>(R.id.floor_level_text).text = floorLevel
-        view.findViewById<TextView>(R.id.user_id_text).text = userID
+        view.findViewById<TextView>(R.id.user_id_text).text = schoolID.orEmpty()
         view.findViewById<TextView>(R.id.full_name_text).text = fullName
         view.findViewById<TextView>(R.id.date_time_text).text = formatDateTime(dateTime)
         view.findViewById<TextView>(R.id.status_badge).text = status?.uppercase()
@@ -626,7 +626,7 @@ class AssistanceModalDialog : DialogFragment() {
         fun newInstance(
             floorLevel: String,
             locationID: String,
-            userID: String,
+            schoolID: String,
             fullName: String,
             dateTime: String,
             status: String,
@@ -638,7 +638,7 @@ class AssistanceModalDialog : DialogFragment() {
             val args = Bundle()
             args.putString("FLOOR_LEVEL", floorLevel)
             args.putString("LOCATION_ID", locationID)
-            args.putString("USER_ID", userID)
+            args.putString("SCHOOL_ID", schoolID)
             args.putString("FULL_NAME", fullName)
             args.putString("DATE_TIME", dateTime)
             args.putString("STATUS", status)

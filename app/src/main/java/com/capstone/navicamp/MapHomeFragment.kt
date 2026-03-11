@@ -48,6 +48,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var isRefreshing = false
     private val activeUserMarkers = mutableMapOf<String, Marker>()
+    private val otherOfficerMarkers = mutableMapOf<String, Marker>()
 
     // For navigating to a specific assistance location
     private var pendingLocationID: String? = null
@@ -263,8 +264,8 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             selectedRequestMarker = gMap.addMarker(
                 MarkerOptions()
                     .position(location)
-                    .title("Selected Assistance")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .title("Selected Assistance Request")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
             )
         } else {
             selectedRequestMarker?.position = location
@@ -283,7 +284,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 val modalDialog = AssistanceModalDialog.newInstance(
                     latestLocationItem.floorLevel,
                     latestLocationItem.locationID,
-                    latestLocationItem.userID,
+                    latestLocationItem.schoolID.orEmpty(),
                     latestLocationItem.fullName,
                     formatDateTime(latestLocationItem.dateTime),
                     latestLocationItem.status,
@@ -306,7 +307,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 val modalDialog = AssistanceModalDialog.newInstance(
                     item.floorLevel,
                     item.locationID,
-                    item.userID,
+                    item.schoolID.orEmpty(),
                     item.fullName,
                     formatDateTime(item.dateTime),
                     item.status,
@@ -339,6 +340,10 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             return
         }
 
+        // Keep officer marker anchored to the officer's own current GPS,
+        // independent of selected assistance marker movements.
+        updateOfficerMarkerFromDevice(moveCamera = false)
+
         if (officerLocationCallback != null) return
 
         val ctx = context ?: return
@@ -368,6 +373,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         CoroutineScope(Dispatchers.IO).launch {
             val activeUsers = MySQLHelper.getActiveAssistanceLiveGps()
             val officerGps = currentOfficerId?.let { MySQLHelper.getLiveGPS(it) }
+            val otherOfficers = MySQLHelper.getLiveOfficerGps(excludeUserID = currentOfficerId)
 
             withContext(Dispatchers.Main) {
                 val gMap = map ?: return@withContext
@@ -376,8 +382,40 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 if (officerGps == null || officerGps[0] == 0.0) {
                     updateOfficerMarkerFromDevice(moveCamera = false)
                 }
+                updateOtherOfficerMarkers(otherOfficers)
                 updateActiveUserMarkers(activeUsers)
-                updateLegend(activeUsers, officerSelfMarker != null)
+                updateLegend(activeUsers, officerSelfMarker != null, otherOfficers)
+            }
+        }
+    }
+
+    private fun updateOtherOfficerMarkers(otherOfficers: List<LiveOfficerGps>) {
+        val gMap = map ?: return
+        val latestIds = otherOfficers.map { it.userID }.toSet()
+
+        val staleMarkerIds = otherOfficerMarkers.keys.filter { it !in latestIds }
+        staleMarkerIds.forEach { userID ->
+            otherOfficerMarkers[userID]?.remove()
+            otherOfficerMarkers.remove(userID)
+        }
+
+        otherOfficers.forEach { officer ->
+            val position = LatLng(officer.latitude, officer.longitude)
+            val existingMarker = otherOfficerMarkers[officer.userID]
+
+            if (existingMarker == null) {
+                val marker = gMap.addMarker(
+                    MarkerOptions()
+                        .position(position)
+                        .title("Officer: ${officer.fullName}")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                )
+                if (marker != null) {
+                    otherOfficerMarkers[officer.userID] = marker
+                }
+            } else {
+                existingMarker.position = position
+                existingMarker.title = "Officer: ${officer.fullName}"
             }
         }
     }
@@ -451,7 +489,11 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         }
     }
 
-    private fun updateLegend(activeUsers: List<ActiveAssistanceGps>, hasOfficerGps: Boolean) {
+    private fun updateLegend(
+        activeUsers: List<ActiveAssistanceGps>,
+        hasOfficerGps: Boolean,
+        otherOfficers: List<LiveOfficerGps>
+    ) {
         val ctx = context ?: return
         legendContainer.removeAllViews()
 
@@ -460,6 +502,15 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 createLegendRow(
                     label = "Officer (You)",
                     colorInt = Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_AZURE, 1f, 1f))
+                )
+            )
+        }
+
+        otherOfficers.forEach { officer ->
+            legendContainer.addView(
+                createLegendRow(
+                    label = "Officer: ${officer.fullName}",
+                    colorInt = Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_CYAN, 1f, 1f))
                 )
             )
         }
@@ -561,5 +612,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         super.onDestroyView()
         stopRealtimeRefresh()
         stopOfficerGpsTracking()
+        otherOfficerMarkers.values.forEach { it.remove() }
+        otherOfficerMarkers.clear()
     }
 }

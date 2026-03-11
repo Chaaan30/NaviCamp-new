@@ -452,7 +452,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
             val phoneLocation = getCurrentPhoneLocation()
             val lat = phoneLocation?.latitude ?: 0.0
             val lng = phoneLocation?.longitude ?: 0.0
-            val floor = "Live Phone GPS"
+            val floor = ""
 
             if (phoneLocation == null && isAdded) {
                 Toast.makeText(requireContext(), "Live phone location unavailable. Sending SOS with fallback coordinates.", Toast.LENGTH_SHORT).show()
