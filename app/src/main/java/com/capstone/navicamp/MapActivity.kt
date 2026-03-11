@@ -136,8 +136,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             selectedRequestMarker = map.addMarker(
                 MarkerOptions()
                     .position(location)
-                    .title("Selected Assistance")
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .title("Selected Assistance Request")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
             )
         } else {
             selectedRequestMarker?.position = location
@@ -156,7 +156,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 val modalDialog = AssistanceModalDialog.newInstance(
                     latestLocationItem.floorLevel,
                     latestLocationItem.locationID,
-                    latestLocationItem.userID,
+                    latestLocationItem.schoolID.orEmpty(),
                     latestLocationItem.fullName,
                     formatDateTime(latestLocationItem.dateTime),
                     latestLocationItem.status,
@@ -187,6 +187,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         val id = officerID ?: run {
             Log.e("MapActivity", "Officer userID unavailable — cannot track GPS")
             return
+        }
+
+        val fusedClient = LocationServices.getFusedLocationProviderClient(this)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null) {
+                    updateOfficerMarker(doubleArrayOf(loc.latitude, loc.longitude))
+                }
+            }
         }
 
         if (officerLocationCallback != null) return

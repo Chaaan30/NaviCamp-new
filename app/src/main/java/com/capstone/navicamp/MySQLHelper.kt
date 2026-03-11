@@ -66,6 +66,14 @@ data class ActiveAssistanceGps(
     val locationID: String = ""
 )
 
+data class LiveOfficerGps(
+    val userID: String,
+    val fullName: String,
+    val latitude: Double,
+    val longitude: Double,
+    val accuracy: Double
+)
+
 data class VerificationGeneratorAccess(
     val campusAffiliation: String,
     val department: String,
@@ -127,6 +135,35 @@ object MySQLHelper {
         }
     }
 
+    private fun getDeviceFloorLevelOrCampusGrounds(
+        connection: Connection,
+        deviceID: String?
+    ): String {
+        if (deviceID.isNullOrBlank()) return "Campus Grounds"
+
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            val query = "SELECT floorLevel FROM devices_table WHERE deviceID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, deviceID)
+            resultSet = statement.executeQuery()
+
+            if (resultSet.next()) {
+                val floorLevel = resultSet.getString("floorLevel")?.trim().orEmpty()
+                if (floorLevel.isBlank()) "Campus Grounds" else floorLevel
+            } else {
+                "Campus Grounds"
+            }
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Failed to read device floorLevel for $deviceID: ${e.message}")
+            "Campus Grounds"
+        } finally {
+            resultSet?.close()
+            statement?.close()
+        }
+    }
+
     fun countPendingItems(location: String): Int {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -183,7 +220,18 @@ object MySQLHelper {
                         l.userID,
                         l.deviceID,
                         u.fullName,
-                        l.floorLevel,
+                        CASE
+                            WHEN LOWER(TRIM(i.status)) IN ('resolved', 'false alarm') THEN
+                                CASE
+                                    WHEN l.floorLevel IS NULL OR TRIM(l.floorLevel) = '' THEN 'Campus Grounds'
+                                    ELSE l.floorLevel
+                                END
+                            ELSE
+                                CASE
+                                    WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                                    ELSE d.floorLevel
+                                END
+                        END AS floorLevel,
                         i.status,
                         l.latitude,
                         l.longitude,
@@ -203,6 +251,7 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
+                    LEFT JOIN devices_table d ON l.deviceID = d.deviceID
                     LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                     WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                        OR (
@@ -219,7 +268,18 @@ object MySQLHelper {
                         l.userID,
                         l.deviceID,
                         u.fullName,
-                        l.floorLevel,
+                        CASE
+                            WHEN LOWER(TRIM(i.status)) IN ('resolved', 'false alarm') THEN
+                                CASE
+                                    WHEN l.floorLevel IS NULL OR TRIM(l.floorLevel) = '' THEN 'Campus Grounds'
+                                    ELSE l.floorLevel
+                                END
+                            ELSE
+                                CASE
+                                    WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                                    ELSE d.floorLevel
+                                END
+                        END AS floorLevel,
                         i.status,
                         l.latitude,
                         l.longitude,
@@ -239,6 +299,7 @@ object MySQLHelper {
                         AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                     JOIN location_table l ON i.locationID = l.locationID
                     JOIN user_table u ON l.userID = u.userID
+                    LEFT JOIN devices_table d ON l.deviceID = d.deviceID
                     LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                     WHERE LOWER(TRIM(i.status)) IN ('pending', 'ongoing')
                     ORDER BY FIELD(LOWER(TRIM(i.status)), 'ongoing', 'pending', 'resolved'), i.alertDateTime DESC
@@ -446,7 +507,7 @@ object MySQLHelper {
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))            // Fixed latitude, longitude, and floorLevel values for testing
             val latitude = 14.243667
             val longitude = 121.111429
-            val floorLevel = "Einstein Building Ground Floor"
+            val floorLevel = getDeviceFloorLevelOrCampusGrounds(connection, deviceID)
 
             val locationQuery = """
                 INSERT INTO location_table (locationID, userID, deviceID, fullName, dateTime, latitude, longitude, floorLevel)
@@ -1015,6 +1076,7 @@ object MySQLHelper {
     ): Boolean = withContext(Dispatchers.IO) {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
+        var floorSnapshotStmt: PreparedStatement? = null
         try {
             connection = getConnection()
             if (connection == null) return@withContext false
@@ -1048,6 +1110,19 @@ object MySQLHelper {
                 }
 
                 if (normalizedStatus == "resolved" || normalizedStatus == "false alarm") {
+                    val snapshotQuery = """
+                        UPDATE location_table l
+                        LEFT JOIN devices_table d ON l.deviceID = d.deviceID
+                        SET l.floorLevel = CASE
+                            WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                            ELSE d.floorLevel
+                        END
+                        WHERE l.locationID = ?
+                    """.trimIndent()
+                    floorSnapshotStmt = connection.prepareStatement(snapshotQuery)
+                    floorSnapshotStmt.setString(1, locationID)
+                    floorSnapshotStmt.executeUpdate()
+
                     val userID = getUserIDByLocationID(locationID)
                     if (!userID.isNullOrBlank()) {
                         deleteLiveGPS(userID)
@@ -1072,6 +1147,7 @@ object MySQLHelper {
             e.printStackTrace()
             false
         } finally {
+            floorSnapshotStmt?.close()
             statement?.close()
             connection?.close()
         }
@@ -1126,7 +1202,7 @@ object MySQLHelper {
         deviceID: String,
         latitude: Double,
         longitude: Double,
-        floorLevel: String
+        _unusedFloorLevel: String
     ): Boolean {
         var connection: Connection? = null
         var locationStmt: PreparedStatement? = null
@@ -1145,6 +1221,7 @@ object MySQLHelper {
             // Get current datetime in Philippine time (UTC+8)
             val currentDateTime = ZonedDateTime.now(ZoneId.of("UTC+8"))
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            val effectiveFloorLevel = getDeviceFloorLevelOrCampusGrounds(connection, deviceID)
 
             // Insert into location_table (fullName removed - will be referenced via userID)
             val locationQuery = """
@@ -1157,7 +1234,7 @@ object MySQLHelper {
             locationStmt.setString(3, deviceID)
             locationStmt.setDouble(4, latitude)
             locationStmt.setDouble(5, longitude)
-            locationStmt.setString(6, floorLevel)
+            locationStmt.setString(6, effectiveFloorLevel)
             locationStmt.setString(7, currentDateTime)
 
             val locationRows = locationStmt.executeUpdate()
@@ -1912,7 +1989,18 @@ object MySQLHelper {
                     l.userID,
                     l.deviceID,
                     u.fullName,
-                    l.floorLevel,
+                    CASE
+                        WHEN LOWER(TRIM(i.status)) IN ('resolved', 'false alarm') THEN
+                            CASE
+                                WHEN l.floorLevel IS NULL OR TRIM(l.floorLevel) = '' THEN 'Campus Grounds'
+                                ELSE l.floorLevel
+                            END
+                        ELSE
+                            CASE
+                                WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                                ELSE d.floorLevel
+                            END
+                    END AS floorLevel,
                     i.status,
                     l.latitude,
                     l.longitude,
@@ -1920,11 +2008,13 @@ object MySQLHelper {
                     i.officerResponded,
                     i.relocatedLocation,
                     u.contactNumber,
+                    p.schoolID,
                     p.emergencyContactPerson,
                     p.emergencyContactNumber
                 FROM incident_logs_table i
                 JOIN location_table l ON i.locationID = l.locationID
                 JOIN user_table u ON l.userID = u.userID
+                LEFT JOIN devices_table d ON l.deviceID = d.deviceID
                 LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
                 WHERE l.locationID = ?
                 ORDER BY i.alertDateTime DESC
@@ -1957,7 +2047,8 @@ object MySQLHelper {
                     assistanceType = assistanceType,
                     contactNumber = resultSet.getString("contactNumber"),
                     emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
-                    emergencyContactNumber = resultSet.getString("emergencyContactNumber")
+                    emergencyContactNumber = resultSet.getString("emergencyContactNumber"),
+                    schoolID = resultSet.getString("schoolID")
                 )
             } else {
                 throw SQLException("Location item not found.")
@@ -2271,11 +2362,22 @@ object MySQLHelper {
             val query = """
                 SELECT
                     i.alertID,
-                    i.userID,
+                    p.schoolID,
                     i.deviceID,
                     u.fullName,
                     CONCAT(l.latitude, ', ', l.longitude) AS coordinates,
-                    l.floorLevel,
+                    CASE
+                        WHEN LOWER(TRIM(i.status)) IN ('resolved', 'false alarm') THEN
+                            CASE
+                                WHEN l.floorLevel IS NULL OR TRIM(l.floorLevel) = '' THEN 'Campus Grounds'
+                                ELSE l.floorLevel
+                            END
+                        ELSE
+                            CASE
+                                WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                                ELSE d.floorLevel
+                            END
+                    END AS floorLevel,
                     i.status,
                     i.alertDateTime,
                     i.resolvedOn,
@@ -2295,6 +2397,8 @@ object MySQLHelper {
                 ) latest ON latest.locationID = i.locationID
                     AND CONCAT(i.alertDateTime, '|', i.alertID) = latest.latestKey
                 JOIN user_table u ON i.userID = u.userID
+                LEFT JOIN pwd_profiles_table p ON i.userID = p.userID
+                LEFT JOIN devices_table d ON i.deviceID = d.deviceID
                 JOIN location_table l ON i.locationID = l.locationID
             """.trimIndent()
 
@@ -2304,7 +2408,7 @@ object MySQLHelper {
             while (resultSet.next()) {
                 val row = listOf(
                     resultSet.getString("alertID") ?: "",
-                    resultSet.getString("userID") ?: "",
+                    resultSet.getString("schoolID") ?: "",
                     resultSet.getString("deviceID") ?: "",
                     resultSet.getString("fullName") ?: "",
                     resultSet.getString("coordinates") ?: "",
@@ -2865,17 +2969,30 @@ object MySQLHelper {
                 l.userID, 
                 l.deviceID, 
                 l.fullName, 
-                l.floorLevel, 
+                CASE
+                    WHEN LOWER(TRIM(i.status)) IN ('resolved', 'false alarm') THEN
+                        CASE
+                            WHEN l.floorLevel IS NULL OR TRIM(l.floorLevel) = '' THEN 'Campus Grounds'
+                            ELSE l.floorLevel
+                        END
+                    ELSE
+                        CASE
+                            WHEN d.floorLevel IS NULL OR TRIM(d.floorLevel) = '' THEN 'Campus Grounds'
+                            ELSE d.floorLevel
+                        END
+                END AS floorLevel, 
                 i.status, 
                 l.latitude, 
                 l.longitude, 
                 l.dateTime, 
                 i.officerResponded,
                 i.relocatedLocation,
+                p.schoolID,
                 p.emergencyContactPerson,
                 p.emergencyContactNumber
             FROM location_table l 
             LEFT JOIN incident_logs_table i ON l.locationID = i.locationID
+            LEFT JOIN devices_table d ON l.deviceID = d.deviceID
             LEFT JOIN pwd_profiles_table p ON l.userID = p.userID
             WHERE l.locationID = ?
             ORDER BY i.alertDateTime DESC
@@ -2907,7 +3024,8 @@ object MySQLHelper {
                     officerName = resultSet.getString("officerResponded") ?: "",
                     assistanceType = assistanceType,
                     emergencyContactPerson = resultSet.getString("emergencyContactPerson"),
-                    emergencyContactNumber = resultSet.getString("emergencyContactNumber")
+                    emergencyContactNumber = resultSet.getString("emergencyContactNumber"),
+                    schoolID = resultSet.getString("schoolID")
                 )
             } else {
                 null
@@ -4106,6 +4224,63 @@ object MySQLHelper {
             results
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "getActiveAssistanceLiveGps failed: ${e.message}")
+            emptyList()
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun getLiveOfficerGps(excludeUserID: String? = null): List<LiveOfficerGps> {
+        val results = mutableListOf<LiveOfficerGps>()
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+
+        return try {
+            connection = getConnection() ?: return emptyList()
+            ensureLiveGpsTableExists(connection)
+
+            val query = """
+                SELECT g.userID,
+                       u.fullName,
+                       g.latitude,
+                       g.longitude,
+                       g.accuracy
+                FROM live_gps_table g
+                JOIN user_table u ON u.userID = g.userID
+                LEFT JOIN safety_officer_profiles_table s ON s.userID = u.userID
+                WHERE (? IS NULL OR g.userID <> ?)
+                  AND (
+                      s.userID IS NOT NULL
+                      OR LOWER(COALESCE(u.userType, '')) LIKE '%safety officer%'
+                      OR LOWER(COALESCE(u.userType, '')) LIKE '%admin%'
+                  )
+            """.trimIndent()
+
+            stmt = connection.prepareStatement(query)
+            stmt.setString(1, excludeUserID)
+            stmt.setString(2, excludeUserID)
+            rs = stmt.executeQuery()
+
+            while (rs.next()) {
+                val lat = rs.getDouble("latitude")
+                val lng = rs.getDouble("longitude")
+                if (lat == 0.0 && lng == 0.0) continue
+
+                results.add(
+                    LiveOfficerGps(
+                        userID = rs.getString("userID") ?: continue,
+                        fullName = rs.getString("fullName") ?: "Officer",
+                        latitude = lat,
+                        longitude = lng,
+                        accuracy = rs.getDouble("accuracy")
+                    )
+                )
+            }
+
+            results
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getLiveOfficerGps failed: ${e.message}")
             emptyList()
         } finally {
             rs?.close(); stmt?.close(); connection?.close()
