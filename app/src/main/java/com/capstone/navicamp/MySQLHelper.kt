@@ -2764,9 +2764,11 @@ object MySQLHelper {
 
             val query = """
             SELECT d.deviceID, d.userID, d.status, d.latitude, d.longitude, 
-                   d.floorLevel, d.connectedUntil, d.rssi, d.distance, u.fullName
+                   d.floorLevel, d.connectedUntil, d.rssi, d.distance, u.fullName,
+                   p.schoolID
             FROM devices_table d
             LEFT JOIN user_table u ON d.userID = u.userID
+            LEFT JOIN pwd_profiles_table p ON d.userID = p.userID
             ORDER BY d.deviceID
         """
             statement = connection?.prepareStatement(query)
@@ -2785,7 +2787,8 @@ object MySQLHelper {
                         rssi = resultSet.getObject("rssi") as? Int,
                         distance = resultSet.getObject("distance") as? Float,
                         userName = resultSet.getString("fullName"),
-                        maintenanceReason = null // Column doesn't exist yet, default to null
+                        maintenanceReason = null,
+                        schoolID = resultSet.getString("schoolID")
                     )
                 )
             }
@@ -2795,6 +2798,78 @@ object MySQLHelper {
             wheelchairs
         } finally {
             resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun getNextDeviceID(): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            val query = "SELECT MAX(CAST(deviceID AS UNSIGNED)) AS maxID FROM devices_table"
+            statement = connection.prepareStatement(query)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) {
+                val maxID = resultSet.getLong("maxID")
+                if (maxID == 0L) "202501" else (maxID + 1).toString()
+            } else {
+                "202501"
+            }
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error getting next device ID: ${e.message}", e)
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun addDevice(deviceID: String, deviceName: String?): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) return false
+            val query = "INSERT INTO devices_table (deviceID, deviceName, status) VALUES (?, ?, 'available')"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, deviceID)
+            statement.setString(2, deviceName)
+            val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                Log.d("MySQLHelper", "Device $deviceID added successfully")
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error adding device $deviceID: ${e.message}", e)
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun deleteDevice(deviceID: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) return false
+            val query = "DELETE FROM devices_table WHERE deviceID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, deviceID)
+            val rowsAffected = statement.executeUpdate()
+            if (rowsAffected > 0) {
+                Log.d("MySQLHelper", "Device $deviceID deleted successfully")
+            }
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error deleting device $deviceID: ${e.message}", e)
+            false
+        } finally {
             statement?.close()
             connection?.close()
         }

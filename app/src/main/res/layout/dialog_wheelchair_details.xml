@@ -130,7 +130,7 @@
                         <TextView
                             android:layout_width="100dp"
                             android:layout_height="wrap_content"
-                            android:text="User ID:"
+                            android:text="School ID:"
                             android:textStyle="bold"
                             android:textColor="@color/darkGray"
                             android:textSize="14sp" />
@@ -223,8 +223,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="8dp">
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="100dp"
@@ -240,55 +239,6 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Unknown"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="8dp">
-
-                        <TextView
-                            android:layout_width="100dp"
-                            android:layout_height="wrap_content"
-                            android:text="Latitude:"
-                            android:textStyle="bold"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/detail_latitude"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="N/A"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="100dp"
-                            android:layout_height="wrap_content"
-                            android:text="Longitude:"
-                            android:textStyle="bold"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/detail_longitude"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="N/A"
                             android:textColor="@color/darkGray"
                             android:textSize="14sp" />
 
@@ -343,56 +293,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="8dp">
-
-                        <TextView
-                            android:layout_width="100dp"
-                            android:layout_height="wrap_content"
-                            android:text="Signal (RSSI):"
-                            android:textStyle="bold"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/detail_rssi"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="N/A"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="8dp">
-
-                        <TextView
-                            android:layout_width="100dp"
-                            android:layout_height="wrap_content"
-                            android:text="Distance (m):"
-                            android:textStyle="bold"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/detail_distance"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="N/A"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -547,6 +447,22 @@
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
+
+        <!-- Delete Device Button (Admin only) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_delete_device"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Delete Device"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/red"
+            app:cornerRadius="8dp"
+            app:icon="@drawable/ic_delete"
+            app:iconTint="@color/white"
+            app:iconSize="18dp"
+            android:visibility="gone" />
 
     </LinearLayout>
 

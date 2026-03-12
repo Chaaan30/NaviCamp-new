@@ -1,16 +1,21 @@
 package com.capstone.navicamp
 
-import android.app.Dialog
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.os.Environment
+import android.provider.MediaStore
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -23,25 +28,44 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
     private lateinit var loadingProgress: ProgressBar
     private lateinit var noWheelchairsText: TextView
     private lateinit var wheelchairCountText: TextView
+    private lateinit var fabAddDevice: ExtendedFloatingActionButton
 
     private var allWheelchairs = listOf<WheelchairDevice>()
     private var filteredWheelchairs = listOf<WheelchairDevice>()
     private var pollingJob: Job? = null
     private val POLLING_INTERVAL = 10000L
+    private var isAdmin = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize Views
         wheelchairsLayout = view.findViewById(R.id.wheelchairs_layout)
         filterSpinner = view.findViewById(R.id.filter_spinner)
         searchEditText = view.findViewById(R.id.search_edit_text)
         loadingProgress = view.findViewById(R.id.loading_progress)
         noWheelchairsText = view.findViewById(R.id.no_wheelchairs_text)
         wheelchairCountText = view.findViewById(R.id.wheelchair_count)
+        fabAddDevice = view.findViewById(R.id.fab_add_device)
 
+        checkAdminStatus()
         setupFilters()
         loadWheelchairs()
+
+        fabAddDevice.setOnClickListener { showAddDeviceDialog() }
+    }
+
+    private fun checkAdminStatus() {
+        val prefs = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
+        val userID = prefs.getString("userID", null)?.trim()
+        if (userID.isNullOrBlank()) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val access = withContext(Dispatchers.IO) {
+                MySQLHelper.getVerificationGeneratorAccess(userID)
+            }
+            isAdmin = access?.isAdmin == true
+            fabAddDevice.visibility = if (isAdmin) View.VISIBLE else View.GONE
+        }
     }
 
     private fun setupFilters() {
@@ -106,23 +130,103 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
         }
     }
 
+    private fun getStatusDisplayText(status: String): String {
+        return when (status.lowercase()) {
+            "available" -> "Available"
+            "in_use" -> "In Use"
+            "maintenance" -> "Maintenance"
+            "offline" -> "Offline"
+            else -> status.uppercase()
+        }
+    }
+
     private fun setupWheelchairCard(view: View, wheelchair: WheelchairDevice) {
         view.findViewById<TextView>(R.id.device_id_text).text = wheelchair.deviceID
+
         val statusText = view.findViewById<TextView>(R.id.status_text)
-        statusText.text = wheelchair.status.uppercase()
+        statusText.text = getStatusDisplayText(wheelchair.status)
 
-        view.findViewById<Button>(R.id.view_details_button).setOnClickListener {
-            showWheelchairDetails(wheelchair)
+        // Set status badge style
+        val statusBadgeBg: Int
+        val statusTextColor: Int
+        when (wheelchair.status.lowercase()) {
+            "available" -> {
+                statusBadgeBg = R.drawable.status_badge_available
+                statusTextColor = R.color.status_available
+            }
+            "in_use" -> {
+                statusBadgeBg = R.drawable.status_badge_in_use
+                statusTextColor = R.color.status_in_use
+            }
+            "maintenance" -> {
+                statusBadgeBg = R.drawable.status_badge_maintenance
+                statusTextColor = R.color.status_maintenance
+            }
+            else -> {
+                statusBadgeBg = R.drawable.status_badge_offline
+                statusTextColor = R.color.status_offline
+            }
         }
+        statusText.setBackgroundResource(statusBadgeBg)
+        statusText.setTextColor(ContextCompat.getColor(requireContext(), statusTextColor))
 
+        // Set status indicator (top bar) color
         val indicator = view.findViewById<View>(R.id.status_indicator)
-        val color = when(wheelchair.status.lowercase()) {
-            "available" -> android.R.color.holo_green_light
-            "in_use" -> android.R.color.holo_blue_light
-            "maintenance" -> android.R.color.holo_orange_light
-            else -> android.R.color.darker_gray
+        val indicatorColor = when (wheelchair.status.lowercase()) {
+            "available" -> R.color.status_available
+            "in_use" -> R.color.status_in_use
+            "maintenance" -> R.color.status_maintenance
+            else -> R.color.status_offline
         }
-        indicator.setBackgroundColor(resources.getColor(color, null))
+        indicator.setBackgroundColor(ContextCompat.getColor(requireContext(), indicatorColor))
+
+        // Set card background tint based on status
+        val cardBg = when (wheelchair.status.lowercase()) {
+            "available" -> R.drawable.card_border_available
+            "in_use" -> R.drawable.card_border_in_use
+            "maintenance" -> R.drawable.card_border_maintenance
+            else -> R.drawable.card_border_offline
+        }
+        val card = view.findViewById<androidx.cardview.widget.CardView>(R.id.wheelchair_card)
+        // Keep card white but set background on inner layout if needed
+
+        // User info
+        view.findViewById<TextView>(R.id.user_name_text).text =
+            wheelchair.userName ?: "Not assigned"
+
+        // Location info
+        view.findViewById<TextView>(R.id.location_text).text =
+            wheelchair.floorLevel ?: "Unknown"
+
+        // Connection info
+        val connectionText = view.findViewById<TextView>(R.id.connection_text)
+        val connectionDot = view.findViewById<View>(R.id.connection_dot)
+        if (wheelchair.connectedUntil != null) {
+            try {
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val connectedDate = dateFormat.parse(wheelchair.connectedUntil)
+                val displayFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                connectionText.text = "Until ${displayFormat.format(connectedDate!!)}"
+                connectionDot.setBackgroundResource(R.drawable.status_badge_available)
+            } catch (e: Exception) {
+                connectionText.text = wheelchair.connectedUntil
+                connectionDot.setBackgroundResource(R.drawable.status_badge_available)
+            }
+        } else {
+            connectionText.text = "Not connected"
+            connectionDot.setBackgroundResource(R.drawable.status_badge_offline)
+        }
+
+        // View details button color based on status
+        val detailsBtn = view.findViewById<MaterialButton>(R.id.view_details_button)
+        val btnColor = when (wheelchair.status.lowercase()) {
+            "available" -> R.color.status_available
+            "in_use" -> R.color.status_in_use
+            "maintenance" -> R.color.status_maintenance
+            else -> R.color.status_offline
+        }
+        detailsBtn.setBackgroundColor(ContextCompat.getColor(requireContext(), btnColor))
+        detailsBtn.setOnClickListener { showWheelchairDetails(wheelchair) }
     }
 
     private fun showWheelchairDetails(wheelchair: WheelchairDevice) {
@@ -132,24 +236,31 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
 
         // Update status badge
         val statusBadge = dialogView.findViewById<TextView>(R.id.detail_status_badge)
-        statusBadge.text = wheelchair.status.uppercase()
+        statusBadge.text = getStatusDisplayText(wheelchair.status)
 
-        // Set status badge color based on status
         when (wheelchair.status.lowercase()) {
-            "available" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.holo_green_light))
-            "in_use" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.holo_blue_light))
-            "offline" -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
-            "maintenance" -> statusBadge.setBackgroundColor(resources.getColor(R.color.orange))
-            else -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
+            "available" -> {
+                statusBadge.setBackgroundResource(R.drawable.status_badge_available)
+                statusBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_available))
+            }
+            "in_use" -> {
+                statusBadge.setBackgroundResource(R.drawable.status_badge_in_use)
+                statusBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_in_use))
+            }
+            "maintenance" -> {
+                statusBadge.setBackgroundResource(R.drawable.status_badge_maintenance)
+                statusBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_maintenance))
+            }
+            else -> {
+                statusBadge.setBackgroundResource(R.drawable.status_badge_offline)
+                statusBadge.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_offline))
+            }
         }
 
-        dialogView.findViewById<TextView>(R.id.detail_user_id).text = wheelchair.userID?.toString() ?: "None"
+        // School ID instead of User ID
+        dialogView.findViewById<TextView>(R.id.detail_user_id).text = wheelchair.schoolID ?: "None"
         dialogView.findViewById<TextView>(R.id.detail_user_name).text = wheelchair.userName ?: "No user assigned"
         dialogView.findViewById<TextView>(R.id.detail_floor_level).text = wheelchair.floorLevel ?: "Unknown"
-        dialogView.findViewById<TextView>(R.id.detail_latitude).text = wheelchair.latitude?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_longitude).text = wheelchair.longitude?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_rssi).text = wheelchair.rssi?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_distance).text = wheelchair.distance?.toString() ?: "N/A"
 
         // Format connected until date
         val connectedUntilText = if (wheelchair.connectedUntil != null) {
@@ -173,13 +284,11 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
         val removeMaintenanceBtn = dialogView.findViewById<MaterialButton>(R.id.btn_remove_maintenance)
 
         if (wheelchair.status.equals("maintenance", ignoreCase = true)) {
-            // Device is in maintenance mode
             maintenanceReasonLayout.visibility = View.VISIBLE
             maintenanceReasonText.text = wheelchair.maintenanceReason ?: "Maintenance reason not available (feature in development)"
             setMaintenanceBtn.visibility = View.GONE
             removeMaintenanceBtn.visibility = View.VISIBLE
         } else {
-            // Device is not in maintenance mode
             maintenanceReasonLayout.visibility = View.GONE
             setMaintenanceBtn.visibility = View.VISIBLE
             removeMaintenanceBtn.visibility = View.GONE
@@ -189,27 +298,171 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             .setView(dialogView)
             .create()
 
-        // Set maintenance button click listener
         setMaintenanceBtn.setOnClickListener {
             showSetMaintenanceDialog(wheelchair.deviceID, dialog)
         }
 
-        // Remove maintenance button click listener
         removeMaintenanceBtn.setOnClickListener {
             showRemoveMaintenanceDialog(wheelchair.deviceID, dialog)
+        }
+
+        // Delete device button - admin only
+        val deleteBtn = dialogView.findViewById<MaterialButton>(R.id.btn_delete_device)
+        if (isAdmin) {
+            deleteBtn.visibility = View.VISIBLE
+            deleteBtn.setOnClickListener {
+                showDeleteDeviceDialog(wheelchair.deviceID, dialog)
+            }
         }
 
         dialog.show()
     }
 
-    private fun showSetMaintenanceDialog(deviceID: String, parentDialog: androidx.appcompat.app.AlertDialog) {
+    private fun showDeleteDeviceDialog(deviceID: String, parentDialog: AlertDialog) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Device")
+            .setMessage("Are you sure you want to delete device $deviceID? This action cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val success = withContext(Dispatchers.IO) { MySQLHelper.deleteDevice(deviceID) }
+                    if (success) {
+                        Toast.makeText(requireContext(), "Device $deviceID deleted", Toast.LENGTH_SHORT).show()
+                        loadWheelchairs()
+                        parentDialog.dismiss()
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to delete device", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showAddDeviceDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_device, null)
+
+        val deviceIdText = dialogView.findViewById<TextView>(R.id.add_device_id)
+        val deviceNameEdit = dialogView.findViewById<EditText>(R.id.add_device_name)
+        val cancelBtn = dialogView.findViewById<MaterialButton>(R.id.btn_cancel_add)
+        val saveDeviceBtn = dialogView.findViewById<MaterialButton>(R.id.btn_save_device)
+
+        var nextDeviceID: String? = null
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        // Fetch next device ID
+        viewLifecycleOwner.lifecycleScope.launch {
+            nextDeviceID = withContext(Dispatchers.IO) { MySQLHelper.getNextDeviceID() }
+            deviceIdText.text = nextDeviceID ?: "Error"
+        }
+
+        cancelBtn.setOnClickListener { dialog.dismiss() }
+
+        saveDeviceBtn.setOnClickListener {
+            val deviceID = nextDeviceID
+            val deviceName = deviceNameEdit.text.toString().trim()
+            if (deviceID == null) {
+                Toast.makeText(requireContext(), "Device ID not ready yet", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                val success = withContext(Dispatchers.IO) {
+                    MySQLHelper.addDevice(deviceID, deviceName.ifBlank { null })
+                }
+                if (success) {
+                    loadWheelchairs()
+                    dialog.dismiss()
+                    showQrGenerationDialog(deviceID)
+                } else {
+                    Toast.makeText(requireContext(), "Failed to add device", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun showQrGenerationDialog(deviceID: String) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_device_qr, null)
+
+        val deviceIdLabel = dialogView.findViewById<TextView>(R.id.qr_device_id_label)
+        val qrCodeImage = dialogView.findViewById<ImageView>(R.id.qr_code_image)
+        val generateQrBtn = dialogView.findViewById<MaterialButton>(R.id.btn_generate_qr)
+        val doneBtn = dialogView.findViewById<MaterialButton>(R.id.btn_qr_done)
+
+        deviceIdLabel.text = deviceID
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+
+        generateQrBtn.setOnClickListener {
+            try {
+                val writer = QRCodeWriter()
+                val bitMatrix = writer.encode(deviceID, BarcodeFormat.QR_CODE, 512, 512)
+                val width = bitMatrix.width
+                val height = bitMatrix.height
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+                for (x in 0 until width) {
+                    for (y in 0 until height) {
+                        bitmap.setPixel(x, y, if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                    }
+                }
+                qrCodeImage.setImageBitmap(bitmap)
+                qrCodeImage.visibility = View.VISIBLE
+
+                generateQrBtn.text = "Save to Gallery"
+                generateQrBtn.setIconResource(R.drawable.ic_check)
+                generateQrBtn.setOnClickListener {
+                    saveQrToGallery(bitmap, deviceID)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to generate QR code", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        doneBtn.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    private fun saveQrToGallery(bitmap: Bitmap, deviceID: String) {
+        try {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "QR_Device_$deviceID.png")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/NaviCamp")
+            }
+
+            val resolver = requireContext().contentResolver
+            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            uri?.let {
+                resolver.openOutputStream(it)?.use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+                Toast.makeText(requireContext(), "QR code saved to gallery", Toast.LENGTH_SHORT).show()
+            } ?: run {
+                Toast.makeText(requireContext(), "Failed to save QR code", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Error saving: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showSetMaintenanceDialog(deviceID: String, parentDialog: AlertDialog) {
         val editText = EditText(requireContext()).apply {
             hint = "Enter maintenance reason (optional - feature in development)"
             maxLines = 3
             setPadding(16, 16, 16, 16)
         }
 
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext())
             .setTitle("Set Maintenance Mode")
             .setMessage("This will disconnect any current user and set the wheelchair to maintenance mode.\n\nNote: Maintenance reason storage is currently in development.")
             .setView(editText)
@@ -221,8 +474,8 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             .show()
     }
 
-    private fun showRemoveMaintenanceDialog(deviceID: String, parentDialog: androidx.appcompat.app.AlertDialog) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+    private fun showRemoveMaintenanceDialog(deviceID: String, parentDialog: AlertDialog) {
+        AlertDialog.Builder(requireContext())
             .setTitle("Remove Maintenance Mode")
             .setMessage("This will set the wheelchair back to available status.")
             .setPositiveButton("Remove Maintenance") { _, _ ->
