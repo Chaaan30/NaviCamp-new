@@ -32,4 +32,12 @@
     
     <!-- New: Material Design Green shade -->
     <color name="green_500">#4CAF50</color> <!-- Standard Material Green -->
+
+    <!-- Status colors -->
+    <color name="status_available">#2E7D32</color>
+    <color name="status_in_use">#1565C0</color>
+    <color name="status_maintenance">#E65100</color>
+    <color name="status_offline">#616161</color>
+    <color name="red">#F44336</color>
+    <color name="lightRed">#FFEBEE</color>
 </resources>

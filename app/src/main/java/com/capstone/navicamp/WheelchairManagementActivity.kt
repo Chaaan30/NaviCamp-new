@@ -30,7 +30,8 @@ data class WheelchairDevice(
     val rssi: Int?,
     val distance: Float?,
     val userName: String? = null,
-    val maintenanceReason: String? = null
+    val maintenanceReason: String? = null,
+    val schoolID: String? = null
 )
 
 class WheelchairManagementActivity : AppCompatActivity() {
@@ -279,13 +280,9 @@ class WheelchairManagementActivity : AppCompatActivity() {
             else -> statusBadge.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
         }
         
-        dialogView.findViewById<TextView>(R.id.detail_user_id).text = wheelchair.userID?.toString() ?: "None"
+        dialogView.findViewById<TextView>(R.id.detail_user_id).text = wheelchair.schoolID ?: "None"
         dialogView.findViewById<TextView>(R.id.detail_user_name).text = wheelchair.userName ?: "No user assigned"
         dialogView.findViewById<TextView>(R.id.detail_floor_level).text = wheelchair.floorLevel ?: "Unknown"
-        dialogView.findViewById<TextView>(R.id.detail_latitude).text = wheelchair.latitude?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_longitude).text = wheelchair.longitude?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_rssi).text = wheelchair.rssi?.toString() ?: "N/A"
-        dialogView.findViewById<TextView>(R.id.detail_distance).text = wheelchair.distance?.toString() ?: "N/A"
         
         // Format connected until date
         val connectedUntilText = if (wheelchair.connectedUntil != null) {
