@@ -3194,15 +3194,24 @@ object MySQLHelper {
 
             val query = StringBuilder(
                 """
-                SELECT userID, fullName, userType, email, contactNumber, createdOn, updatedOn, proofPicture, verified
-                FROM user_table
-                WHERE verified = 1
+                SELECT COALESCE(p.schoolID, CAST(u.userID AS CHAR)) AS userID,
+                       u.fullName,
+                       u.userType,
+                       u.email,
+                       u.contactNumber,
+                       u.createdOn,
+                       u.updatedOn,
+                       u.proofPicture,
+                       u.verified
+                FROM user_table u
+                LEFT JOIN pwd_profiles_table p ON p.userID = u.userID
+                WHERE u.verified = 1
             """
             )
             if (userType != null && userType != "All") {
-                query.append(" AND userType = ?")
+                query.append(" AND u.userType = ?")
             } else {
-                query.append(" AND userType IN ('Temporarily Disabled', 'Permanently Disabled')")
+                query.append(" AND u.userType IN ('Temporarily Disabled', 'Permanently Disabled')")
             }
 
             statement = connection.prepareStatement(query.toString())
@@ -3248,19 +3257,19 @@ object MySQLHelper {
 
             val query = """
                 SELECT 
-                u.userID, 
-                u.fullName, 
-                p.disabilityType AS userType, 
-                u.email, 
-                u.contactNumber, 
-                u.createdOn, 
-                u.updatedOn, 
-                u.proofPicture, 
-                u.verified
-            FROM user_table u
-            INNER JOIN pwd_profiles_table p ON u.userID = p.userID
-            WHERE u.verified = 1
-            ORDER BY u.createdOn DESC
+                    COALESCE(p.schoolID, CAST(u.userID AS CHAR)) AS userID,
+                    u.fullName, 
+                    p.disabilityType AS userType, 
+                    u.email, 
+                    u.contactNumber, 
+                    u.createdOn, 
+                    u.updatedOn, 
+                    u.proofPicture, 
+                    u.verified
+                FROM user_table u
+                INNER JOIN pwd_profiles_table p ON u.userID = p.userID
+                WHERE u.verified = 1
+                ORDER BY u.createdOn DESC
             """
 
             statement = connection.prepareStatement(query)
@@ -4473,6 +4482,32 @@ object MySQLHelper {
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "hasActiveIncidentForUser failed: ${e.message}")
             false
+        } finally {
+            rs?.close(); stmt?.close(); connection?.close()
+        }
+    }
+
+    fun getLatestUnresolvedIncidentStatusForUser(userID: String): String? {
+        var connection: Connection? = null
+        var stmt: PreparedStatement? = null
+        var rs: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            val query = """
+                SELECT status
+                FROM incident_logs_table
+                WHERE userID = ?
+                  AND LOWER(TRIM(status)) NOT IN ('resolved', 'false alarm')
+                ORDER BY alertDateTime DESC
+                LIMIT 1
+            """.trimIndent()
+            stmt = connection.prepareStatement(query)
+            stmt.setString(1, userID)
+            rs = stmt.executeQuery()
+            if (rs.next()) rs.getString("status") else null
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getLatestUnresolvedIncidentStatusForUser failed: ${e.message}")
+            null
         } finally {
             rs?.close(); stmt?.close(); connection?.close()
         }

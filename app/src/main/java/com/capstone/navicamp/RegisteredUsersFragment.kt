@@ -11,6 +11,8 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class RegisteredUsersFragment : Fragment(R.layout.fragment_registered_users) {
 
@@ -118,12 +120,12 @@ class RegisteredUsersFragment : Fragment(R.layout.fragment_registered_users) {
         val userTypeIndicator = cardView.findViewById<View>(R.id.user_type_indicator)
 
         // Set Data
-        userIdText.text = "ID: ${user.userID}"
+        userIdText.text = "School ID: ${user.userID}"
         userNameText.text = user.fullName
         userTypeBadge.text = user.userType // "Temporary" or "Permanent"
         emailText.text = "Email: ${user.email}"
         contactText.text = "Contact: ${user.contactNumber}"
-        createdDateText.text = "Registered: ${user.createdOn}"
+        createdDateText.text = "Registered: ${formatRegisteredDate(user.createdOn)}"
 
         // Dynamic Color Logic
         // Temporary = Blue (#0277BD), Permanent = Green (#2E7D32)
@@ -144,6 +146,17 @@ class RegisteredUsersFragment : Fragment(R.layout.fragment_registered_users) {
 
         // 4. Set badge text color (White looks better on dark blue/green)
         userTypeBadge.setTextColor(themeColor)
+    }
+
+    private fun formatRegisteredDate(rawDateTime: String): String {
+        return try {
+            val input = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val output = SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.getDefault())
+            val parsed = input.parse(rawDateTime)
+            if (parsed != null) output.format(parsed) else rawDateTime
+        } catch (e: Exception) {
+            rawDateTime
+        }
     }
 
     private fun startSmartPolling() {
