@@ -24,6 +24,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class DisplayRegisteredUsersActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
@@ -209,12 +211,12 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         val createdDateText = cardView.findViewById<TextView>(R.id.created_date_text)
         val userTypeIndicator = cardView.findViewById<View>(R.id.user_type_indicator)
 
-        userIdText.text = "ID: ${user.userID}"
+        userIdText.text = "School ID: ${user.userID}"
         userNameText.text = user.fullName
         userTypeBadge.text = user.userType
         emailText.text = "Email: ${user.email}"
         contactText.text = "Contact: ${user.contactNumber}"
-        createdDateText.text = "Registered: ${user.createdOn}"
+        createdDateText.text = "Registered: ${formatRegisteredDate(user.createdOn)}"
 
         // Set user type badge and indicator colors based on type
         when (user.userType.lowercase()) {
@@ -230,6 +232,17 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
                 userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.darker_gray))
                 userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
             }
+        }
+    }
+
+    private fun formatRegisteredDate(rawDateTime: String): String {
+        return try {
+            val input = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val output = SimpleDateFormat("yyyy-MM-dd hh:mm:ss a", Locale.getDefault())
+            val parsed = input.parse(rawDateTime)
+            if (parsed != null) output.format(parsed) else rawDateTime
+        } catch (e: Exception) {
+            rawDateTime
         }
     }
 

@@ -59,6 +59,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     private var isSOSPending = false
     private var lastTickProgress = 0
     private var hasHandledSliderCancel = false
+    private var breathingAnimator: ValueAnimator? = null
 
     // State Variables
     private var connectedDeviceID: String? = null
@@ -162,6 +163,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
         // 4. Restore Database State (Critical Assistance Feature)
         restoreConnectionFromDatabase()
+        restoreSOSStateFromDatabase()
         startIncidentPolling()
     }
 
@@ -179,6 +181,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         if (!isAdded) return
         checkUserAccessStatus()
         restoreConnectionFromDatabase()
+        restoreSOSStateFromDatabase()
     }
 
     override fun onDestroyView() {
@@ -238,7 +241,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
         assistanceButtonBackground.text = "" // Hide "Connect to Wheelchair" text
 
-        if (!isAlertSent && !isSOSPending) {
+        if (isAlertSent) {
+            applyAlertSentVisualState(animate = true)
+        } else if (!isSOSPending) {
             assistanceButton.text = "SOS"
             assistanceButton.textSize = 50f
             assistanceButton.setTextColor(Color.WHITE)
@@ -246,6 +251,14 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     }
 
     private fun disableSOSButton(reason: String) {
+        if (isAlertSent || isSOSPending) {
+            applyAlertSentVisualState(animate = true)
+            sosProgressBar.visibility = View.GONE
+            sosSliderContainer.visibility = View.GONE
+            sosSlider.visibility = View.GONE
+            return
+        }
+
         assistanceButton.isEnabled = false
 
         // Use high-contrast grays so inner button is visible
@@ -266,6 +279,89 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
 
         assistanceButton.text = "SOS"
         assistanceButton.setTextColor(Color.WHITE)
+    }
+
+    private fun restoreSOSStateFromDatabase() {
+        val uid = currentUserID ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val unresolvedStatus = withContext(Dispatchers.IO) {
+                MySQLHelper.getLatestUnresolvedIncidentStatusForUser(uid)
+            }
+
+            if (!isAdded) return@launch
+
+            if (unresolvedStatus != null) {
+                isSOSPending = false
+                isAlertSent = true
+                pendingTimer?.cancel()
+
+                applyAlertSentVisualState(animate = true)
+
+                sosProgressBar.visibility = View.GONE
+                sosSliderContainer.visibility = View.GONE
+                sosSlider.visibility = View.GONE
+
+                val normalized = unresolvedStatus.trim().lowercase(Locale.getDefault())
+                if (normalized == "pending") {
+                    sosHeaderText.text = "SOS pending..."
+                    sosInstructionText.text = "Your request is queued. Please wait for a safety officer."
+                } else {
+                    sosHeaderText.text = "Assistance request in progress"
+                    sosInstructionText.text = "Wait for an officer to respond"
+                }
+            } else if (isAlertSent && !isSOSPending) {
+                forceResetButtonState()
+            }
+        }
+    }
+
+    private fun applyAlertSentVisualState(animate: Boolean) {
+        assistanceButton.isEnabled = false
+
+        // Full colored circle: expand inner button to fill outer ring and tint both red.
+        val fullSizePx = dpToPx(286)
+        val params = assistanceButton.layoutParams
+        params.width = fullSizePx
+        params.height = fullSizePx
+        assistanceButton.layoutParams = params
+
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
+        assistanceButtonBackground.text = ""
+
+        assistanceButton.text = "ALERT SENT"
+        assistanceButton.textSize = 20f
+        assistanceButton.setTextColor(Color.WHITE)
+
+        if (animate) {
+            startBreathingEffect()
+        } else {
+            stopBreathingEffect()
+            assistanceButton.scaleX = 1.0f
+            assistanceButton.scaleY = 1.0f
+        }
+    }
+
+    private fun startBreathingEffect() {
+        if (breathingAnimator?.isRunning == true) return
+
+        breathingAnimator = ValueAnimator.ofFloat(1.0f, 1.05f).apply {
+            duration = 800
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            addUpdateListener {
+                val s = it.animatedValue as Float
+                assistanceButton.scaleX = s
+                assistanceButton.scaleY = s
+            }
+            start()
+        }
+    }
+
+    private fun stopBreathingEffect() {
+        breathingAnimator?.cancel()
+        breathingAnimator = null
     }
 
     private fun restoreConnectionFromDatabase() {
@@ -374,11 +470,23 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         pendingTimer?.cancel()
         isSOSPending = false
         isAlertSent = false
+        stopBreathingEffect()
 
         sosProgressBar.visibility = View.GONE
         sosSliderContainer.visibility = View.GONE
         sosSlider.visibility = View.GONE
         sosHeaderText.text = "Emergency help needed?"
+
+        // Restore original circle-within-circle shape.
+        val originalSizePx = dpToPx(174)
+        val params = assistanceButton.layoutParams
+        params.width = originalSizePx
+        params.height = originalSizePx
+        assistanceButton.layoutParams = params
+
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
+        assistanceButtonBackground.text = ""
 
         assistanceButton.text = "SOS"
         assistanceButton.textSize = 50f
@@ -397,6 +505,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         pendingTimer?.cancel()
         isSOSPending = false
         isAlertSent = false
+        stopBreathingEffect()
 
         // 2. Reset Button Size (Shrink back to 174dp)
         val originalSizePx = dpToPx(174)
@@ -411,6 +520,9 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         assistanceButton.scaleY = 1.0f
 
         // 3. Reset Text and Styles
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
+        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
+        assistanceButtonBackground.text = ""
         assistanceButton.text = "SOS"
         assistanceButton.textSize = 50f
         sosHeaderText.text = "Emergency help needed?"
@@ -431,19 +543,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     }
 
     private fun playSuccessAnimation() {
-        assistanceButton.text = "ALERT SENT"
-        assistanceButton.textSize = 20f
-        ValueAnimator.ofFloat(1.0f, 1.05f).apply {
-            duration = 800
-            repeatMode = ValueAnimator.REVERSE
-            repeatCount = ValueAnimator.INFINITE
-            addUpdateListener {
-                val s = it.animatedValue as Float
-                assistanceButton.scaleX = s
-                assistanceButton.scaleY = s
-            }
-            start()
-        }
+        applyAlertSentVisualState(animate = true)
         triggerSuccessVibration()
     }
 
