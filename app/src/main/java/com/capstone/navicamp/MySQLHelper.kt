@@ -2437,6 +2437,27 @@ object MySQLHelper {
         return data
     }
 
+    fun getLocationIDByAlertID(alertID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            val query = "SELECT locationID FROM incident_logs_table WHERE alertID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, alertID)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) resultSet.getString("locationID") else null
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error fetching locationID by alertID $alertID: ${e.message}", e)
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
 //    fun resolveEmergencyAlert(alertID: String): Boolean {
 //        var connection: Connection? = null
 //        var statement: PreparedStatement? = null

@@ -122,8 +122,8 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             pendingStatus = args.getString(ARG_STATUS)
         }
 
-        // Show FAB only when navigating to a specific assistance
-        if (pendingLocationID != null) {
+        // Show FAB only when navigating to an active assistance status
+        if (pendingLocationID != null && isAssistanceModalEligibleStatus(pendingStatus)) {
             fabAssistance.visibility = View.VISIBLE
             fabAssistance.setOnClickListener { showBottomSheet() }
         }
@@ -161,7 +161,9 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                     }
                 }
             }
-            showBottomSheet()
+            if (isAssistanceModalEligibleStatus(pendingStatus)) {
+                showBottomSheet()
+            }
         } else {
             // Default home: center on officer's own device GPS
             focusOnOfficerLocation()
@@ -312,6 +314,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
 
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
+                if (!isAssistanceModalEligibleStatus(latestLocationItem.status)) return@withContext
                 val modalDialog = AssistanceModalDialog.newInstance(
                     latestLocationItem.floorLevel,
                     latestLocationItem.locationID,
@@ -327,6 +330,11 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 modalDialog.show(childFragmentManager, "AssistanceModal")
             }
         }
+    }
+
+    private fun isAssistanceModalEligibleStatus(status: String?): Boolean {
+        val normalized = status?.trim()?.lowercase(Locale.getDefault()).orEmpty()
+        return normalized in setOf("pending", "ongoing", "in_progress", "responding")
     }
 
     private fun openAssistanceModalForUser(locationID: String) {
