@@ -20,19 +20,18 @@
         <ImageView
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@drawable/ic_add"
-            android:tint="@color/primaryColor"
+            android:src="@drawable/ic_maintenance"
+            android:tint="@color/orange"
             android:layout_marginEnd="12dp" />
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Add New Device"
+            android:text="Set Maintenance Mode"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/darkGray"
-            android:fontFamily="@font/inter_bold" />
+            android:textColor="@color/darkGray" />
 
     </LinearLayout>
 
@@ -41,55 +40,38 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#F0F0F0"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Description -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="This will disconnect any active user and place this wheelchair into maintenance mode."
+        android:textSize="14sp"
+        android:textColor="@color/gray"
+        android:lineSpacingExtra="3dp"
         android:layout_marginBottom="20dp" />
 
-    <!-- Device ID (Auto-generated, read-only) -->
+    <!-- Message Input -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Device ID (auto-generated)"
-        app:boxStrokeColor="@color/primaryColor"
-        app:hintTextColor="@color/primaryColor"
-        app:boxBackgroundColor="#F7F7F7"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_marginBottom="16dp">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/add_device_id"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Generating..."
-            android:textSize="15sp"
-            android:textColor="@color/darkGray"
-            android:textStyle="bold"
-            android:fontFamily="@font/inter_bold"
-            android:focusable="false"
-            android:focusableInTouchMode="false"
-            android:cursorVisible="false"
-            android:background="@null" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Device Name -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Device name (optional)"
-        app:boxStrokeColor="@color/primaryColor"
-        app:hintTextColor="@color/primaryColor"
+        android:hint="Maintenance message (optional)"
+        app:boxStrokeColor="@color/orange"
+        app:hintTextColor="@color/orange"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_marginBottom="24dp">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/add_device_name"
+            android:id="@+id/maintenance_message_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapWords"
-            android:maxLines="1"
-            android:imeOptions="actionDone"
+            android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="4"
+            android:minLines="3"
+            android:gravity="top"
             android:textSize="14sp"
-            android:textColor="@color/darkGray"
-            android:fontFamily="@font/inter" />
+            android:textColor="@color/darkGray" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -101,7 +83,7 @@
         android:gravity="end">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_cancel_add"
+            android:id="@+id/btn_cancel_maintenance"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="44dp"
@@ -112,16 +94,15 @@
             app:rippleColor="@color/lightGray" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_save_device"
+            android:id="@+id/btn_confirm_maintenance"
             android:layout_width="wrap_content"
             android:layout_height="44dp"
-            android:text="Save Device"
+            android:text="Set Maintenance"
             android:textColor="@color/white"
             android:textSize="14sp"
-            android:textStyle="bold"
-            app:backgroundTint="@color/primaryColor"
+            app:backgroundTint="@color/orange"
             app:cornerRadius="8dp"
-            app:icon="@drawable/ic_check"
+            app:icon="@drawable/ic_maintenance"
             app:iconTint="@color/white"
             app:iconSize="16dp" />
 

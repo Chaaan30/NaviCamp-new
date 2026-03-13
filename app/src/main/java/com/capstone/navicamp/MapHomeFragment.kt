@@ -122,11 +122,14 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             pendingStatus = args.getString(ARG_STATUS)
         }
 
-        // Show FAB only when navigating to a specific assistance
-        if (pendingLocationID != null) {
+        // Show FAB only when navigating to an active assistance status
+        if (pendingLocationID != null && isAssistanceModalEligibleStatus(pendingStatus)) {
             fabAssistance.visibility = View.VISIBLE
             fabAssistance.setOnClickListener { showBottomSheet() }
         }
+
+        // Reset so that every time this fragment view opens it re-centers on user
+        hasCenteredOnOfficer = false
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.map_fragment_container) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
@@ -158,11 +161,16 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                     }
                 }
             }
-            showBottomSheet()
+            if (isAssistanceModalEligibleStatus(pendingStatus)) {
+                showBottomSheet()
+            }
         } else {
             // Default home: center on officer's own device GPS
             focusOnOfficerLocation()
         }
+
+        // Start writing officer GPS to DB immediately when map opens
+        officerID?.let { id -> startOfficerGpsWriting(id) }
 
         startRealtimeRefresh()
     }
@@ -181,6 +189,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
     private fun focusOnOfficerLocation() {
         if (hasCenteredOnOfficer) return
         val ctx = context ?: return
+
         if (ActivityCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -199,25 +208,49 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             }
             return
         }
+
         val fusedClient = LocationServices.getFusedLocationProviderClient(ctx)
-        fusedClient.lastLocation.addOnSuccessListener { loc ->
+
+        // Try getCurrentLocation first for a fresh fix, fall back to lastLocation
+        fusedClient.getCurrentLocation(
+            com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY,
+            null
+        ).addOnSuccessListener { loc ->
             if (loc != null) {
                 hasCenteredOnOfficer = true
                 val pos = LatLng(loc.latitude, loc.longitude)
                 setOfficerMarkerPosition(pos, moveCamera = true)
             } else {
-                // Fallback: try DB
-                officerID?.let { id ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val officerGps = MySQLHelper.getLiveGPS(id)
-                        withContext(Dispatchers.Main) {
-                            if (officerGps != null && officerGps[0] != 0.0) {
-                                hasCenteredOnOfficer = true
-                                val pos2 = LatLng(officerGps[0], officerGps[1])
-                                setOfficerMarkerPosition(pos2, moveCamera = true)
+                // Fallback to lastLocation
+                fusedClient.lastLocation.addOnSuccessListener { lastLoc ->
+                    if (lastLoc != null) {
+                        hasCenteredOnOfficer = true
+                        val pos = LatLng(lastLoc.latitude, lastLoc.longitude)
+                        setOfficerMarkerPosition(pos, moveCamera = true)
+                    } else {
+                        // Final fallback: DB GPS
+                        officerID?.let { id ->
+                            CoroutineScope(Dispatchers.IO).launch {
+                                val officerGps = MySQLHelper.getLiveGPS(id)
+                                withContext(Dispatchers.Main) {
+                                    if (officerGps != null && officerGps[0] != 0.0) {
+                                        hasCenteredOnOfficer = true
+                                        val pos2 = LatLng(officerGps[0], officerGps[1])
+                                        setOfficerMarkerPosition(pos2, moveCamera = true)
+                                    }
+                                }
                             }
                         }
                     }
+                }
+            }
+        }.addOnFailureListener {
+            // If getCurrentLocation fails, fall back to lastLocation
+            fusedClient.lastLocation.addOnSuccessListener { lastLoc ->
+                if (lastLoc != null) {
+                    hasCenteredOnOfficer = true
+                    val pos = LatLng(lastLoc.latitude, lastLoc.longitude)
+                    setOfficerMarkerPosition(pos, moveCamera = true)
                 }
             }
         }
@@ -281,6 +314,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
 
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
+                if (!isAssistanceModalEligibleStatus(latestLocationItem.status)) return@withContext
                 val modalDialog = AssistanceModalDialog.newInstance(
                     latestLocationItem.floorLevel,
                     latestLocationItem.locationID,
@@ -296,6 +330,11 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 modalDialog.show(childFragmentManager, "AssistanceModal")
             }
         }
+    }
+
+    private fun isAssistanceModalEligibleStatus(status: String?): Boolean {
+        val normalized = status?.trim()?.lowercase(Locale.getDefault()).orEmpty()
+        return normalized in setOf("pending", "ongoing", "in_progress", "responding")
     }
 
     private fun openAssistanceModalForUser(locationID: String) {

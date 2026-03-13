@@ -154,7 +154,7 @@
                         <TextView
                             android:layout_width="100dp"
                             android:layout_height="wrap_content"
-                            android:text="User Name:"
+                            android:text="Full Name:"
                             android:textStyle="bold"
                             android:textColor="@color/darkGray"
                             android:textSize="14sp" />
@@ -250,80 +250,6 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Connection Information Card -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@color/white">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:src="@drawable/ic_signal"
-                        android:tint="@color/primaryColor"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Connection Information"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primaryColor" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="100dp"
-                            android:layout_height="wrap_content"
-                            android:text="Connected Until:"
-                            android:textStyle="bold"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/detail_connected_until"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Not connected"
-                            android:textColor="@color/darkGray"
-                            android:textSize="14sp" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-        </androidx.cardview.widget.CardView>
-
         <!-- Maintenance Information Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -356,7 +282,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Maintenance Information"
+                        android:text="Maintenance Settings"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/orange" />
@@ -375,7 +301,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Maintenance Reason:"
+                        android:text="Maintenance Message:"
                         android:textStyle="bold"
                         android:textColor="@color/darkGray"
                         android:textSize="14sp"
@@ -407,13 +333,15 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:layout_marginTop="4dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_set_maintenance"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:layout_marginBottom="8dp"
                         android:text="Set Maintenance"
                         android:textColor="@color/white"
                         android:textSize="14sp"
@@ -422,15 +350,31 @@
                         app:cornerRadius="8dp"
                         app:icon="@drawable/ic_maintenance"
                         app:iconTint="@color/white"
-                        app:iconSize="18dp"
-                        android:layout_marginEnd="8dp" />
+                        app:iconSize="18dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_rename_device"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="Rename Device"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/primaryColor"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_edit"
+                        app:iconTint="@color/white"
+                        app:iconSize="18dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_remove_maintenance"
-                        android:layout_width="0dp"
-                        android:layout_height="48dp"
-                        android:layout_weight="1"
-                        android:text="Remove Maintenance"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="Done Maintenance"
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         android:textStyle="bold"
@@ -439,7 +383,22 @@
                         app:icon="@drawable/ic_check"
                         app:iconTint="@color/white"
                         app:iconSize="18dp"
-                        android:layout_marginStart="8dp"
+                        android:visibility="gone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_delete_device"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:text="Delete Device"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/red"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_delete"
+                        app:iconTint="@color/white"
+                        app:iconSize="18dp"
                         android:visibility="gone" />
 
                 </LinearLayout>
@@ -447,22 +406,6 @@
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
-
-        <!-- Delete Device Button (Admin only) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_delete_device"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Delete Device"
-            android:textColor="@color/white"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            app:backgroundTint="@color/red"
-            app:cornerRadius="8dp"
-            app:icon="@drawable/ic_delete"
-            app:iconTint="@color/white"
-            app:iconSize="18dp"
-            android:visibility="gone" />
 
     </LinearLayout>
 

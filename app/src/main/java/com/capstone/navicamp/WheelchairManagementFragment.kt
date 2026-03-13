@@ -141,6 +141,8 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
     }
 
     private fun setupWheelchairCard(view: View, wheelchair: WheelchairDevice) {
+        val deviceName = wheelchair.deviceName?.takeIf { it.isNotBlank() } ?: "Wheelchair ${wheelchair.deviceID}"
+        view.findViewById<TextView>(R.id.device_name_text).text = deviceName
         view.findViewById<TextView>(R.id.device_id_text).text = wheelchair.deviceID
 
         val statusText = view.findViewById<TextView>(R.id.status_text)
@@ -217,6 +219,16 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             connectionDot.setBackgroundResource(R.drawable.status_badge_offline)
         }
 
+        // Maintenance Message
+        val maintenanceMessageLayout = view.findViewById<LinearLayout>(R.id.maintenance_message_layout)
+        val maintenanceMessageText = view.findViewById<TextView>(R.id.maintenance_message_text)
+        if (wheelchair.status.equals("maintenance", ignoreCase = true) && !wheelchair.maintenanceMessage.isNullOrBlank()) {
+            maintenanceMessageLayout.visibility = View.VISIBLE
+            maintenanceMessageText.text = wheelchair.maintenanceMessage
+        } else {
+            maintenanceMessageLayout.visibility = View.GONE
+        }
+
         // View details button color based on status
         val detailsBtn = view.findViewById<MaterialButton>(R.id.view_details_button)
         val btnColor = when (wheelchair.status.lowercase()) {
@@ -262,21 +274,6 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
         dialogView.findViewById<TextView>(R.id.detail_user_name).text = wheelchair.userName ?: "No user assigned"
         dialogView.findViewById<TextView>(R.id.detail_floor_level).text = wheelchair.floorLevel ?: "Unknown"
 
-        // Format connected until date
-        val connectedUntilText = if (wheelchair.connectedUntil != null) {
-            try {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val connectedDate = dateFormat.parse(wheelchair.connectedUntil)
-                val displayFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-                displayFormat.format(connectedDate!!)
-            } catch (e: Exception) {
-                wheelchair.connectedUntil
-            }
-        } else {
-            "Not connected"
-        }
-        dialogView.findViewById<TextView>(R.id.detail_connected_until).text = connectedUntilText
-
         // Handle maintenance information
         val maintenanceReasonLayout = dialogView.findViewById<LinearLayout>(R.id.maintenance_reason_layout)
         val maintenanceReasonText = dialogView.findViewById<TextView>(R.id.detail_maintenance_reason)
@@ -285,7 +282,7 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
 
         if (wheelchair.status.equals("maintenance", ignoreCase = true)) {
             maintenanceReasonLayout.visibility = View.VISIBLE
-            maintenanceReasonText.text = wheelchair.maintenanceReason ?: "Maintenance reason not available (feature in development)"
+            maintenanceReasonText.text = wheelchair.maintenanceMessage ?: "No maintenance message provided"
             setMaintenanceBtn.visibility = View.GONE
             removeMaintenanceBtn.visibility = View.VISIBLE
         } else {
@@ -313,6 +310,14 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             deleteBtn.setOnClickListener {
                 showDeleteDeviceDialog(wheelchair.deviceID, dialog)
             }
+        } else {
+            deleteBtn.visibility = View.GONE
+        }
+
+        // Rename device button
+        val renameBtn = dialogView.findViewById<MaterialButton>(R.id.btn_rename_device)
+        renameBtn.setOnClickListener {
+            showRenameDeviceDialog(wheelchair.deviceID, wheelchair.deviceName, dialog)
         }
 
         dialog.show()
@@ -338,11 +343,46 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             .show()
     }
 
+    private fun showRenameDeviceDialog(deviceID: String, currentName: String?, parentDialog: AlertDialog) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_rename_device, null)
+        val descriptionText = dialogView.findViewById<TextView>(R.id.rename_device_description)
+        val nameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.rename_device_input)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_cancel_rename)
+        val btnConfirm = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_confirm_rename)
+
+        descriptionText.text = "Enter a new display name for device $deviceID."
+        nameInput?.setText(currentName ?: "")
+        nameInput?.setSelection(nameInput.text?.length ?: 0)
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            val newName = nameInput?.text.toString().trim()
+            viewLifecycleOwner.lifecycleScope.launch {
+                val success = withContext(Dispatchers.IO) { MySQLHelper.renameDevice(deviceID, newName) }
+                if (success) {
+                    Toast.makeText(requireContext(), "Device renamed", Toast.LENGTH_SHORT).show()
+                    loadWheelchairs()
+                    dialog.dismiss()
+                    parentDialog.dismiss()
+                } else {
+                    Toast.makeText(requireContext(), "Failed to rename device", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        dialog.show()
+    }
+
     private fun showAddDeviceDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_device, null)
 
-        val deviceIdText = dialogView.findViewById<TextView>(R.id.add_device_id)
-        val deviceNameEdit = dialogView.findViewById<EditText>(R.id.add_device_name)
+        val deviceIdText = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.add_device_id)
+        val deviceNameEdit = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.add_device_name)
         val cancelBtn = dialogView.findViewById<MaterialButton>(R.id.btn_cancel_add)
         val saveDeviceBtn = dialogView.findViewById<MaterialButton>(R.id.btn_save_device)
 
@@ -352,18 +392,19 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             .setView(dialogView)
             .setCancelable(false)
             .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         // Fetch next device ID
         viewLifecycleOwner.lifecycleScope.launch {
             nextDeviceID = withContext(Dispatchers.IO) { MySQLHelper.getNextDeviceID() }
-            deviceIdText.text = nextDeviceID ?: "Error"
+            deviceIdText?.setText(nextDeviceID ?: "Error")
         }
 
         cancelBtn.setOnClickListener { dialog.dismiss() }
 
         saveDeviceBtn.setOnClickListener {
             val deviceID = nextDeviceID
-            val deviceName = deviceNameEdit.text.toString().trim()
+            val deviceName = deviceNameEdit?.text.toString().trim()
             if (deviceID == null) {
                 Toast.makeText(requireContext(), "Device ID not ready yet", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -400,6 +441,7 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
             .setView(dialogView)
             .setCancelable(true)
             .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         generateQrBtn.setOnClickListener {
             try {
@@ -456,22 +498,24 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
     }
 
     private fun showSetMaintenanceDialog(deviceID: String, parentDialog: AlertDialog) {
-        val editText = EditText(requireContext()).apply {
-            hint = "Enter maintenance reason (optional - feature in development)"
-            maxLines = 3
-            setPadding(16, 16, 16, 16)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_set_maintenance, null)
+        val messageInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.maintenance_message_input)
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_cancel_maintenance)
+        val btnConfirm = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_confirm_maintenance)
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnConfirm.setOnClickListener {
+            val message = messageInput?.text.toString().trim()
+            setDeviceMaintenanceMode(deviceID, true, message, parentDialog)
+            dialog.dismiss()
         }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Set Maintenance Mode")
-            .setMessage("This will disconnect any current user and set the wheelchair to maintenance mode.\n\nNote: Maintenance reason storage is currently in development.")
-            .setView(editText)
-            .setPositiveButton("Set Maintenance") { _, _ ->
-                val reason = editText.text.toString().trim()
-                setDeviceMaintenanceMode(deviceID, true, reason, parentDialog)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        dialog.show()
     }
 
     private fun showRemoveMaintenanceDialog(deviceID: String, parentDialog: AlertDialog) {

@@ -140,9 +140,16 @@ class IncidentCardAdapter(
                 resolvedAt.text = formatDateTime(incident.resolvedOn)
             }
             
-            // View on map button
-            viewOnMapButton.setOnClickListener {
-                onMapClick(incident)
+            // View on map button — only visible for pending and ongoing incidents
+            val showMapBtn = when (incident.status.lowercase()) {
+                "pending", "ongoing", "in_progress", "responding" -> true
+                else -> false
+            }
+            viewOnMapButton.visibility = if (showMapBtn) View.VISIBLE else View.GONE
+            if (showMapBtn) {
+                viewOnMapButton.setOnClickListener {
+                    onMapClick(incident)
+                }
             }
             
             // Set click listeners

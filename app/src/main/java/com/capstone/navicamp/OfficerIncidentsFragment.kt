@@ -79,15 +79,30 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
             context = requireContext(),
             incidents = emptyList(),
             onMapClick = { incident ->
-                // Navigate to map home fragment with coordinates
-                val lat = incident.coordinates.split(",")[0].trim().toDoubleOrNull() ?: 0.0
-                val lng = incident.coordinates.split(",")[1].trim().toDoubleOrNull() ?: 0.0
-                val mapFragment = MapHomeFragment.newInstance(
-                    latitude = lat,
-                    longitude = lng,
-                    fullName = incident.userName
-                )
-                (activity as? SecurityOfficerActivity)?.navigateToMapHome(mapFragment)
+                // Navigate to map home, and include locationID for active assistance statuses.
+                val lat = incident.coordinates.split(",").getOrNull(0)?.trim()?.toDoubleOrNull() ?: 0.0
+                val lng = incident.coordinates.split(",").getOrNull(1)?.trim()?.toDoubleOrNull() ?: 0.0
+
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val normalizedStatus = incident.status.trim().lowercase(Locale.getDefault())
+                    val shouldOpenAssistanceModal = normalizedStatus in setOf("pending", "ongoing", "in_progress", "responding")
+
+                    val locationID = if (shouldOpenAssistanceModal) {
+                        withContext(Dispatchers.IO) { MySQLHelper.getLocationIDByAlertID(incident.alertId) }
+                    } else {
+                        null
+                    }
+
+                    val mapFragment = MapHomeFragment.newInstance(
+                        locationID = locationID,
+                        latitude = lat,
+                        longitude = lng,
+                        fullName = incident.userName,
+                        floorLevel = incident.floorLevel,
+                        status = incident.status
+                    )
+                    (activity as? SecurityOfficerActivity)?.navigateToMapHome(mapFragment)
+                }
             },
             onResolveClick = { incident ->
                 resolveIncident(incident)

@@ -45,11 +45,11 @@
                     android:layout_marginEnd="10dp" />
 
                 <TextView
-                    android:id="@+id/device_id_text"
+                    android:id="@+id/device_name_text"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Device ID"
+                    android:text="Device Name"
                     android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="@color/darkGray"
@@ -81,6 +81,34 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginBottom="12dp">
+
+                <!-- Device ID Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_qr_code"
+                        android:tint="@color/gray"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/device_id_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Device ID"
+                        android:textSize="13sp"
+                        android:textColor="@color/darkGray"
+                        android:fontFamily="@font/inter"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
 
                 <!-- User Row -->
                 <LinearLayout
@@ -115,7 +143,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
 
                     <ImageView
                         android:layout_width="14dp"
@@ -133,6 +162,35 @@
                         android:textColor="@color/darkGray"
                         android:fontFamily="@font/inter"
                         android:maxLines="1"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                <!-- Maintenance Message Row -->
+                <LinearLayout
+                    android:id="@+id/maintenance_message_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_maintenance"
+                        android:tint="@color/orange"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/maintenance_message_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Maintenance Message"
+                        android:textSize="13sp"
+                        android:textColor="@color/orange"
+                        android:fontFamily="@font/inter"
+                        android:maxLines="2"
                         android:ellipsize="end" />
 
                 </LinearLayout>
