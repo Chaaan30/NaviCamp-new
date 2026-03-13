@@ -2763,7 +2763,7 @@ object MySQLHelper {
             }
 
             val query = """
-            SELECT d.deviceID, d.userID, d.status, d.latitude, d.longitude, 
+            SELECT d.deviceID, d.deviceName, d.maintenanceMessage, d.userID, d.status, d.latitude, d.longitude, 
                    d.floorLevel, d.connectedUntil, d.rssi, d.distance, u.fullName,
                    p.schoolID
             FROM devices_table d
@@ -2787,8 +2787,9 @@ object MySQLHelper {
                         rssi = resultSet.getObject("rssi") as? Int,
                         distance = resultSet.getObject("distance") as? Float,
                         userName = resultSet.getString("fullName"),
-                        maintenanceReason = null,
-                        schoolID = resultSet.getString("schoolID")
+                        maintenanceMessage = resultSet.getString("maintenanceMessage"),
+                        schoolID = resultSet.getString("schoolID"),
+                        deviceName = resultSet.getString("deviceName")
                     )
                 )
             }
@@ -3771,7 +3772,7 @@ object MySQLHelper {
     fun updateDeviceMaintenanceStatus(
         deviceID: String,
         isMaintenanceMode: Boolean,
-        reason: String? = null
+        message: String? = null
     ): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -3786,25 +3787,29 @@ object MySQLHelper {
             }
 
             val newStatus = if (isMaintenanceMode) "maintenance" else "available"
-            // Simplified query without maintenanceReason column for now
             val query = if (isMaintenanceMode) {
                 // Set to maintenance mode - disconnect any user
-                "UPDATE devices_table SET status = ?, userID = NULL, connectedUntil = NULL WHERE deviceID = ?"
+                "UPDATE devices_table SET status = ?, maintenanceMessage = ?, userID = NULL, connectedUntil = NULL WHERE deviceID = ?"
             } else {
                 // Remove from maintenance mode
-                "UPDATE devices_table SET status = ? WHERE deviceID = ?"
+                "UPDATE devices_table SET status = ?, maintenanceMessage = NULL WHERE deviceID = ?"
             }
 
             statement = connection.prepareStatement(query)
             statement.setString(1, newStatus)
-            statement.setString(2, deviceID)
+            if (isMaintenanceMode) {
+                statement.setString(2, message)
+                statement.setString(3, deviceID)
+            } else {
+                statement.setString(2, deviceID)
+            }
 
             val rowsAffected = statement.executeUpdate()
 
             if (rowsAffected > 0) {
                 Log.d("MySQLHelper", "Device $deviceID maintenance status updated to: $newStatus")
-                if (reason != null) {
-                    Log.d("MySQLHelper", "Maintenance reason (not stored in DB yet): $reason")
+                if (message != null) {
+                    Log.d("MySQLHelper", "Maintenance message stored in DB: $message")
                 }
                 SmartPollingManager.getInstance().triggerFastUpdate()
             }
@@ -3813,6 +3818,29 @@ object MySQLHelper {
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "Error updating maintenance status for $deviceID: ${e.message}", e)
             e.printStackTrace()
+            false
+        } finally {
+            statement?.close()
+            connection?.close()
+        }
+    }
+
+    fun renameDevice(deviceID: String, newName: String): Boolean {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        return try {
+            connection = getConnection()
+            if (connection == null) return false
+
+            val query = "UPDATE devices_table SET deviceName = ? WHERE deviceID = ?"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, newName.ifBlank { null })
+            statement.setString(2, deviceID)
+            
+            val rowsAffected = statement.executeUpdate()
+            rowsAffected > 0
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "Error renaming device $deviceID: ${e.message}", e)
             false
         } finally {
             statement?.close()
