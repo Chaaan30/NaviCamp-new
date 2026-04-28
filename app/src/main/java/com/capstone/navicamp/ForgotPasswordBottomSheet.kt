@@ -5,6 +5,8 @@ import android.content.DialogInterface
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,8 +41,19 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
     private lateinit var otpTimerTextView: TextView
     private lateinit var confirmOtpButton: Button
     private lateinit var resetPasswordButton: Button
+
+    private lateinit var requirementLengthTextView: TextView
+    private lateinit var requirementCaseTextView: TextView
+    private lateinit var requirementNumberTextView: TextView
+    private lateinit var requirementSymbolTextView: TextView
+
     private var generatedOtp: String? = null
     private var isOtpConfirmed: Boolean = false
+
+    private data class PasswordRuleResult(
+        val score: Int,
+        val failedRequirements: List<String>
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -56,6 +69,13 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         otpTimerTextView = view.findViewById(R.id.otp_timer)
         confirmOtpButton = view.findViewById(R.id.confirm_otp_button)
         resetPasswordButton = view.findViewById(R.id.reset_password_button)
+
+        requirementLengthTextView = view.findViewById(R.id.password_requirement_length)
+        requirementCaseTextView = view.findViewById(R.id.password_requirement_case)
+        requirementNumberTextView = view.findViewById(R.id.password_requirement_number)
+        requirementSymbolTextView = view.findViewById(R.id.password_requirement_symbol)
+
+        setupPasswordRequirementWatcher()
 
         sendOtpButton.setOnClickListener { onSendOtpButtonClick() }
         confirmOtpButton.setOnClickListener { onConfirmOtpButtonClick() }
@@ -78,6 +98,7 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
                         sendOtpEmail(userEmail, generatedOtp!!)
                     }
                     loadingDialog.dismiss()
+                    view?.findViewById<View>(R.id.otp_layout)?.visibility = View.VISIBLE
                     otpEditText.visibility = View.VISIBLE
                     confirmOtpButton.visibility = View.VISIBLE
                     startOtpTimer()
@@ -98,11 +119,15 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         val otp = otpEditText.text.toString()
         if (otp == generatedOtp) {
             isOtpConfirmed = true
+            view?.findViewById<View>(R.id.new_password_layout)?.visibility = View.VISIBLE
+            view?.findViewById<View>(R.id.confirm_password_layout)?.visibility = View.VISIBLE
+            view?.findViewById<View>(R.id.password_requirements_card)?.visibility = View.VISIBLE
             newPasswordEditText.visibility = View.VISIBLE
             confirmPasswordEditText.visibility = View.VISIBLE
             resetPasswordButton.visibility = View.VISIBLE
             confirmOtpButton.visibility = View.GONE
             sendOtpButton.visibility = View.GONE
+            view?.findViewById<View>(R.id.otp_layout)?.visibility = View.GONE
             otpEditText.visibility = View.GONE
             otpTimerTextView.visibility = View.GONE
             Toast.makeText(context, "OTP confirmed", Toast.LENGTH_SHORT).show()
@@ -115,8 +140,10 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         val newPassword = newPasswordEditText.text.toString()
         val confirmPassword = confirmPasswordEditText.text.toString()
 
-        if (newPassword.length < 7) {
-            Toast.makeText(context, "Password must be at least 7 characters long", Toast.LENGTH_SHORT).show()
+        val passwordRuleResult = validatePasswordRequirements(newPassword)
+        if (passwordRuleResult.score < 3) {
+            val failedRulesText = passwordRuleResult.failedRequirements.joinToString("\n- ")
+            Toast.makeText(context, "Password must meet at least 3 requirements:\n- $failedRulesText", Toast.LENGTH_LONG).show()
             return
         }
 
@@ -215,6 +242,59 @@ class ForgotPasswordBottomSheet : BottomSheetDialogFragment() {
         val md = MessageDigest.getInstance("SHA-256")
         val hashedBytes = md.digest(password.toByteArray())
         return hashedBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun setupPasswordRequirementWatcher() {
+        updatePasswordRequirementIndicators("")
+        newPasswordEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updatePasswordRequirementIndicators(s?.toString().orEmpty())
+            }
+
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+    }
+
+    private fun updatePasswordRequirementIndicators(password: String) {
+        val hasValidLength = password.length in 12..16
+        val hasUppercaseAndLowercase =
+            password.any { it.isUpperCase() } && password.any { it.isLowerCase() }
+        val hasNumber = password.any { it.isDigit() }
+        val hasSymbol = password.any { !it.isLetterOrDigit() }
+
+        setRequirementColor(requirementLengthTextView, hasValidLength)
+        setRequirementColor(requirementCaseTextView, hasUppercaseAndLowercase)
+        setRequirementColor(requirementNumberTextView, hasNumber)
+        setRequirementColor(requirementSymbolTextView, hasSymbol)
+    }
+
+    private fun setRequirementColor(textView: TextView, isMet: Boolean) {
+        if (context != null) {
+            val colorRes = if (isMet) android.R.color.holo_green_dark else android.R.color.holo_red_dark
+            textView.setTextColor(ContextCompat.getColor(requireContext(), colorRes))
+        }
+    }
+
+    private fun validatePasswordRequirements(password: String): PasswordRuleResult {
+        val hasValidLength = password.length in 12..16
+        val hasUppercaseAndLowercase =
+            password.any { it.isUpperCase() } && password.any { it.isLowerCase() }
+        val hasNumber = password.any { it.isDigit() }
+        val hasSymbol = password.any { !it.isLetterOrDigit() }
+
+        val checks = listOf(
+            hasValidLength to "12-16 characters",
+            hasUppercaseAndLowercase to "both uppercase and lowercase letters",
+            hasNumber to "at least 1 number",
+            hasSymbol to "at least 1 symbol"
+        )
+
+        return PasswordRuleResult(
+            score = checks.count { it.first },
+            failedRequirements = checks.filterNot { it.first }.map { it.second }
+        )
     }
 
     private fun showLoadingDialog(): Dialog {

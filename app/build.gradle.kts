@@ -65,11 +65,15 @@ android {
     }
     packaging {
         resources {
-            pickFirsts += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/mimetypes.default")
+            pickFirsts += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/mimetypes.default", "META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.md", "META-INF/NOTICE.txt")
         }
     }
 
     // Adding packaging options to handle duplicate files
+}
+
+configurations.all {
+    exclude(group = "javax.activation", module = "activation")
 }
 
 
@@ -90,10 +94,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 
-    implementation("com.sun.mail:android-mail:1.6.2") {
-        exclude(group = "javax.activation", module = "activation")
-    }
-    implementation("com.sun.mail:android-activation:1.6.2")
+    implementation("com.sun.mail:android-mail:1.6.7")
+    implementation("com.sun.mail:android-activation:1.6.7")
 
     // Standard AndroidX
     implementation ("androidx.appcompat:appcompat:1.6.1")
