@@ -386,6 +386,23 @@
                         android:visibility="gone" />
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_generate_qr"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:layout_marginBottom="8dp"
+                        android:text="Generate QR Code"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="@color/primaryColor"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_qr_code"
+                        app:iconTint="@color/white"
+                        app:iconSize="18dp"
+                        android:visibility="gone" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_delete_device"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

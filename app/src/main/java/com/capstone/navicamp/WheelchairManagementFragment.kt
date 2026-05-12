@@ -305,13 +305,20 @@ class WheelchairManagementFragment : Fragment(R.layout.fragment_wheelchair_manag
 
         // Delete device button - admin only
         val deleteBtn = dialogView.findViewById<MaterialButton>(R.id.btn_delete_device)
+        val generateQrBtn = dialogView.findViewById<MaterialButton>(R.id.btn_generate_qr)
         if (isAdmin) {
             deleteBtn.visibility = View.VISIBLE
             deleteBtn.setOnClickListener {
                 showDeleteDeviceDialog(wheelchair.deviceID, dialog)
             }
+            generateQrBtn.visibility = View.VISIBLE
+            generateQrBtn.setOnClickListener {
+                dialog.dismiss()
+                showQrGenerationDialog(wheelchair.deviceID)
+            }
         } else {
             deleteBtn.visibility = View.GONE
+            generateQrBtn.visibility = View.GONE
         }
 
         // Rename device button

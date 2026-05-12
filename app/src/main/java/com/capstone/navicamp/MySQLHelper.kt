@@ -2831,15 +2831,22 @@ object MySQLHelper {
         var resultSet: ResultSet? = null
         return try {
             connection = getConnection() ?: return null
-            val query = "SELECT MAX(CAST(deviceID AS UNSIGNED)) AS maxID FROM devices_table"
+            val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR).toString()
+            // Fetch all deviceIDs that start with the current year
+            val query = "SELECT deviceID FROM devices_table WHERE deviceID LIKE ?"
             statement = connection.prepareStatement(query)
+            statement.setString(1, "$currentYear%")
             resultSet = statement.executeQuery()
-            if (resultSet.next()) {
-                val maxID = resultSet.getLong("maxID")
-                if (maxID == 0L) "202501" else (maxID + 1).toString()
-            } else {
-                "202501"
+
+            var maxSeq = 0
+            while (resultSet.next()) {
+                val id = resultSet.getString("deviceID") ?: continue
+                // The sequence is everything after the year prefix (4 digits)
+                val seqPart = id.drop(4).toIntOrNull() ?: continue
+                if (seqPart > maxSeq) maxSeq = seqPart
             }
+            val nextSeq = (maxSeq + 1).toString().padStart(2, '0')
+            "$currentYear$nextSeq"
         } catch (e: SQLException) {
             Log.e("MySQLHelper", "Error getting next device ID: ${e.message}", e)
             null
