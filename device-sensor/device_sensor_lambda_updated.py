@@ -162,6 +162,9 @@ def handle_sensor_data(event):
         floor_level = body['floorLevel']
         rssi = int(body['rssi'])
         distance = float(body['distance'])
+
+        if is_gps_available(latitude, longitude) and is_missing_beacon_floor(floor_level):
+            floor_level = "Campus Grounds"
         
         print(f"INFO: Updating sensor data for device {device_id}")
         print(f"INFO: Location: {latitude}, {longitude}, Floor: {floor_level}")
@@ -256,6 +259,15 @@ def handle_sensor_data(event):
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': 'Internal server error'})
         }
+
+def is_gps_available(latitude, longitude):
+    return latitude != 0.0 and longitude != 0.0
+
+def is_missing_beacon_floor(floor_level):
+    if floor_level is None:
+        return True
+    normalized = str(floor_level).strip().lower()
+    return normalized == "" or normalized == "unknown"
 
 def lambda_handler(event, context):
     """Main Lambda handler for device and sensor endpoints."""

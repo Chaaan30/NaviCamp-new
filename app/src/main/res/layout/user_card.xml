@@ -20,9 +20,9 @@
         <!-- User Type Indicator -->
         <View
             android:id="@+id/user_type_indicator"
-            android:layout_width="8dp"
+            android:layout_width="6dp"
             android:layout_height="match_parent"
-            android:layout_marginEnd="16dp" />
+            android:layout_marginEnd="14dp" />
 
         <!-- Main Content -->
         <LinearLayout
@@ -31,7 +31,7 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Header Row -->
+            <!-- Header Row: Name + Badge -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -45,17 +45,20 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="User Name"
-                    android:textSize="18sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/primaryColor"
-                    android:fontFamily="@font/inter_bold" />
+                    android:fontFamily="@font/inter_bold"
+                    android:ellipsize="end"
+                    android:maxLines="2" />
 
                 <TextView
                     android:id="@+id/user_type_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Student"
-                    android:textSize="12sp"
+                    android:layout_marginStart="8dp"
+                    android:text="Permanent"
+                    android:textSize="11sp"
                     android:background="@drawable/status_badge_background"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="4dp"
@@ -64,40 +67,114 @@
 
             </LinearLayout>
 
-            <!-- User ID -->
+            <!-- School ID -->
             <TextView
                 android:id="@+id/user_id_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="ID: 123456789"
-                android:textSize="14sp"
+                android:text="School ID: 123456789"
+                android:textSize="13sp"
                 android:textColor="@color/darkGray"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="3dp"
                 android:fontFamily="@font/inter" />
 
-            <!-- Email Info -->
+            <!-- Email -->
             <TextView
                 android:id="@+id/email_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Email: user@example.com"
-                android:textSize="14sp"
+                android:textSize="13sp"
                 android:textColor="@color/darkGray"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="3dp"
                 android:fontFamily="@font/inter" />
 
-            <!-- Contact Number Info -->
+            <!-- Contact Number -->
             <TextView
                 android:id="@+id/contact_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Contact: +60 12-345 6789"
-                android:textSize="14sp"
+                android:text="Contact: +63 912-345-6789"
+                android:textSize="13sp"
                 android:textColor="@color/darkGray"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="3dp"
                 android:fontFamily="@font/inter" />
 
-            <!-- Creation Date -->
+            <!-- Emergency Contact (hidden if empty) -->
+            <LinearLayout
+                android:id="@+id/emergency_contact_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/emergency_contact_person_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Emergency Contact: —"
+                    android:textSize="13sp"
+                    android:textColor="@color/darkGray"
+                    android:layout_marginBottom="3dp"
+                    android:fontFamily="@font/inter" />
+
+                <TextView
+                    android:id="@+id/emergency_contact_number_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Emergency No.: —"
+                    android:textSize="13sp"
+                    android:textColor="@color/darkGray"
+                    android:layout_marginBottom="3dp"
+                    android:fontFamily="@font/inter" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp"
+                android:background="#E0E0E0" />
+
+            <!-- Expiry Date (shown only for Temporary users) -->
+            <TextView
+                android:id="@+id/expiry_date_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Expires: 2026-12-31"
+                android:textSize="12sp"
+                android:textColor="#E65100"
+                android:layout_marginBottom="3dp"
+                android:fontFamily="@font/inter_medium"
+                android:visibility="gone" />
+
+            <!-- Verification Date -->
+            <TextView
+                android:id="@+id/verification_date_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Verified: 2026-05-01"
+                android:textSize="12sp"
+                android:textColor="@color/gray"
+                android:layout_marginBottom="3dp"
+                android:fontFamily="@font/inter"
+                android:visibility="gone" />
+
+            <!-- Verified By -->
+            <TextView
+                android:id="@+id/verified_by_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Verified by: —"
+                android:textSize="12sp"
+                android:textColor="@color/gray"
+                android:layout_marginBottom="3dp"
+                android:fontFamily="@font/inter"
+                android:visibility="gone" />
+
+            <!-- Registered Date -->
             <TextView
                 android:id="@+id/created_date_text"
                 android:layout_width="match_parent"
@@ -111,4 +188,4 @@
 
     </LinearLayout>
 
-</androidx.cardview.widget.CardView> 
+</androidx.cardview.widget.CardView>

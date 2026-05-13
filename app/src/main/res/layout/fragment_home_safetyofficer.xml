@@ -182,6 +182,15 @@
                         android:textSize="36sp"
                         android:textColor="#FFFFFF"
                         android:fontFamily="@font/inter_bold" />
+                    <TextView
+                        android:id="@+id/online_users_indicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="● 0 online now"
+                        android:textColor="#A5F3A0"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/inter_medium" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -29,7 +29,7 @@ fun exportIncidentDataToCSV(context: Context, data: List<List<String>>, fileName
 }
 
 fun writeIncidentDataToWriter(writer: Writer, data: List<List<String>>) {
-    writer.appendLine("Alert ID,User ID,Device ID,Name,Coordinates,Floor Level,Status,Time of Alert,Resolved On,Officer Name,Incident Description")
+    writer.appendLine("Alert ID,User ID,Device ID,Name,Coordinates,Floor Level,Status,Assistance Type,Date & Time of Alert,Resolved On,Responding Officer,First Aid Action,Further Information for Treatment,Relocated To")
     data.forEach { row ->
         writer.appendLine(row.joinToString(",") { "\"${it.replace("\"", "\"\"")}\"" })
     }
@@ -55,9 +55,10 @@ object CsvExportUtils {
 
             // Write headers
             val headers = listOf(
-                "Alert ID", "User ID", "Device ID", "Name", "Coordinates",
-                "Floor Level", "Status", "Time of Alert", "Resolved On",
-                "Officer Name", "Incident Description"
+                "Alert ID", "User ID", "Device ID", "Name", "Coordinates", "Floor Level",
+                "Status", "Assistance Type", "Date & Time of Alert", "Resolved On",
+                "Responding Officer", "First Aid Action", "Further Information for Treatment",
+                "Relocated To"
             )
             writer.write(headers.joinToString(",") + "\n")
 

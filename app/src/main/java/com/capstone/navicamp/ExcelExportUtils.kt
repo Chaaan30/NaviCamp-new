@@ -43,9 +43,10 @@ object ExcelExportUtils {
 
         // --- Headers ---
         val headers = listOf(
-            "Alert ID", "User ID", "Device ID", "Name", "Coordinates",
-            "Floor Level", "Status", "Time of Alert", "Resolved On",
-            "Officer Name", "Incident Description"
+            "Alert ID", "User ID", "Device ID", "Name", "Coordinates", "Floor Level",
+            "Status", "Assistance Type", "Date & Time of Alert", "Resolved On",
+            "Responding Officer", "First Aid Action", "Further Information for Treatment",
+            "Relocated To"
         )
         val headerRow = sheet.createRow(2) // Start headers on the 3rd row (index 2)
         headers.forEachIndexed { index, header ->
@@ -64,7 +65,7 @@ object ExcelExportUtils {
                 rowData.forEachIndexed { cellIndex, cellData ->
                     val cell = row.createCell(cellIndex)
                     // Format dates if they look like timestamps
-                    if ((cellIndex == 7 || cellIndex == 8) && cellData.isNotBlank()) {
+                    if ((cellIndex == 8 || cellIndex == 9) && cellData.isNotBlank()) {
                         try {
                             val inputFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                             val outputFormat = SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault())
@@ -90,10 +91,13 @@ object ExcelExportUtils {
         sheet.setColumnWidth(4, 5000) // Coordinates
         sheet.setColumnWidth(5, 4000) // Floor Level
         sheet.setColumnWidth(6, 3000) // Status
-        sheet.setColumnWidth(7, 5000) // Time of Alert
-        sheet.setColumnWidth(8, 5000) // Resolved On
-        sheet.setColumnWidth(9, 5000) // Officer Name
-        sheet.setColumnWidth(10, 10000) // Incident Description
+        sheet.setColumnWidth(7, 4500) // Assistance Type
+        sheet.setColumnWidth(8, 5000) // Date & Time of Alert
+        sheet.setColumnWidth(9, 5000) // Resolved On
+        sheet.setColumnWidth(10, 5000) // Responding Officer
+        sheet.setColumnWidth(11, 7000) // First Aid Action
+        sheet.setColumnWidth(12, 10000) // Further Information for Treatment
+        sheet.setColumnWidth(13, 6000) // Relocated To
 
         workbook.write(outputStream)
         workbook.close()
