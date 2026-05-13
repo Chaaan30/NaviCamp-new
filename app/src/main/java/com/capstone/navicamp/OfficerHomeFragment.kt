@@ -12,6 +12,8 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.capstone.navicamp.R
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,6 +30,8 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     private lateinit var onDutySwitch: SwitchCompat
     private var suppressOnDutySwitchCallback = false
     private var officerFullName: String = "Officer"
+    private var presenceListener: ListenerRegistration? = null
+    private var onlineUsersIndicator: TextView? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -40,6 +44,7 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         val iotDevicesCard = view.findViewById<MaterialCardView>(R.id.iot_devices_card)
         val registeredUsersText = view.findViewById<TextView>(R.id.registered_users)
         val iotDevicesText = view.findViewById<TextView>(R.id.iot_devices)
+        onlineUsersIndicator = view.findViewById(R.id.online_users_indicator)
         emptyStateLayout = view.findViewById(R.id.empty_state_layout)
         onDutySwitch = view.findViewById(R.id.on_duty_switch)
 
@@ -72,6 +77,27 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
         viewModel.fetchPendingItems(officerFullName)
         viewModel.fetchUserCount()
         viewModel.fetchDeviceCount()
+    }
+
+    private fun startPresenceListener() {
+        val firestore = FirebaseFirestore.getInstance()
+        val twoMinutesAgo = com.google.firebase.Timestamp(
+            Date(System.currentTimeMillis() - 2 * 60 * 1000)
+        )
+
+        presenceListener = firestore.collection("presence")
+            .whereEqualTo("user_type", "locomotor")
+            .whereGreaterThan("last_seen", twoMinutesAgo)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val onlineCount = snapshot.size()
+                onlineUsersIndicator?.text = "\u25cf $onlineCount online now"
+            }
+    }
+
+    private fun stopPresenceListener() {
+        presenceListener?.remove()
+        presenceListener = null
     }
 
     private fun setupObservers(view: View) {
@@ -274,10 +300,12 @@ class OfficerHomeFragment : Fragment(R.layout.fragment_home_safetyofficer) {
     override fun onResume() {
         super.onResume()
         smartPollingManager.startPolling()
+        startPresenceListener()
     }
 
     override fun onPause() {
         super.onPause()
         smartPollingManager.stopPolling()
+        stopPresenceListener()
     }
 }

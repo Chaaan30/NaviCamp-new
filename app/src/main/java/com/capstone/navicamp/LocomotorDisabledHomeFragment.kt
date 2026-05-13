@@ -19,6 +19,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.firestore.FirebaseFirestore
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -170,6 +171,7 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     override fun onResume() {
         super.onResume()
         refreshStateManually()
+        updatePresence()
     }
 
     override fun onPause() {
@@ -191,6 +193,22 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
         resetHandler.removeCallbacks(resetRunnable)
         stopIncidentPolling()
         stopGpsUpdates()
+    }
+
+    private fun updatePresence() {
+        val uid = currentUserID ?: return
+        val firestore = FirebaseFirestore.getInstance()
+        firestore.collection("presence").document(uid)
+            .set(mapOf(
+                "last_seen" to com.google.firebase.Timestamp.now(),
+                "user_type" to "locomotor"
+            ))
+            .addOnSuccessListener {
+                Log.d("Presence", "Presence updated successfully for user: $uid")
+            }
+            .addOnFailureListener { e ->
+                Log.e("Presence", "Failed to update presence: ${e.message}")
+            }
     }
 
     private fun checkUserAccessStatus() {
