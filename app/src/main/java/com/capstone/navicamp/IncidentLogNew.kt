@@ -418,10 +418,13 @@ class IncidentLogNew : AppCompatActivity() {
                 incident.coordinates,
                 incident.floorLevel,
                 incident.status,
+                getAssistanceTypeForExport(incident),
                 incident.timeOfAlert,
                 incident.resolvedOn ?: "",
                 incident.officerName ?: "",
-                incident.incidentDescription
+                incident.actionFA,
+                incident.actionINFO,
+                incident.relocatedLocation
             )
         }
         
@@ -461,6 +464,20 @@ class IncidentLogNew : AppCompatActivity() {
                     Toast.makeText(this, "${format.uppercase()} export not implemented for Android 10 and below", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun getAssistanceTypeForExport(incident: IncidentCardAdapter.IncidentData): String {
+        val combinedText = listOf(
+            incident.incidentDescription,
+            incident.relocatedLocation,
+            incident.actionINFO
+        ).joinToString(" ").lowercase(Locale.getDefault())
+
+        return if (combinedText.contains("fall")) {
+            "Fall Detection"
+        } else {
+            "Manual SOS"
         }
     }
 
@@ -561,10 +578,13 @@ class IncidentLogNew : AppCompatActivity() {
                     incident.coordinates,
                     incident.floorLevel,
                     incident.status,
+                    getAssistanceTypeForExport(incident),
                     incident.timeOfAlert,
                     incident.resolvedOn ?: "",
                     incident.officerName ?: "",
-                    incident.incidentDescription
+                    incident.actionFA,
+                    incident.actionINFO,
+                    incident.relocatedLocation
                 )
             }
             

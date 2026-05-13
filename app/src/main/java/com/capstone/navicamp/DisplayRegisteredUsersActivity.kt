@@ -210,7 +210,14 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         val contactText = cardView.findViewById<TextView>(R.id.contact_text)
         val createdDateText = cardView.findViewById<TextView>(R.id.created_date_text)
         val userTypeIndicator = cardView.findViewById<View>(R.id.user_type_indicator)
+        val emergencySection = cardView.findViewById<View>(R.id.emergency_contact_section)
+        val emergencyPersonText = cardView.findViewById<TextView>(R.id.emergency_contact_person_text)
+        val emergencyNumberText = cardView.findViewById<TextView>(R.id.emergency_contact_number_text)
+        val expiryDateText = cardView.findViewById<TextView>(R.id.expiry_date_text)
+        val verificationDateText = cardView.findViewById<TextView>(R.id.verification_date_text)
+        val verifiedByText = cardView.findViewById<TextView>(R.id.verified_by_text)
 
+        // Basic info
         userIdText.text = "School ID: ${user.userID}"
         userNameText.text = user.fullName
         userTypeBadge.text = user.userType
@@ -218,21 +225,60 @@ class DisplayRegisteredUsersActivity : AppCompatActivity() {
         contactText.text = "Contact: ${user.contactNumber}"
         createdDateText.text = "Registered: ${formatRegisteredDate(user.createdOn)}"
 
-        // Set user type badge and indicator colors based on type
-        when (user.userType.lowercase()) {
-            "temporarily disabled" -> {
-                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_blue_dark))
-                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_blue_dark))
-            }
-            "permanently disabled" -> {
-                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.holo_green_dark))
-                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.holo_green_dark))
-            }
-            else -> {
-                userTypeBadge.backgroundTintList = ColorStateList.valueOf(resources.getColor(android.R.color.darker_gray))
-                userTypeIndicator.setBackgroundColor(resources.getColor(android.R.color.darker_gray))
-            }
+        // Emergency contact
+        val hasEmergencyContact = user.emergencyContactPerson.isNotBlank() || user.emergencyContactNumber.isNotBlank()
+        if (hasEmergencyContact) {
+            emergencySection.visibility = View.VISIBLE
+            emergencyPersonText.text = "Emergency Contact: ${user.emergencyContactPerson.ifBlank { "—" }}"
+            emergencyNumberText.text = "Emergency No.: ${user.emergencyContactNumber.ifBlank { "—" }}"
+        } else {
+            emergencySection.visibility = View.GONE
         }
+
+        // Expiry date — only for Temporary users
+        val isTemporary = user.userType.equals("Temporary", ignoreCase = true)
+        if (isTemporary && user.expiryDate.isNotBlank()) {
+            expiryDateText.visibility = View.VISIBLE
+            expiryDateText.text = "Expires: ${user.expiryDate}"
+        } else {
+            expiryDateText.visibility = View.GONE
+        }
+
+        // Verification date
+        if (user.verificationDate.isNotBlank()) {
+            verificationDateText.visibility = View.VISIBLE
+            verificationDateText.text = "Verified on: ${formatRegisteredDate(user.verificationDate)}"
+        } else {
+            verificationDateText.visibility = View.GONE
+        }
+
+        // Verified by — resolve ID → name asynchronously
+        if (user.verifiedByID.isNotBlank()) {
+            verifiedByText.visibility = View.VISIBLE
+            verifiedByText.text = "Verified by: Loading..."
+            lifecycleScope.launch {
+                val officerName = withContext(Dispatchers.IO) {
+                    MySQLHelper.getFullNameByUserID(user.verifiedByID)
+                }
+                verifiedByText.text = "Verified by: ${officerName ?: user.verifiedByID}"
+            }
+        } else {
+            verifiedByText.visibility = View.GONE
+        }
+
+        // Colors
+        val themeColor = when (user.userType.lowercase()) {
+            "temporarily disabled", "temporary" ->
+                resources.getColor(android.R.color.holo_blue_dark)
+            "permanently disabled", "permanent" ->
+                resources.getColor(android.R.color.holo_green_dark)
+            else -> resources.getColor(android.R.color.darker_gray)
+        }
+
+        userTypeIndicator.setBackgroundColor(themeColor)
+        userTypeBadge.backgroundTintList = ColorStateList.valueOf(themeColor)
+        userTypeBadge.setTextColor(themeColor)
+        userNameText.setTextColor(themeColor)
     }
 
     private fun formatRegisteredDate(rawDateTime: String): String {

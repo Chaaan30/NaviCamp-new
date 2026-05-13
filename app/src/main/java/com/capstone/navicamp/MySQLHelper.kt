@@ -382,6 +382,27 @@ object MySQLHelper {
         }
     }
 
+    fun getFullNameByUserID(userID: String): String? {
+        var connection: Connection? = null
+        var statement: PreparedStatement? = null
+        var resultSet: ResultSet? = null
+        return try {
+            connection = getConnection() ?: return null
+            val query = "SELECT fullName FROM user_table WHERE userID = ? LIMIT 1"
+            statement = connection.prepareStatement(query)
+            statement.setString(1, userID)
+            resultSet = statement.executeQuery()
+            if (resultSet.next()) resultSet.getString("fullName") else null
+        } catch (e: SQLException) {
+            Log.e("MySQLHelper", "getFullNameByUserID failed: ${e.message}")
+            null
+        } finally {
+            resultSet?.close()
+            statement?.close()
+            connection?.close()
+        }
+    }
+
     fun insertFeedback(userID: String, fbDescription: String): Boolean {
         var connection: Connection? = null
         var statement: PreparedStatement? = null
@@ -3272,7 +3293,12 @@ object MySQLHelper {
                     u.createdOn, 
                     u.updatedOn, 
                     u.proofPicture, 
-                    u.verified
+                    u.verified,
+                    COALESCE(p.emergencyContactPerson, '') AS emergencyContactPerson,
+                    COALESCE(p.emergencyContactNumber, '') AS emergencyContactNumber,
+                    COALESCE(p.expiryDate, '') AS expiryDate,
+                    COALESCE(CAST(p.verifiedBy AS CHAR), '') AS verifiedBy,
+                    COALESCE(p.verificationDate, '') AS verificationDate
                 FROM user_table u
                 INNER JOIN pwd_profiles_table p ON u.userID = p.userID
                 WHERE u.verified = 1
@@ -3285,15 +3311,20 @@ object MySQLHelper {
             while (resultSet.next()) {
                 users.add(
                     UserData(
-                        resultSet.getString("userID") ?: "",
-                        resultSet.getString("fullName") ?: "",
-                        resultSet.getString("userType") ?: "",
-                        resultSet.getString("email") ?: "",
-                        resultSet.getString("contactNumber") ?: "",
-                        resultSet.getString("createdOn") ?: "",
-                        resultSet.getString("updatedOn") ?: "",
-                        resultSet.getString("proofPicture") ?: "",
-                        resultSet.getInt("verified")
+                        userID = resultSet.getString("userID") ?: "",
+                        fullName = resultSet.getString("fullName") ?: "",
+                        userType = resultSet.getString("userType") ?: "",
+                        email = resultSet.getString("email") ?: "",
+                        contactNumber = resultSet.getString("contactNumber") ?: "",
+                        createdOn = resultSet.getString("createdOn") ?: "",
+                        updatedOn = resultSet.getString("updatedOn") ?: "",
+                        proofPicture = resultSet.getString("proofPicture") ?: "",
+                        verified = resultSet.getInt("verified"),
+                        emergencyContactPerson = resultSet.getString("emergencyContactPerson") ?: "",
+                        emergencyContactNumber = resultSet.getString("emergencyContactNumber") ?: "",
+                        expiryDate = resultSet.getString("expiryDate") ?: "",
+                        verifiedByID = resultSet.getString("verifiedBy") ?: "",
+                        verificationDate = resultSet.getString("verificationDate") ?: ""
                     )
                 )
             }

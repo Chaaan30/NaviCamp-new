@@ -9,5 +9,10 @@ data class UserData(
     val createdOn: String,
     val updatedOn: String,
     val proofPicture: String,
-    val verified: Int // Add this line
+    val verified: Int,
+    val emergencyContactPerson: String = "",
+    val emergencyContactNumber: String = "",
+    val expiryDate: String = "",
+    val verifiedByID: String = "",
+    val verificationDate: String = ""
 )

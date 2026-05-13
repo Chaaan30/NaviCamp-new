@@ -118,34 +118,73 @@ class RegisteredUsersFragment : Fragment(R.layout.fragment_registered_users) {
         val contactText = cardView.findViewById<TextView>(R.id.contact_text)
         val createdDateText = cardView.findViewById<TextView>(R.id.created_date_text)
         val userTypeIndicator = cardView.findViewById<View>(R.id.user_type_indicator)
+        val emergencySection = cardView.findViewById<View>(R.id.emergency_contact_section)
+        val emergencyPersonText = cardView.findViewById<TextView>(R.id.emergency_contact_person_text)
+        val emergencyNumberText = cardView.findViewById<TextView>(R.id.emergency_contact_number_text)
+        val expiryDateText = cardView.findViewById<TextView>(R.id.expiry_date_text)
+        val verificationDateText = cardView.findViewById<TextView>(R.id.verification_date_text)
+        val verifiedByText = cardView.findViewById<TextView>(R.id.verified_by_text)
 
-        // Set Data
+        // Basic info
         userIdText.text = "School ID: ${user.userID}"
         userNameText.text = user.fullName
-        userTypeBadge.text = user.userType // "Temporary" or "Permanent"
+        userTypeBadge.text = user.userType
         emailText.text = "Email: ${user.email}"
         contactText.text = "Contact: ${user.contactNumber}"
         createdDateText.text = "Registered: ${formatRegisteredDate(user.createdOn)}"
 
-        // Dynamic Color Logic
-        // Temporary = Blue (#0277BD), Permanent = Green (#2E7D32)
-        val themeColor = if (user.userType.equals("Temporary", ignoreCase = true)) {
-            Color.parseColor("#0277BD") // Material Blue 700
+        // Emergency contact
+        val hasEmergencyContact = user.emergencyContactPerson.isNotBlank() || user.emergencyContactNumber.isNotBlank()
+        if (hasEmergencyContact) {
+            emergencySection.visibility = View.VISIBLE
+            emergencyPersonText.text = "Emergency Contact: ${user.emergencyContactPerson.ifBlank { "—" }}"
+            emergencyNumberText.text = "Emergency No.: ${user.emergencyContactNumber.ifBlank { "—" }}"
         } else {
-            Color.parseColor("#2E7D32") // Material Green 800
+            emergencySection.visibility = View.GONE
         }
 
-        // 1. Set the side indicator color
+        // Expiry date — only for Temporary users
+        val isTemporary = user.userType.equals("Temporary", ignoreCase = true)
+        if (isTemporary && user.expiryDate.isNotBlank()) {
+            expiryDateText.visibility = View.VISIBLE
+            expiryDateText.text = "Expires: ${user.expiryDate}"
+        } else {
+            expiryDateText.visibility = View.GONE
+        }
+
+        // Verification date
+        if (user.verificationDate.isNotBlank()) {
+            verificationDateText.visibility = View.VISIBLE
+            verificationDateText.text = "Verified on: ${formatRegisteredDate(user.verificationDate)}"
+        } else {
+            verificationDateText.visibility = View.GONE
+        }
+
+        // Verified by — resolve ID → name asynchronously
+        if (user.verifiedByID.isNotBlank()) {
+            verifiedByText.visibility = View.VISIBLE
+            verifiedByText.text = "Verified by: Loading..."
+            viewLifecycleOwner.lifecycleScope.launch {
+                val officerName = withContext(Dispatchers.IO) {
+                    MySQLHelper.getFullNameByUserID(user.verifiedByID)
+                }
+                verifiedByText.text = "Verified by: ${officerName ?: user.verifiedByID}"
+            }
+        } else {
+            verifiedByText.visibility = View.GONE
+        }
+
+        // Dynamic Color Logic
+        val themeColor = if (isTemporary) {
+            android.graphics.Color.parseColor("#0277BD") // Blue
+        } else {
+            android.graphics.Color.parseColor("#2E7D32") // Green
+        }
+
         userTypeIndicator.setBackgroundColor(themeColor)
-
-        // 2. Set the badge background color (using tint to keep rounded corners)
-        userTypeBadge.backgroundTintList = ColorStateList.valueOf(themeColor)
-
-        // 3. Optional: Set the user name color to match the theme for a professional look
-        userNameText.setTextColor(themeColor)
-
-        // 4. Set badge text color (White looks better on dark blue/green)
+        userTypeBadge.backgroundTintList = android.content.res.ColorStateList.valueOf(themeColor)
         userTypeBadge.setTextColor(themeColor)
+        userNameText.setTextColor(themeColor)
     }
 
     private fun formatRegisteredDate(rawDateTime: String): String {

@@ -29,9 +29,10 @@ object PdfExportUtils {
             createEmptyPdfPage(pdfDocument)
         } else {
             val headers = listOf(
-                "Alert ID", "User ID", "Device ID", "Name", "Coordinates", 
-                "Floor Level", "Status", "Time of Alert", "Resolved On", 
-                "Officer Name", "Incident Description"
+                "Alert ID", "User ID", "Device ID", "Name", "Coordinates",
+                "Floor Level", "Status", "Assistance Type", "Date & Time of Alert",
+                "Resolved On", "Responding Officer", "First Aid Action",
+                "Further Information for Treatment", "Relocated To"
             )
             createDataPages(pdfDocument, headers, data, officerName)
         }
@@ -197,18 +198,21 @@ object PdfExportUtils {
         val widths = IntArray(columnCount)
         
         // Give more space to description and name
-        if (columnCount >= 11) {
+        if (columnCount >= 14) {
             widths[0] = (availableWidth * 0.05f).toInt() // Alert ID
-            widths[1] = (availableWidth * 0.08f).toInt() // User ID
-            widths[2] = (availableWidth * 0.07f).toInt() // Device ID
-            widths[3] = (availableWidth * 0.10f).toInt() // Name
-            widths[4] = (availableWidth * 0.10f).toInt() // Coordinates
-            widths[5] = (availableWidth * 0.08f).toInt() // Floor Level
-            widths[6] = (availableWidth * 0.07f).toInt() // Status
-            widths[7] = (availableWidth * 0.10f).toInt() // Time of Alert
-            widths[8] = (availableWidth * 0.10f).toInt() // Resolved On
-            widths[9] = (availableWidth * 0.10f).toInt() // Officer Name
-            widths[10] = (availableWidth * 0.15f).toInt()// Description
+            widths[1] = (availableWidth * 0.06f).toInt() // User ID
+            widths[2] = (availableWidth * 0.06f).toInt() // Device ID
+            widths[3] = (availableWidth * 0.09f).toInt() // Name
+            widths[4] = (availableWidth * 0.09f).toInt() // Coordinates
+            widths[5] = (availableWidth * 0.06f).toInt() // Floor Level
+            widths[6] = (availableWidth * 0.05f).toInt() // Status
+            widths[7] = (availableWidth * 0.07f).toInt() // Assistance Type
+            widths[8] = (availableWidth * 0.09f).toInt() // Date & Time of Alert
+            widths[9] = (availableWidth * 0.08f).toInt() // Resolved On
+            widths[10] = (availableWidth * 0.08f).toInt() // Responding Officer
+            widths[11] = (availableWidth * 0.08f).toInt() // First Aid Action
+            widths[12] = (availableWidth * 0.12f).toInt() // Further Information for Treatment
+            widths[13] = (availableWidth * 0.07f).toInt() // Relocated To
         } else {
             val baseWidth = availableWidth / columnCount
             for (i in 0 until columnCount) {
