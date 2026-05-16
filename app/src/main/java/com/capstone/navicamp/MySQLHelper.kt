@@ -238,6 +238,7 @@ object MySQLHelper {
                         l.dateTime,
                         i.officerResponded,
                         i.relocatedLocation,
+                        i.alertDescription,
                         p.emergencyContactPerson,
                         p.emergencyContactNumber
                     FROM incident_logs_table i
@@ -286,6 +287,7 @@ object MySQLHelper {
                         l.dateTime,
                         i.officerResponded,
                         i.relocatedLocation,
+                        i.alertDescription,
                         p.emergencyContactPerson,
                         p.emergencyContactNumber
                     FROM incident_logs_table i
@@ -313,8 +315,10 @@ object MySQLHelper {
 
             while (resultSet.next()) {
                 val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceText = "${relocatedLocation} ${alertDescription}".lowercase(Locale.getDefault())
                 val assistanceType =
-                    if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    if (assistanceText.contains("wheelchair fall") || assistanceText.contains("fall detected")) {
                         "FALL_DETECTION"
                     } else {
                         "MANUAL"
@@ -2028,6 +2032,7 @@ object MySQLHelper {
                     l.dateTime,
                     i.officerResponded,
                     i.relocatedLocation,
+                    i.alertDescription,
                     u.contactNumber,
                     p.schoolID,
                     p.emergencyContactPerson,
@@ -2047,8 +2052,10 @@ object MySQLHelper {
             resultSet = statement.executeQuery()
             if (resultSet.next()) {
                 val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceText = "${relocatedLocation} ${alertDescription}".lowercase(Locale.getDefault())
                 val assistanceType =
-                    if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    if (assistanceText.contains("wheelchair fall") || assistanceText.contains("fall detected")) {
                         "FALL_DETECTION"
                     } else {
                         "MANUAL"
@@ -3112,6 +3119,7 @@ object MySQLHelper {
                 l.dateTime, 
                 i.officerResponded,
                 i.relocatedLocation,
+                i.alertDescription,
                 p.schoolID,
                 p.emergencyContactPerson,
                 p.emergencyContactNumber
@@ -3129,8 +3137,10 @@ object MySQLHelper {
             resultSet = statement?.executeQuery()
             if (resultSet?.next() == true) {
                 val relocatedLocation = resultSet.getString("relocatedLocation") ?: ""
+                val alertDescription = resultSet.getString("alertDescription") ?: ""
+                val assistanceText = "${relocatedLocation} ${alertDescription}".lowercase(Locale.getDefault())
                 val assistanceType =
-                    if (relocatedLocation.contains("WHEELCHAIR FALL DETECTED", ignoreCase = true)) {
+                    if (assistanceText.contains("wheelchair fall") || assistanceText.contains("fall detected")) {
                         "FALL_DETECTION"
                     } else {
                         "MANUAL"

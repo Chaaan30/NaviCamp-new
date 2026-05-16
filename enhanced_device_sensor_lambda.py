@@ -321,11 +321,20 @@ def handle_sensor_data(event):
                     (deviceID, userID, status, latitude, longitude, floorLevel, rssi, distance, connectedUntil, fallStatus)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
-                    
-                    cursor.execute(insert_query, (
-                        device_id, None, 'available', latitude, longitude, floor_level, 
-                        rssi, distance, None, fall_status
-                    ))
+
+                    new_device_values = (
+                        device_id,
+                        None,
+                        "available",
+                        latitude,
+                        longitude,
+                        floor_level,
+                        rssi,
+                        distance,
+                        None,
+                        fall_status,
+                    )
+                    cursor.execute(insert_query, new_device_values)
                     print(f"INFO: Inserted new device {device_id} with sensor data")
                 
                 # Return success response with Philippines time
