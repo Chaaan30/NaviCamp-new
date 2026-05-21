@@ -508,17 +508,6 @@
                             android:textSize="15sp"
                             android:textColor="@color/primaryDarkColor"
                             android:paddingTop="4dp" />
-                        <Spinner
-                            android:id="@+id/pwd_edit_department_spinner"
-                            android:layout_width="match_parent"
-                            android:layout_height="48dp"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/spinner_background_with_arrow"
-                            android:paddingStart="4dp"
-                            android:paddingEnd="4dp"
-                            android:popupBackground="@android:color/white"
-                            android:spinnerMode="dropdown"
-                            android:visibility="gone" />
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/inactive_stroke" />

@@ -37,7 +37,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
     private lateinit var schoolIdText: TextView
     private lateinit var editSchoolId: EditText
     private lateinit var departmentText: TextView
-    private lateinit var editDepartmentSpinner: Spinner
     private lateinit var emailText: TextView
     private lateinit var contactNumberText: TextView
     private lateinit var editContactNumber: EditText
@@ -108,7 +107,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         schoolIdText = view.findViewById(R.id.pwd_display_id)
         editSchoolId = view.findViewById(R.id.pwd_edit_school_id)
         departmentText = view.findViewById(R.id.pwd_display_department)
-        editDepartmentSpinner = view.findViewById(R.id.pwd_edit_department_spinner)
         emailText = view.findViewById(R.id.pwd_display_email)
         contactNumberText = view.findViewById(R.id.pwd_display_contact)
         editContactNumber = view.findViewById(R.id.pwd_edit_contact)
@@ -180,7 +178,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         // Initial Visibility
         editFullNameLayout.visibility = View.GONE
         editSchoolIdLayout.visibility = View.GONE
-        editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editContactNumberLayout.visibility = View.GONE
         editEmergencyNameLayout.visibility = View.GONE
@@ -196,7 +193,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         val currentFull = fullNameText.text.toString()
         val currentSchoolId = schoolIdText.text.toString()
-        val currentDepartment = departmentText.text.toString()
         val currentEmail = emailText.text.toString()
         val currentContact = contactNumberText.text.toString()
         val currentEmerName = emergencyNameText.text.toString()
@@ -225,9 +221,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         editContactNumber.setText(currentContact)
         contactNumberText.visibility = View.GONE
 
-        setupDepartmentSpinner(userTypeText.text.toString(), currentDepartment)
-        editDepartmentSpinner.visibility = View.VISIBLE
-        departmentText.visibility = View.GONE
 
         editEmergencyNameLayout.visibility = View.VISIBLE
         editEmergencyName.setText(currentEmerName)
@@ -247,13 +240,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         val otp = editOtp.text.toString().trim()
         val currentEmail = emailText.text.toString().trim()
         val newContact = editContactNumber.text.toString().trim()
-        val selectedDepartment = editDepartmentSpinner.selectedItem?.toString()?.trim().orEmpty()
         val currentDepartment = departmentText.text.toString().trim()
-        val finalDepartment = if (selectedDepartment.isNotBlank() && selectedDepartment != "Department") {
-            selectedDepartment
-        } else {
-            currentDepartment
-        }
         val newEmerName = editEmergencyName.text.toString().trim()
         val newEmerNumber = editEmergencyNumber.text.toString().trim()
 
@@ -266,10 +253,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         }
         if (newEmail != currentEmail && !isOtpConfirmed) {
             Toast.makeText(requireContext(), "Verify new email first", Toast.LENGTH_SHORT).show()
-            return
-        }
-        if (finalDepartment.isBlank()) {
-            Toast.makeText(requireContext(), "Please select a department", Toast.LENGTH_SHORT).show()
             return
         }
         if (newContact.length != 11 || (newEmerNumber.isNotBlank() && newEmerNumber.length != 11)) {
@@ -285,7 +268,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                 MySQLHelper.updateUserWithUserID(
                     newFull, newSchool, if (isOtpConfirmed) newEmail else currentEmail,
                     newContact, newEmerName, newEmerNumber, userID!!, updatedOn,
-                    newDepartment = finalDepartment
+                    newDepartment = currentDepartment
                 )
             }
 
@@ -296,7 +279,7 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
                 editor.putString("schoolID", newSchool)
                 editor.putString("email", if (isOtpConfirmed) newEmail else currentEmail)
                 editor.putString("contactNumber", newContact)
-                editor.putString("department", finalDepartment)
+                editor.putString("department", currentDepartment)
                 editor.putString("emergencyContactName", newEmerName)
                 editor.putString("emergencyContactNumber", newEmerNumber)
                 editor.apply()
@@ -316,7 +299,6 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
 
         editFullNameLayout.visibility = View.GONE
         editSchoolIdLayout.visibility = View.GONE
-        editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editContactNumberLayout.visibility = View.GONE
         editEmergencyNameLayout.visibility = View.GONE
@@ -439,31 +421,11 @@ class LocomotorAccountSettingsFragment : Fragment(R.layout.fragment_locomotor_di
         }
     }
 
-    private fun setupDepartmentSpinner(userType: String, selectedDepartment: String) {
-        val normalizedUserType = userType.trim().lowercase()
-        val departmentArrayRes = if (normalizedUserType.contains("employee")) {
-            R.array.departments_employee
-        } else {
-            R.array.departments_student
-        }
-
-        val adapter = ArrayAdapter(
-            requireContext(),
-            R.layout.spinner_register_selected_item,
-            resources.getStringArray(departmentArrayRes).toList()
-        ).apply {
-            setDropDownViewResource(R.layout.spinner_register_dropdown_item)
-        }
-
-        editDepartmentSpinner.adapter = adapter
-        val index = adapter.getPosition(selectedDepartment).takeIf { it >= 0 } ?: 0
-        editDepartmentSpinner.setSelection(index)
-    }
 
     private fun setNonEditableFieldsDimmed(dim: Boolean) {
         val color = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
         val alpha = if (dim) 0.6f else 1.0f
-        listOf(userTypeText, disabilityTypeText, verifiedByText, verificationDateText, dateCreatedText).forEach {
+        listOf(departmentText, userTypeText, disabilityTypeText, verifiedByText, verificationDateText, dateCreatedText).forEach {
             it.setTextColor(color)
             it.alpha = alpha
         }
