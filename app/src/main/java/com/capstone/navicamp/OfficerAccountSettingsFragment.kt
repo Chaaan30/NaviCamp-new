@@ -35,7 +35,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
     private lateinit var userTypeText: TextView
     private lateinit var employeeTypeText: TextView
     private lateinit var departmentText: TextView
-    private lateinit var editDepartmentSpinner: Spinner
     private lateinit var emailText: TextView
     private lateinit var contactNumberText: TextView
     private lateinit var editContactNumber: EditText
@@ -94,7 +93,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         userTypeText = view.findViewById(R.id.user_type_text)
         employeeTypeText = view.findViewById(R.id.employee_type_text)
         departmentText = view.findViewById(R.id.department_text)
-        editDepartmentSpinner = view.findViewById(R.id.edit_department_spinner)
         emailText = view.findViewById(R.id.email_text)
         contactNumberText = view.findViewById(R.id.contact_number_text)
         editContactNumber = view.findViewById(R.id.edit_contact_number)
@@ -146,7 +144,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
 
         // Initial Visibility
         editFullNameLayout.visibility = View.GONE
-        editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editContactNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
@@ -161,7 +158,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         val currentEmail = emailText.text.toString()
         val currentFull = fullNameText.text.toString()
         val currentContact = contactNumberText.text.toString()
-        val currentDepartment = departmentText.text.toString()
 
         editFullNameLayout.visibility = View.VISIBLE
         editFullName.setText(currentFull)
@@ -182,9 +178,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         editContactNumber.setText(currentContact)
         contactNumberText.visibility = View.GONE
 
-        setupDepartmentSpinner(userTypeText.text.toString(), currentDepartment)
-        editDepartmentSpinner.visibility = View.VISIBLE
-        departmentText.visibility = View.GONE
 
         sendOtpButton.visibility = View.VISIBLE
     }
@@ -193,15 +186,9 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         val newFull = editFullName.text.toString().trim()
         val newEmail = editEmail.text.toString().trim()
         val newContact = editContactNumber.text.toString().trim()
-        val selectedDepartment = editDepartmentSpinner.selectedItem?.toString()?.trim().orEmpty()
         val otp = editOtp.text.toString().trim()
         val currentEmail = emailText.text.toString().trim()
         val currentDepartment = departmentText.text.toString().trim()
-        val finalDepartment = if (selectedDepartment.isNotBlank() && selectedDepartment != "Department") {
-            selectedDepartment
-        } else {
-            currentDepartment
-        }
 
         val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", Context.MODE_PRIVATE)
         val userID = sharedPreferences.getString("userID", null)
@@ -212,7 +199,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         }
         if (newContact.isNotBlank() && newContact.length != 11) { Toast.makeText(requireContext(), "11 digits required", Toast.LENGTH_SHORT).show(); return }
         if (newEmail != currentEmail && !isOtpConfirmed) { Toast.makeText(requireContext(), "Verify new email first", Toast.LENGTH_SHORT).show(); return }
-        if (finalDepartment.isBlank()) { Toast.makeText(requireContext(), "Please select a department", Toast.LENGTH_SHORT).show(); return }
 
         showLoadingDialog()
 
@@ -225,7 +211,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
                     newContact,
                     userID!!,
                     updatedOn,
-                    newDepartment = finalDepartment
+                    newDepartment = currentDepartment
                 )
             }
 
@@ -235,7 +221,7 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
                 editor.putString("fullName", newFull)
                 editor.putString("email", if (isOtpConfirmed) newEmail else currentEmail)
                 editor.putString("contactNumber", newContact)
-                editor.putString("department", finalDepartment)
+                editor.putString("department", currentDepartment)
                 editor.apply()
 
                 Toast.makeText(requireContext(), "Updated Successfully", Toast.LENGTH_SHORT).show()
@@ -252,7 +238,6 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         setNonEditableFieldsDimmed(false)
 
         editFullNameLayout.visibility = View.GONE
-        editDepartmentSpinner.visibility = View.GONE
         emailEditContainer.visibility = View.GONE
         editContactNumberLayout.visibility = View.GONE
         otpContainer.visibility = View.GONE
@@ -350,34 +335,11 @@ class OfficerAccountSettingsFragment : Fragment(R.layout.fragment_officer_accoun
         }
     }
 
-    private fun setupDepartmentSpinner(userType: String, selectedDepartment: String) {
-        val normalizedUserType = userType.trim().lowercase()
-        val departmentArrayRes = if (normalizedUserType.contains("employee")
-            || normalizedUserType.contains("officer")
-            || normalizedUserType.contains("admin")
-        ) {
-            R.array.departments_employee
-        } else {
-            R.array.departments_student
-        }
-
-        val adapter = ArrayAdapter(
-            requireContext(),
-            R.layout.spinner_register_selected_item,
-            resources.getStringArray(departmentArrayRes).toList()
-        ).apply {
-            setDropDownViewResource(R.layout.spinner_register_dropdown_item)
-        }
-
-        editDepartmentSpinner.adapter = adapter
-        val index = adapter.getPosition(selectedDepartment).takeIf { it >= 0 } ?: 0
-        editDepartmentSpinner.setSelection(index)
-    }
 
     private fun setNonEditableFieldsDimmed(dim: Boolean) {
         val color = if (dim) Color.parseColor("#AAAAAA") else Color.parseColor("#222222")
         val alpha = if (dim) 0.6f else 1.0f
-        listOf(userTypeText, employeeTypeText, dateCreatedText).forEach {
+        listOf(departmentText, userTypeText, employeeTypeText, dateCreatedText).forEach {
             it.setTextColor(color)
             it.alpha = alpha
         }
