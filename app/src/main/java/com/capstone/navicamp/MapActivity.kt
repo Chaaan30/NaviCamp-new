@@ -42,6 +42,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var map: GoogleMap
     private lateinit var fab: FloatingActionButton
     private lateinit var legendContainer: LinearLayout
+    private lateinit var legendCard: View
     private var officerLocationCallback: LocationCallback? = null
     private var officerID: String? = null
     private var selectedRequestMarker: Marker? = null
@@ -86,6 +87,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         filterLayout = findViewById(R.id.filter_layout)
         fabFilter = findViewById(R.id.fab_filter)
         legendContainer = findViewById(R.id.legend_container)
+        legendCard = findViewById(R.id.legend_card)
 
         fabFilter.setOnClickListener {
             filterContainer.visibility = if (filterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
@@ -248,10 +250,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         legendContainer.removeAllViews()
 
         if (activeUsers.isEmpty() && !hasOfficerGps) {
-            legendContainer.visibility = View.GONE
+            legendCard.visibility = View.GONE
             return
         }
-        legendContainer.visibility = View.VISIBLE
+        legendCard.visibility = View.VISIBLE
 
         if (hasOfficerGps) {
             legendContainer.addView(createLegendRow("You (Officer)", BitmapDescriptorFactory.HUE_AZURE))
@@ -386,16 +388,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = dpToPx(6)
+                bottomMargin = dpToPx(8)
             }
         }
 
         val dot = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(10), dpToPx(10)).apply {
-                marginEnd = dpToPx(8)
+                marginEnd = dpToPx(12)
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -407,20 +409,59 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             this.text = label
             setTextColor(resources.getColor(R.color.black, theme))
             textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1.0f
+            )
+        }
+
+        val switchView = com.google.android.material.switchmaterial.SwitchMaterial(this).apply {
+            isChecked = !hiddenCategories.contains(id)
+            val thumbStates = android.content.res.ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    colorInt,
+                    Color.parseColor("#B0B0B0")
+                )
+            )
+            thumbTintList = thumbStates
+
+            val trackColor = Color.argb(
+                70,
+                Color.red(colorInt),
+                Color.green(colorInt),
+                Color.blue(colorInt)
+            )
+            val trackStates = android.content.res.ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    trackColor,
+                    Color.parseColor("#E0E0E0")
+                )
+            )
+            trackTintList = trackStates
         }
 
         row.addView(dot)
         row.addView(text)
-
-        row.alpha = if (hiddenCategories.contains(id)) 0.5f else 1.0f
+        row.addView(switchView)
 
         row.setOnClickListener {
-            if (hiddenCategories.contains(id)) {
+            switchView.isChecked = !switchView.isChecked
+        }
+
+        switchView.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
                 hiddenCategories.remove(id)
-                row.alpha = 1.0f
             } else {
                 hiddenCategories.add(id)
-                row.alpha = 0.5f
             }
 
             if (id == "OFFICERS") {
