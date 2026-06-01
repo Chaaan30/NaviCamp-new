@@ -39,7 +39,11 @@ import java.util.*
 class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback {
 
     private var map: GoogleMap? = null
+    private lateinit var filterContainer: View
+    private lateinit var filterLayout: LinearLayout
+    private lateinit var fabFilter: FloatingActionButton
     private lateinit var legendContainer: LinearLayout
+    private lateinit var legendCard: View
     private lateinit var fabAssistance: FloatingActionButton
     private var officerLocationCallback: LocationCallback? = null
     private var officerID: String? = null
@@ -49,6 +53,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
     private var isRefreshing = false
     private val activeUserMarkers = mutableMapOf<String, Marker>()
     private val otherOfficerMarkers = mutableMapOf<String, Marker>()
+    private val hiddenCategories = mutableSetOf<String>()
 
     // For navigating to a specific assistance location
     private var pendingLocationID: String? = null
@@ -105,8 +110,17 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        filterContainer = view.findViewById(R.id.filter_container)
+        filterLayout = view.findViewById(R.id.filter_layout)
+        fabFilter = view.findViewById(R.id.fab_filter)
         legendContainer = view.findViewById(R.id.legend_container)
+        legendCard = view.findViewById(R.id.legend_card)
         fabAssistance = view.findViewById(R.id.fab_assistance)
+
+        fabFilter.setOnClickListener {
+            filterContainer.visibility = if (filterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+        setupFilterMenu()
 
         officerID = UserSingleton.userID
             ?: requireContext().getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
@@ -280,7 +294,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                     .position(position)
                     .title("You (Officer)")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-            )
+            )?.apply { isVisible = !hiddenCategories.contains("OFFICERS") }
         } else {
             officerSelfMarker?.position = position
         }
@@ -423,9 +437,72 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 }
                 updateOtherOfficerMarkers(otherOfficers)
                 updateActiveUserMarkers(activeUsers)
-                updateLegend(activeUsers, officerSelfMarker != null, otherOfficers)
+                updateLegend(activeUsers, officerGps != null && officerGps[0] != 0.0, otherOfficers)
             }
         }
+    }
+
+    private fun updateLegend(
+        activeUsers: List<ActiveAssistanceGps>,
+        hasOfficerGps: Boolean,
+        otherOfficers: List<LiveOfficerGps>? = null
+    ) {
+        legendContainer.removeAllViews()
+
+        if (activeUsers.isEmpty() && !hasOfficerGps && (otherOfficers.isNullOrEmpty())) {
+            legendCard.visibility = View.GONE
+            return
+        }
+        legendCard.visibility = View.VISIBLE
+
+        if (hasOfficerGps) {
+            legendContainer.addView(createLegendRow("You (Officer)", BitmapDescriptorFactory.HUE_AZURE))
+        }
+
+        otherOfficers?.forEach { officer ->
+            legendContainer.addView(createLegendRow("Officer: ${officer.fullName}", BitmapDescriptorFactory.HUE_CYAN))
+        }
+
+        activeUsers.forEach { user ->
+            val hue = hueForStatus(user.status)
+            legendContainer.addView(createLegendRow("${user.fullName} (${user.status})", hue))
+        }
+    }
+
+    private fun createLegendRow(label: String, hue: Float): View {
+        val ctx = requireContext()
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(4)
+            }
+        }
+
+        val colorInt = Color.HSVToColor(floatArrayOf(hue, 1f, 1f))
+
+        val dot = View(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(10), dpToPx(10)).apply {
+                marginEnd = dpToPx(8)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(colorInt)
+            }
+        }
+
+        val text = TextView(ctx).apply {
+            this.text = label
+            setTextColor(resources.getColor(R.color.black, ctx.theme))
+            textSize = 12f
+        }
+
+        row.addView(dot)
+        row.addView(text)
+        return row
     }
 
     private fun updateOtherOfficerMarkers(otherOfficers: List<LiveOfficerGps>) {
@@ -448,13 +525,14 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                         .position(position)
                         .title("Officer: ${officer.fullName}")
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
-                )
+                )?.apply { isVisible = !hiddenCategories.contains("OFFICERS") }
                 if (marker != null) {
                     otherOfficerMarkers[officer.userID] = marker
                 }
             } else {
                 existingMarker.position = position
                 existingMarker.title = "Officer: ${officer.fullName}"
+                existingMarker.isVisible = !hiddenCategories.contains("OFFICERS")
             }
         }
     }
@@ -496,12 +574,13 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                         .title("${userGps.fullName} (Needs Assistance)")
                         .snippet(userGps.userID)
                         .icon(BitmapDescriptorFactory.defaultMarker(hue))
-                )
+                )?.apply { isVisible = !hiddenCategories.contains(userGps.status.uppercase(Locale.getDefault())) }
                 if (marker != null) {
                     activeUserMarkers[userGps.userID] = marker
                 }
             } else {
                 existingMarker.position = userPosition
+                existingMarker.isVisible = !hiddenCategories.contains(userGps.status.uppercase(Locale.getDefault()))
                 // Update color if status changed
                 if (prevStatus != userGps.status) {
                     existingMarker.setIcon(BitmapDescriptorFactory.defaultMarker(hue))
@@ -528,65 +607,38 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         }
     }
 
-    private fun updateLegend(
-        activeUsers: List<ActiveAssistanceGps>,
-        hasOfficerGps: Boolean,
-        otherOfficers: List<LiveOfficerGps>
-    ) {
+    private fun setupFilterMenu() {
         val ctx = context ?: return
-        legendContainer.removeAllViews()
+        filterLayout.removeAllViews()
 
-        if (hasOfficerGps) {
-            legendContainer.addView(
-                createLegendRow(
-                    label = "Officer (You)",
-                    colorInt = Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_AZURE, 1f, 1f))
-                )
-            )
+        val categories = listOf(
+            Triple("PENDING", "Pending Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_RED, 1f, 1f))),
+            Triple("ONGOING", "Ongoing Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_ORANGE, 1f, 1f))),
+            Triple("RESOLVED", "Resolved Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_GREEN, 1f, 1f))),
+            Triple("OFFICERS", "Officers", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_CYAN, 1f, 1f)))
+        )
+
+        for ((id, label, colorInt) in categories) {
+            filterLayout.addView(createFilterRow(id, label, colorInt))
         }
-
-        otherOfficers.forEach { officer ->
-            legendContainer.addView(
-                createLegendRow(
-                    label = "Officer: ${officer.fullName}",
-                    colorInt = Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_CYAN, 1f, 1f))
-                )
-            )
-        }
-
-        activeUsers.forEach { userGps ->
-            val statusLabel = when (userGps.status.lowercase()) {
-                "resolved" -> "RESOLVED"
-                "ongoing" -> "ONGOING"
-                else -> "PENDING"
-            }
-            legendContainer.addView(
-                createLegendRow(
-                    label = "${userGps.fullName} ($statusLabel)",
-                    colorInt = colorForStatus(userGps.status)
-                )
-            )
-        }
-
-        legendContainer.visibility = if (legendContainer.childCount > 0) View.VISIBLE else View.GONE
     }
 
-    private fun createLegendRow(label: String, colorInt: Int): View {
+    private fun createFilterRow(id: String, label: String, colorInt: Int): View {
         val ctx = requireContext()
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = dpToPx(6)
+                bottomMargin = dpToPx(8)
             }
         }
 
         val dot = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(dpToPx(10), dpToPx(10)).apply {
-                marginEnd = dpToPx(8)
+                marginEnd = dpToPx(12)
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -597,11 +649,75 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         val text = TextView(ctx).apply {
             this.text = label
             setTextColor(resources.getColor(R.color.black, ctx.theme))
-            textSize = 12f
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1.0f
+            )
+        }
+
+        val switchView = com.google.android.material.switchmaterial.SwitchMaterial(ctx).apply {
+            isChecked = !hiddenCategories.contains(id)
+            val thumbStates = android.content.res.ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    colorInt,
+                    Color.parseColor("#B0B0B0")
+                )
+            )
+            thumbTintList = thumbStates
+
+            val trackColor = Color.argb(
+                70,
+                Color.red(colorInt),
+                Color.green(colorInt),
+                Color.blue(colorInt)
+            )
+            val trackStates = android.content.res.ColorStateList(
+                arrayOf(
+                    intArrayOf(android.R.attr.state_checked),
+                    intArrayOf(-android.R.attr.state_checked)
+                ),
+                intArrayOf(
+                    trackColor,
+                    Color.parseColor("#E0E0E0")
+                )
+            )
+            trackTintList = trackStates
         }
 
         row.addView(dot)
         row.addView(text)
+        row.addView(switchView)
+
+        row.setOnClickListener {
+            switchView.isChecked = !switchView.isChecked
+        }
+
+        switchView.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                hiddenCategories.remove(id)
+            } else {
+                hiddenCategories.add(id)
+            }
+            
+            if (id == "OFFICERS") {
+                officerSelfMarker?.isVisible = !hiddenCategories.contains(id)
+                otherOfficerMarkers.values.forEach { it.isVisible = !hiddenCategories.contains(id) }
+            } else {
+                activeUserMarkers.entries.forEach { (userId, marker) ->
+                    val status = activeUserStatuses[userId]?.uppercase(Locale.getDefault()) ?: ""
+                    if (status == id) {
+                        marker.isVisible = !hiddenCategories.contains(id)
+                    }
+                }
+            }
+        }
+
         return row
     }
 
