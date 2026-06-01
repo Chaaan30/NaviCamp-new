@@ -47,20 +47,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var selectedRequestMarker: Marker? = null
     private var officerSelfMarker: Marker? = null
 
+    private lateinit var filterContainer: View
+    private lateinit var filterLayout: LinearLayout
+    private lateinit var fabFilter: FloatingActionButton
+
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var isRefreshing = false
     private val activeUserMarkers = mutableMapOf<String, Marker>()
-
-    private val markerHues = listOf(
-        BitmapDescriptorFactory.HUE_RED,
-        BitmapDescriptorFactory.HUE_ORANGE,
-        BitmapDescriptorFactory.HUE_YELLOW,
-        BitmapDescriptorFactory.HUE_GREEN,
-        BitmapDescriptorFactory.HUE_CYAN,
-        BitmapDescriptorFactory.HUE_VIOLET,
-        BitmapDescriptorFactory.HUE_MAGENTA,
-        BitmapDescriptorFactory.HUE_ROSE
-    )
+    private val activeUserStatuses = mutableMapOf<String, String>()
+    private val hiddenCategories = mutableSetOf<String>()
 
     private val refreshRunnable = object : Runnable {
         override fun run() {
@@ -87,7 +82,15 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             showBottomSheet()
         }
 
+        filterContainer = findViewById(R.id.filter_container)
+        filterLayout = findViewById(R.id.filter_layout)
+        fabFilter = findViewById(R.id.fab_filter)
         legendContainer = findViewById(R.id.legend_container)
+
+        fabFilter.setOnClickListener {
+            filterContainer.visibility = if (filterContainer.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        }
+        setupFilterMenu()
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -233,9 +236,66 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (!::map.isInitialized) return@withContext
                 updateOfficerMarker(officerGps)
                 updateActiveUserMarkers(activeUsers)
-                updateLegend(activeUsers, officerGps != null)
+                updateLegend(activeUsers, officerGps != null && officerGps[0] != 0.0)
             }
         }
+    }
+
+    private fun updateLegend(
+        activeUsers: List<ActiveAssistanceGps>,
+        hasOfficerGps: Boolean
+    ) {
+        legendContainer.removeAllViews()
+
+        if (activeUsers.isEmpty() && !hasOfficerGps) {
+            legendContainer.visibility = View.GONE
+            return
+        }
+        legendContainer.visibility = View.VISIBLE
+
+        if (hasOfficerGps) {
+            legendContainer.addView(createLegendRow("You (Officer)", BitmapDescriptorFactory.HUE_AZURE))
+        }
+
+        activeUsers.forEach { user ->
+            val hue = hueForStatus(user.status)
+            legendContainer.addView(createLegendRow("${user.fullName} (${user.status})", hue))
+        }
+    }
+
+    private fun createLegendRow(label: String, hue: Float): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dpToPx(4)
+            }
+        }
+
+        val colorInt = Color.HSVToColor(floatArrayOf(hue, 1f, 1f))
+
+        val dot = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dpToPx(10), dpToPx(10)).apply {
+                marginEnd = dpToPx(8)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(colorInt)
+            }
+        }
+
+        val text = TextView(this).apply {
+            this.text = label
+            setTextColor(Color.BLACK)
+            textSize = 12f
+        }
+
+        row.addView(dot)
+        row.addView(text)
+        return row
     }
 
     private fun updateOfficerMarker(officerGps: DoubleArray?) {
@@ -252,7 +312,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     .position(position)
                     .title("You (Officer)")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-            )
+            )?.apply { isVisible = !hiddenCategories.contains("OFFICERS") }
         } else {
             officerSelfMarker?.position = position
         }
@@ -265,12 +325,14 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         staleMarkerIds.forEach { userID ->
             activeUserMarkers[userID]?.remove()
             activeUserMarkers.remove(userID)
+            activeUserStatuses.remove(userID)
         }
 
         activeUsers.forEach { userGps ->
             val userPosition = LatLng(userGps.latitude, userGps.longitude)
-            val hue = markerHueForUser(userGps.userID)
+            val hue = hueForStatus(userGps.status)
             val existingMarker = activeUserMarkers[userGps.userID]
+            val prevStatus = activeUserStatuses[userGps.userID]
 
             if (existingMarker == null) {
                 val marker = map.addMarker(
@@ -279,46 +341,47 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                         .title("${userGps.fullName} (Needs Assistance)")
                         .snippet(userGps.userID)
                         .icon(BitmapDescriptorFactory.defaultMarker(hue))
-                )
+                )?.apply { isVisible = !hiddenCategories.contains(userGps.status.uppercase(Locale.getDefault())) }
                 if (marker != null) {
                     activeUserMarkers[userGps.userID] = marker
                 }
             } else {
                 existingMarker.position = userPosition
+                existingMarker.isVisible = !hiddenCategories.contains(userGps.status.uppercase(Locale.getDefault()))
+                // Update color if status changed
+                if (prevStatus != userGps.status) {
+                    existingMarker.setIcon(BitmapDescriptorFactory.defaultMarker(hue))
+                }
             }
+
+            activeUserStatuses[userGps.userID] = userGps.status
         }
     }
 
-    private fun markerHueForUser(userID: String): Float {
-        val index = kotlin.math.abs(userID.hashCode()) % markerHues.size
-        return markerHues[index]
+    private fun hueForStatus(status: String): Float {
+        return when (status.lowercase(Locale.getDefault())) {
+            "resolved" -> BitmapDescriptorFactory.HUE_GREEN
+            "ongoing" -> BitmapDescriptorFactory.HUE_ORANGE
+            else -> BitmapDescriptorFactory.HUE_RED
+        }
     }
 
-    private fun updateLegend(activeUsers: List<ActiveAssistanceGps>, hasOfficerGps: Boolean) {
-        legendContainer.removeAllViews()
+    private fun setupFilterMenu() {
+        filterLayout.removeAllViews()
 
-        if (hasOfficerGps) {
-            legendContainer.addView(
-                createLegendRow(
-                    label = "You (Officer)",
-                    colorInt = Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_AZURE, 1f, 1f))
-                )
-            )
+        val categories = listOf(
+            Triple("PENDING", "Pending Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_RED, 1f, 1f))),
+            Triple("ONGOING", "Ongoing Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_ORANGE, 1f, 1f))),
+            Triple("RESOLVED", "Resolved Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_GREEN, 1f, 1f))),
+            Triple("OFFICERS", "Officers", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_AZURE, 1f, 1f)))
+        )
+
+        for ((id, label, colorInt) in categories) {
+            filterLayout.addView(createFilterRow(id, label, colorInt))
         }
-
-        activeUsers.forEach { userGps ->
-            legendContainer.addView(
-                createLegendRow(
-                    label = userGps.fullName,
-                    colorInt = Color.HSVToColor(floatArrayOf(markerHueForUser(userGps.userID), 1f, 1f))
-                )
-            )
-        }
-
-        legendContainer.visibility = if (legendContainer.childCount > 0) View.VISIBLE else View.GONE
     }
 
-    private fun createLegendRow(label: String, colorInt: Int): View {
+    private fun createFilterRow(id: String, label: String, colorInt: Int): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -343,11 +406,35 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         val text = TextView(this).apply {
             this.text = label
             setTextColor(resources.getColor(R.color.black, theme))
-            textSize = 12f
+            textSize = 14f
         }
 
         row.addView(dot)
         row.addView(text)
+
+        row.alpha = if (hiddenCategories.contains(id)) 0.5f else 1.0f
+
+        row.setOnClickListener {
+            if (hiddenCategories.contains(id)) {
+                hiddenCategories.remove(id)
+                row.alpha = 1.0f
+            } else {
+                hiddenCategories.add(id)
+                row.alpha = 0.5f
+            }
+
+            if (id == "OFFICERS") {
+                officerSelfMarker?.isVisible = !hiddenCategories.contains(id)
+            } else {
+                activeUserMarkers.entries.forEach { (userId, marker) ->
+                    val status = activeUserStatuses[userId]?.uppercase(Locale.getDefault()) ?: ""
+                    if (status == id) {
+                        marker.isVisible = !hiddenCategories.contains(id)
+                    }
+                }
+            }
+        }
+
         return row
     }
 
