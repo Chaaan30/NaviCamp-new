@@ -253,11 +253,14 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
     }
 
     private fun enableSOSButton() {
+        assistanceButton.visibility = View.VISIBLE
         assistanceButton.isEnabled = true
         assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EE2D4C"))
         assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E9C7CD"))
 
         assistanceButtonBackground.text = "" // Hide "Connect to Wheelchair" text
+        assistanceButtonBackground.isClickable = false
+        assistanceButtonBackground.isFocusable = false
 
         if (isAlertSent) {
             applyAlertSentVisualState(animate = true)
@@ -277,26 +280,35 @@ class LocomotorDisabledHomeFragment : Fragment(R.layout.fragment_locomotor_disab
             return
         }
 
+        // Hide the inner SOS button to prevent it overlapping with the text on the outer button
+        assistanceButton.visibility = View.GONE
         assistanceButton.isEnabled = false
 
-        // Use high-contrast grays so inner button is visible
-        assistanceButton.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#616161")) // Deep Gray
-        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F5F5F5")) // Very Light Gray
+        // Use light gray for the disabled background circle
+        assistanceButtonBackground.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E0E0E0"))
 
-        // Force inner button to stay on top
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            assistanceButton.translationZ = 10f
+        if (reason == "Account Expired") {
+            assistanceButtonBackground.text = "ACCOUNT EXPIRED"
+            assistanceButtonBackground.setTextColor(Color.parseColor("#B00020")) // Reddish color for expired alert
+            assistanceButtonBackground.isClickable = false
+            assistanceButtonBackground.isFocusable = false
+        } else {
+            assistanceButtonBackground.text = "CONNECT TO A WHEELCHAIR"
+            assistanceButtonBackground.setTextColor(Color.parseColor("#757575"))
+            assistanceButtonBackground.textSize = 18f // Make text larger and readable
+            
+            // Make the background clickable to redirect the user to the scan fragment
+            assistanceButtonBackground.isClickable = true
+            assistanceButtonBackground.isFocusable = true
+            assistanceButtonBackground.setOnClickListener {
+                (activity as? LocomotorDisabilityActivity)?.let { act ->
+                    act.setBottomNavSelection(R.id.nav_pwd_scan_qr)
+                    parentFragmentManager.beginTransaction()
+                        .replace(R.id.pwd_fragment_container, LocomotorDisabledScanFragment())
+                        .commit()
+                }
+            }
         }
-
-        assistanceButtonBackground.text = "CONNECT TO A WHEELCHAIR"
-        assistanceButtonBackground.setTextColor(Color.parseColor("#757575"))
-
-        // Ensure the background is not interactive
-        assistanceButtonBackground.isClickable = false
-        assistanceButtonBackground.isFocusable = false
-
-        assistanceButton.text = "SOS"
-        assistanceButton.setTextColor(Color.WHITE)
     }
 
     private fun restoreSOSStateFromDatabase() {
