@@ -56,9 +56,6 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         // Load Home Fragment by default
         if (savedInstanceState == null) {
             loadFragment(LocomotorDisabledHomeFragment())
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.pwd_fragment_container, LocomotorDisabledHomeFragment())
-                .commit()
             syncConnectionStateWithDatabase()
         }
 
@@ -96,7 +93,12 @@ class LocomotorDisabilityActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val active = MySQLHelper.getActiveConnectionForUser(uid)
             withContext(Dispatchers.Main) {
-                updateScanTabUI(active != null)
+                val isConnected = active != null
+                updateScanTabUI(isConnected)
+                if (!isConnected) {
+                    setBottomNavSelection(R.id.nav_pwd_scan_qr)
+                    loadFragment(LocomotorDisabledScanFragment())
+                }
             }
         }
     }
