@@ -126,53 +126,37 @@
                 android:text="Filters"
                 android:fontFamily="@font/inter_bold" />
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/filter_button"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="FILTER"
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/inter_bold"
+                android:paddingHorizontal="16dp"
+                android:backgroundTint="@color/primaryColor"
+                app:cornerRadius="8dp"
+                app:rippleColor="#33FFFFFF"
+                android:elevation="2dp"
+                android:layout_marginEnd="8dp" />
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/export_button"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
                 android:text="EXPORT"
-                app:cornerRadius="8dp" />
+                android:textColor="@android:color/white"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/inter_bold"
+                android:paddingHorizontal="16dp"
+                android:backgroundTint="@color/primaryColor"
+                app:cornerRadius="8dp"
+                app:rippleColor="#33FFFFFF"
+                android:elevation="2dp" />
         </LinearLayout>
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:layout_marginTop="8dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.chip.Chip android:id="@+id/chip_all_time" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="All Time" android:checked="true" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_today" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Today" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_this_week" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="This Week" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_this_month" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="This Month" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_this_year" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="This Year" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_custom_date" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Custom" />
-
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:layout_marginTop="4dp">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.chip.Chip android:id="@+id/chip_all_status" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="All Status" android:checked="true" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_pending" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Pending" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_ongoing" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Ongoing" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_resolved" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="Resolved" />
-                <com.google.android.material.chip.Chip android:id="@+id/chip_false_alarm" style="@style/Widget.MaterialComponents.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginEnd="6dp" android:text="False Alarm" />
-
-            </LinearLayout>
-        </HorizontalScrollView>
     </LinearLayout>
 
     <!-- Main List Container -->

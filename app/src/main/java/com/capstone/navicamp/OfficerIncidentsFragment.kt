@@ -6,6 +6,7 @@ import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Patterns
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
@@ -21,6 +22,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Properties
+import javax.mail.Message
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
+import javax.mail.internet.MimeMultipart
+import javax.mail.internet.MimeBodyPart
+import javax.activation.FileDataSource
+import javax.activation.DataHandler
+import android.app.Dialog
 
 class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
 
@@ -28,6 +41,7 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     private lateinit var incidentsRecyclerView: RecyclerView
     private lateinit var loadingProgress: ProgressBar
     private lateinit var noIncidentsText: TextView
+    private lateinit var filterButton: MaterialButton
     private lateinit var exportButton: MaterialButton
     private lateinit var totalIncidentsCount: TextView
     private lateinit var ongoingIncidentsCount: TextView
@@ -42,9 +56,11 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     // Filter State
     private var selectedDateFilter = "All Time"
     private var selectedStatusFilter = "All Status"
+    private var selectedLocationFilter = "All Locations"
     private var customStartDate: Calendar? = null
     private var customEndDate: Calendar? = null
-    private var selectedExportFormat = "csv"
+    private var selectedExportFormat = "excel"
+    private var pendingEmailAddress: String? = null
 
     companion object {
         private const val CREATE_FILE_REQUEST_CODE = 1001
@@ -55,7 +71,6 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
 
         setupViews(view)
         setupRecyclerView()
-        setupFilters(view)
         setupObservers()
         loadIncidents()
     }
@@ -64,11 +79,15 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
         incidentsRecyclerView = view.findViewById(R.id.incidents_recycler_view)
         loadingProgress = view.findViewById(R.id.loading_progress)
         noIncidentsText = view.findViewById(R.id.no_incidents_text)
+        filterButton = view.findViewById(R.id.filter_button)
         exportButton = view.findViewById(R.id.export_button)
         totalIncidentsCount = view.findViewById(R.id.total_incidents_count)
         ongoingIncidentsCount = view.findViewById(R.id.ongoing_incidents_count)
         resolvedIncidentsCount = view.findViewById(R.id.resolved_incidents_count)
 
+        filterButton.setOnClickListener {
+            showFilterDialog()
+        }
         exportButton.setOnClickListener {
             showExportOptionsDialog()
         }
@@ -115,58 +134,157 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
         }
     }
 
-    private fun setupFilters(view: View) {
-        // Date Filters
-        view.findViewById<Chip>(R.id.chip_all_time).setOnClickListener { selectDateFilter(view, "All Time") }
-        view.findViewById<Chip>(R.id.chip_today).setOnClickListener { selectDateFilter(view, "Today") }
-        view.findViewById<Chip>(R.id.chip_this_week).setOnClickListener { selectDateFilter(view, "This Week") }
-        view.findViewById<Chip>(R.id.chip_this_month).setOnClickListener { selectDateFilter(view, "This Month") }
-        view.findViewById<Chip>(R.id.chip_this_year).setOnClickListener { selectDateFilter(view, "This Year") }
-        view.findViewById<Chip>(R.id.chip_custom_date).setOnClickListener { showCustomDateRangePicker(view) }
-
-        // Status Filters
-        view.findViewById<Chip>(R.id.chip_all_status).setOnClickListener { selectStatusFilter(view, "All Status") }
-        view.findViewById<Chip>(R.id.chip_pending).setOnClickListener { selectStatusFilter(view, "Pending") }
-        view.findViewById<Chip>(R.id.chip_ongoing).setOnClickListener { selectStatusFilter(view, "Ongoing") }
-        view.findViewById<Chip>(R.id.chip_resolved).setOnClickListener { selectStatusFilter(view, "Resolved") }
-        view.findViewById<Chip>(R.id.chip_false_alarm).setOnClickListener { selectStatusFilter(view, "False Alarm") }
-    }
-
-    private fun selectDateFilter(view: View, filter: String) {
-        val ids = listOf(R.id.chip_all_time, R.id.chip_today, R.id.chip_this_week, R.id.chip_this_month, R.id.chip_this_year, R.id.chip_custom_date)
-        ids.forEach { view.findViewById<Chip>(it).isChecked = false }
-
-        when (filter) {
-            "All Time" -> view.findViewById<Chip>(R.id.chip_all_time).isChecked = true
-            "Today" -> view.findViewById<Chip>(R.id.chip_today).isChecked = true
-            "This Week" -> view.findViewById<Chip>(R.id.chip_this_week).isChecked = true
-            "This Month" -> view.findViewById<Chip>(R.id.chip_this_month).isChecked = true
-            "This Year" -> view.findViewById<Chip>(R.id.chip_this_year).isChecked = true
-            "Custom Range" -> view.findViewById<Chip>(R.id.chip_custom_date).isChecked = true
-        }
-        selectedDateFilter = filter
-        filterIncidents()
-    }
-
-    private fun selectStatusFilter(view: View, filter: String) {
-        val ids = listOf(
-            R.id.chip_all_status,
-            R.id.chip_pending,
-            R.id.chip_ongoing,
-            R.id.chip_resolved,
-            R.id.chip_false_alarm
+    private fun showFilterDialog() {
+        val dialog = Dialog(requireContext())
+        val dialogView = layoutInflater.inflate(R.layout.dialog_filter_options, null)
+        dialog.setContentView(dialogView)
+        dialog.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        ids.forEach { view.findViewById<Chip>(it).isChecked = false }
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
-        when (filter) {
-            "All Status" -> view.findViewById<Chip>(R.id.chip_all_status).isChecked = true
-            "Pending" -> view.findViewById<Chip>(R.id.chip_pending).isChecked = true
-            "Ongoing" -> view.findViewById<Chip>(R.id.chip_ongoing).isChecked = true
-            "Resolved" -> view.findViewById<Chip>(R.id.chip_resolved).isChecked = true
-            "False Alarm" -> view.findViewById<Chip>(R.id.chip_false_alarm).isChecked = true
+        var tempSelectedDate = selectedDateFilter
+        var tempSelectedStatus = selectedStatusFilter
+        var tempSelectedLocation = selectedLocationFilter
+        var tempCustomStart = customStartDate
+        var tempCustomEnd = customEndDate
+
+        val chipAllTime = dialogView.findViewById<Chip>(R.id.dialog_chip_all_time)
+        val chipToday = dialogView.findViewById<Chip>(R.id.dialog_chip_today)
+        val chipThisWeek = dialogView.findViewById<Chip>(R.id.dialog_chip_this_week)
+        val chipThisMonth = dialogView.findViewById<Chip>(R.id.dialog_chip_this_month)
+        val chipThisYear = dialogView.findViewById<Chip>(R.id.dialog_chip_this_year)
+        val chipCustomDate = dialogView.findViewById<Chip>(R.id.dialog_chip_custom_date)
+
+        val dateChips = listOf(chipAllTime, chipToday, chipThisWeek, chipThisMonth, chipThisYear, chipCustomDate)
+
+        val chipAllStatus = dialogView.findViewById<Chip>(R.id.dialog_chip_all_status)
+        val chipPending = dialogView.findViewById<Chip>(R.id.dialog_chip_pending)
+        val chipOngoing = dialogView.findViewById<Chip>(R.id.dialog_chip_ongoing)
+        val chipResolved = dialogView.findViewById<Chip>(R.id.dialog_chip_resolved)
+        val chipFalseAlarm = dialogView.findViewById<Chip>(R.id.dialog_chip_false_alarm)
+
+        val statusChips = listOf(chipAllStatus, chipPending, chipOngoing, chipResolved, chipFalseAlarm)
+
+        val chipAllLocations = dialogView.findViewById<Chip>(R.id.dialog_chip_all_locations)
+        val chipLocationGym = dialogView.findViewById<Chip>(R.id.dialog_chip_location_gym)
+        val chipLocationField = dialogView.findViewById<Chip>(R.id.dialog_chip_location_field)
+        val chipLocationLounge = dialogView.findViewById<Chip>(R.id.dialog_chip_location_student_lounge)
+        val chipLocationClinic = dialogView.findViewById<Chip>(R.id.dialog_chip_location_clinic)
+        val chipLocationOther = dialogView.findViewById<Chip>(R.id.dialog_chip_location_other)
+
+        val locationChips = listOf(chipAllLocations, chipLocationGym, chipLocationField, chipLocationLounge, chipLocationClinic, chipLocationOther)
+
+        fun selectDateChip(selected: Chip) {
+            dateChips.forEach { it.isChecked = (it == selected) }
         }
-        selectedStatusFilter = filter
-        filterIncidents()
+        fun selectStatusChip(selected: Chip) {
+            statusChips.forEach { it.isChecked = (it == selected) }
+        }
+        fun selectLocationChip(selected: Chip) {
+            locationChips.forEach { it.isChecked = (it == selected) }
+        }
+
+        // Initialize dialog chips state
+        when (tempSelectedDate) {
+            "All Time" -> selectDateChip(chipAllTime)
+            "Today" -> selectDateChip(chipToday)
+            "This Week" -> selectDateChip(chipThisWeek)
+            "This Month" -> selectDateChip(chipThisMonth)
+            "This Year" -> selectDateChip(chipThisYear)
+            "Custom Range" -> {
+                selectDateChip(chipCustomDate)
+                if (tempCustomStart != null && tempCustomEnd != null) {
+                    chipCustomDate.text = "Custom (${formatDateShort(tempCustomStart!!)} - ${formatDateShort(tempCustomEnd!!)})"
+                }
+            }
+        }
+
+        when (tempSelectedStatus) {
+            "All Status" -> selectStatusChip(chipAllStatus)
+            "Pending" -> selectStatusChip(chipPending)
+            "Ongoing" -> selectStatusChip(chipOngoing)
+            "Resolved" -> selectStatusChip(chipResolved)
+            "False Alarm" -> selectStatusChip(chipFalseAlarm)
+        }
+
+        when (tempSelectedLocation) {
+            "All Locations" -> selectLocationChip(chipAllLocations)
+            "Gym" -> selectLocationChip(chipLocationGym)
+            "Field" -> selectLocationChip(chipLocationField)
+            "Student Lounge" -> selectLocationChip(chipLocationLounge)
+            "Clinic" -> selectLocationChip(chipLocationClinic)
+            "Other" -> selectLocationChip(chipLocationOther)
+        }
+
+        chipAllTime.setOnClickListener { tempSelectedDate = "All Time"; selectDateChip(chipAllTime) }
+        chipToday.setOnClickListener { tempSelectedDate = "Today"; selectDateChip(chipToday) }
+        chipThisWeek.setOnClickListener { tempSelectedDate = "This Week"; selectDateChip(chipThisWeek) }
+        chipThisMonth.setOnClickListener { tempSelectedDate = "This Month"; selectDateChip(chipThisMonth) }
+        chipThisYear.setOnClickListener { tempSelectedDate = "This Year"; selectDateChip(chipThisYear) }
+        chipCustomDate.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            DatePickerDialog(requireContext(), { _, year, month, day ->
+                val startCal = Calendar.getInstance().apply {
+                    set(year, month, day, 0, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                DatePickerDialog(requireContext(), { _, endYear, endMonth, endDay ->
+                    val endCal = Calendar.getInstance().apply {
+                        set(endYear, endMonth, endDay, 23, 59, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }
+                    tempCustomStart = startCal
+                    tempCustomEnd = endCal
+                    tempSelectedDate = "Custom Range"
+                    chipCustomDate.text = "Custom (${formatDateShort(startCal)} - ${formatDateShort(endCal)})"
+                    selectDateChip(chipCustomDate)
+                }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).apply {
+                setTitle("Select Start Date")
+            }.show()
+        }
+
+        chipAllStatus.setOnClickListener { tempSelectedStatus = "All Status"; selectStatusChip(chipAllStatus) }
+        chipPending.setOnClickListener { tempSelectedStatus = "Pending"; selectStatusChip(chipPending) }
+        chipOngoing.setOnClickListener { tempSelectedStatus = "Ongoing"; selectStatusChip(chipOngoing) }
+        chipResolved.setOnClickListener { tempSelectedStatus = "Resolved"; selectStatusChip(chipResolved) }
+        chipFalseAlarm.setOnClickListener { tempSelectedStatus = "False Alarm"; selectStatusChip(chipFalseAlarm) }
+
+        chipAllLocations.setOnClickListener { tempSelectedLocation = "All Locations"; selectLocationChip(chipAllLocations) }
+        chipLocationGym.setOnClickListener { tempSelectedLocation = "Gym"; selectLocationChip(chipLocationGym) }
+        chipLocationField.setOnClickListener { tempSelectedLocation = "Field"; selectLocationChip(chipLocationField) }
+        chipLocationLounge.setOnClickListener { tempSelectedLocation = "Student Lounge"; selectLocationChip(chipLocationLounge) }
+        chipLocationClinic.setOnClickListener { tempSelectedLocation = "Clinic"; selectLocationChip(chipLocationClinic) }
+        chipLocationOther.setOnClickListener { tempSelectedLocation = "Other"; selectLocationChip(chipLocationOther) }
+
+        dialogView.findViewById<View>(R.id.btn_clear_filters).setOnClickListener {
+            selectedDateFilter = "All Time"
+            selectedStatusFilter = "All Status"
+            selectedLocationFilter = "All Locations"
+            customStartDate = null
+            customEndDate = null
+            filterIncidents()
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<View>(R.id.btn_apply_filters).setOnClickListener {
+            selectedDateFilter = tempSelectedDate
+            selectedStatusFilter = tempSelectedStatus
+            selectedLocationFilter = tempSelectedLocation
+            customStartDate = tempCustomStart
+            customEndDate = tempCustomEnd
+            filterIncidents()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun formatDateShort(calendar: Calendar): String {
+        val format = SimpleDateFormat("MM/dd", Locale.getDefault())
+        return format.format(calendar.time)
     }
 
     private fun setupObservers() {
@@ -226,7 +344,7 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
                 else -> true
             }
 
-            // 2. Check Date (Handled via helper functions)
+            // 2. Check Date
             val matchesDate = when (selectedDateFilter) {
                 "All Time" -> true
                 "Today" -> isToday(incident.timeOfAlert)
@@ -237,7 +355,18 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
                 else -> true
             }
 
-            matchesStatus && matchesDate
+            // 3. Check Relocation Location
+            val matchesLocation = when (selectedLocationFilter) {
+                "All Locations" -> true
+                "Other" -> {
+                    val fixedOptions = listOf("gym", "field", "student lounge", "clinic")
+                    val loc = incident.relocatedLocation.trim().lowercase(Locale.getDefault())
+                    loc.isNotBlank() && fixedOptions.none { it == loc }
+                }
+                else -> incident.relocatedLocation.trim().equals(selectedLocationFilter, ignoreCase = true)
+            }
+
+            matchesStatus && matchesDate && matchesLocation
         }
         updateIncidentsList()
     }
@@ -262,75 +391,110 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
     }
 
     private fun showExportOptionsDialog() {
-        val options = arrayOf("CSV", "Excel")
+        val options = arrayOf("Excel (.xlsx)", "PDF (.pdf)", "Email / Share (Excel + PDF)")
         AlertDialog.Builder(requireContext())
             .setTitle("Export Options")
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> exportIncidents("csv")
-                    1 -> exportIncidents("excel")
+                    0 -> exportIncidents("excel")
+                    1 -> exportIncidents("pdf")
+                    2 -> sendReportsByEmail()
                 }
             }
             .show()
     }
 
-    private fun exportIncidents(format: String) {
-        val dataToExport = filteredIncidents.map { incident ->
-            listOf(
-                incident.alertId,
-                incident.userId,
-                incident.deviceId,
-                incident.userName,
-                incident.coordinates,
-                incident.floorLevel,
-                incident.status,
-                getAssistanceTypeForExport(incident),
-                incident.timeOfAlert,
-                incident.resolvedOn ?: "",
-                incident.officerName ?: "",
-                incident.actionFA,
-                incident.actionINFO,
-                incident.relocatedLocation
-            )
-        }
+    private fun sendReportsByEmail() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val dataToExport = getSortedExportData()
+                val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
+                val officerName = sharedPreferences.getString("fullName", "Officer") ?: "Officer"
+                val dateStamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
+                val randomSuffix = String.format("%04d", java.util.Random().nextInt(10000))
+                val excelFile = java.io.File(requireContext().cacheDir, "assistance_data_${dateStamp}_${randomSuffix}.xlsx")
+                val pdfFile = java.io.File(requireContext().cacheDir, "assistance_data_${dateStamp}_${randomSuffix}.pdf")
 
-        val dateStamp = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                excelFile.outputStream().use { out ->
+                    ExcelExportUtils.exportIncidentDataToExcelStream(out, dataToExport, officerName)
+                }
 
-        // Store the format for use in onActivityResult
-        selectedExportFormat = format
+                pdfFile.outputStream().use { out ->
+                    PdfExportUtils.exportIncidentDataToPdfStream(out, dataToExport, officerName)
+                }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ (API 30+): Use SAF
-            val (mimeType, extension) = when (format) {
-                "csv" -> Pair("text/csv", "csv")
-                "excel" -> Pair("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx")
-                else -> Pair("text/csv", "csv")
-            }
-
-            val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                this.type = mimeType
-                putExtra(Intent.EXTRA_TITLE, "assistance_data_${dateStamp}.${extension}")
-            }
-            startActivityForResult(createFileIntent,
-                OfficerIncidentsFragment.Companion.CREATE_FILE_REQUEST_CODE
-            )
-        } else {
-            // Android 10 and below
-            when (format) {
-                "csv" -> {
-                    val file = exportIncidentDataToCSV(requireContext(), dataToExport)
-                    if (file != null) {
-                        Toast.makeText(requireContext(), "CSV exported successfully to ${file.absolutePath}", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(requireContext(), "CSV export failed", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    try {
+                        val excelUri = androidx.core.content.FileProvider.getUriForFile(
+                            requireContext(),
+                            "${requireContext().packageName}.fileprovider",
+                            excelFile
+                        )
+                        val pdfUri = androidx.core.content.FileProvider.getUriForFile(
+                            requireContext(),
+                            "${requireContext().packageName}.fileprovider",
+                            pdfFile
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                            type = "*/*"
+                            putExtra(Intent.EXTRA_SUBJECT, "Incident Assistance Report - ${dateStamp}_${randomSuffix}")
+                            putExtra(Intent.EXTRA_TEXT, "Please find attached the Incident Assistance Report exported by $officerName on ${SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date())}.")
+                            val uriList = ArrayList<android.net.Uri>()
+                            uriList.add(excelUri)
+                            uriList.add(pdfUri)
+                            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        startActivity(Intent.createChooser(shareIntent, "Share Report via Email"))
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                        Toast.makeText(requireContext(), "Failed to open email app: ${ex.message}", Toast.LENGTH_LONG).show()
                     }
                 }
-                "excel" -> {
-                    Toast.makeText(requireContext(), "${format.uppercase()} export not implemented for Android 10 and below", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Failed to prepare files: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
+    }
+
+    private fun getSortedExportData(): List<List<String>> {
+        val sorted = filteredIncidents.sortedByDescending { incident ->
+            try {
+                val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                format.parse(incident.timeOfAlert)?.time ?: 0L
+            } catch (e: Exception) { 0L }
+        }
+        return sorted.map { incident ->
+            listOf(
+                incident.alertId, incident.userId, incident.deviceId, incident.userName,
+                incident.coordinates, incident.floorLevel, incident.status,
+                getAssistanceTypeForExport(incident), incident.timeOfAlert,
+                incident.resolvedOn ?: "", incident.officerName ?: "",
+                incident.actionFA, incident.actionINFO, incident.relocatedLocation
+            )
+        }
+    }
+
+    private fun exportIncidents(format: String) {
+        val dateStamp = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+        val randomSuffix = String.format("%04d", java.util.Random().nextInt(10000))
+        selectedExportFormat = format
+
+        val (mimeType, extension) = when (format) {
+            "pdf" -> Pair("application/pdf", "pdf")
+            "excel" -> Pair("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx")
+            else -> Pair("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "xlsx")
+        }
+
+        val createFileIntent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            this.type = mimeType
+            putExtra(Intent.EXTRA_TITLE, "assistance_data_${dateStamp}_${randomSuffix}.${extension}")
+        }
+        startActivityForResult(createFileIntent, CREATE_FILE_REQUEST_CODE)
     }
 
     private fun getAssistanceTypeForExport(incident: IncidentCardAdapter.IncidentData): String {
@@ -428,40 +592,13 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
         }
     }
 
-    private fun showCustomDateRangePicker(view: View) {
-        val calendar = Calendar.getInstance()
-        DatePickerDialog(requireContext(), { _, year, month, day ->
-            customStartDate = Calendar.getInstance().apply { set(year, month, day, 0, 0, 0) }
-            DatePickerDialog(requireContext(), { _, eYear, eMonth, eDay ->
-                customEndDate = Calendar.getInstance().apply { set(eYear, eMonth, eDay, 23, 59, 59) }
-                view.findViewById<Chip>(R.id.chip_custom_date).text = "Selected Range"
-                selectDateFilter(view, "Custom Range")
-            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
-    }
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == OfficerIncidentsFragment.Companion.CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+        if (requestCode == CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
             val uri = data?.data
-            val dataToExport = filteredIncidents.map { incident ->
-                listOf(
-                    incident.alertId,
-                    incident.userId,
-                    incident.deviceId,
-                    incident.userName,
-                    incident.coordinates,
-                    incident.floorLevel,
-                    incident.status,
-                    getAssistanceTypeForExport(incident),
-                    incident.timeOfAlert,
-                    incident.resolvedOn ?: "",
-                    incident.officerName ?: "",
-                    incident.actionFA,
-                    incident.actionINFO,
-                    incident.relocatedLocation
-                )
-            }
+            val dataToExport = getSortedExportData()
 
             val sharedPreferences = requireContext().getSharedPreferences("UserPrefs", MODE_PRIVATE)
             val officerName = sharedPreferences.getString("fullName", "Officer") ?: "Officer"
@@ -474,9 +611,9 @@ class OfficerIncidentsFragment : Fragment(R.layout.fragment_officer_incidents) {
             if (uri != null) {
                 try {
                     when (selectedExportFormat) {
-                        "csv" -> {
-                            CsvExportUtils.exportIncidentDataToCsv(requireContext(), uri, dataToExport, officerName)
-                            Toast.makeText(requireContext(), "CSV exported successfully", Toast.LENGTH_LONG).show()
+                        "pdf" -> {
+                            PdfExportUtils.exportIncidentDataToPdf(requireContext(), uri, dataToExport, officerName)
+                            Toast.makeText(requireContext(), "PDF exported successfully", Toast.LENGTH_LONG).show()
                         }
                         "excel" -> {
                             ExcelExportUtils.exportIncidentDataToExcel(requireContext(), uri, dataToExport, officerName)
