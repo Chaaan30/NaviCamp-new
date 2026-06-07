@@ -25,6 +25,8 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.Circle
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -48,6 +50,7 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
     private var officerLocationCallback: LocationCallback? = null
     private var officerID: String? = null
     private var officerSelfMarker: Marker? = null
+    private var geofenceCircle: Circle? = null
 
     private val refreshHandler = Handler(Looper.getMainLooper())
     private var isRefreshing = false
@@ -85,6 +88,11 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         private const val ARG_FULL_NAME = "FULL_NAME"
         private const val ARG_FLOOR_LEVEL = "FLOOR_LEVEL"
         private const val ARG_STATUS = "STATUS"
+
+        // School geofence constants (Mapúa Malayan Colleges Laguna)
+        private const val SCHOOL_CENTER_LAT = 14.24422110217503
+        private const val SCHOOL_CENTER_LNG = 121.112341209786
+        private const val GEOFENCE_RADIUS_METERS = 220.0 // 220m radius
 
         fun newInstance(
             locationID: String? = null,
@@ -185,6 +193,9 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
 
         // Start writing officer GPS to DB immediately when map opens
         officerID?.let { id -> startOfficerGpsWriting(id) }
+
+        // Draw geofence circle on map for testing
+        drawGeofenceCircle()
 
         startRealtimeRefresh()
     }
@@ -438,6 +449,9 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
                 updateOtherOfficerMarkers(otherOfficers)
                 updateActiveUserMarkers(activeUsers)
                 updateLegend(activeUsers, officerGps != null && officerGps[0] != 0.0, otherOfficers)
+
+                // Update geofence circle visibility based on filter
+                geofenceCircle?.isVisible = !hiddenCategories.contains("GEOFENCE")
             }
         }
     }
@@ -615,7 +629,8 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             Triple("PENDING", "Pending Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_RED, 1f, 1f))),
             Triple("ONGOING", "Ongoing Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_ORANGE, 1f, 1f))),
             Triple("RESOLVED", "Resolved Calls", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_GREEN, 1f, 1f))),
-            Triple("OFFICERS", "Officers", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_CYAN, 1f, 1f)))
+            Triple("OFFICERS", "Officers", Color.HSVToColor(floatArrayOf(BitmapDescriptorFactory.HUE_CYAN, 1f, 1f))),
+            Triple("GEOFENCE", "School Area (Geofence)", Color.parseColor("#4285F4"))
         )
 
         for ((id, label, colorInt) in categories) {
@@ -708,6 +723,8 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
             if (id == "OFFICERS") {
                 officerSelfMarker?.isVisible = !hiddenCategories.contains(id)
                 otherOfficerMarkers.values.forEach { it.isVisible = !hiddenCategories.contains(id) }
+            } else if (id == "GEOFENCE") {
+                geofenceCircle?.isVisible = !hiddenCategories.contains(id)
             } else {
                 activeUserMarkers.entries.forEach { (userId, marker) ->
                     val status = activeUserStatuses[userId]?.uppercase(Locale.getDefault()) ?: ""
@@ -719,6 +736,29 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         }
 
         return row
+    }
+
+    /**
+     * Draws the geofence circle overlay on the map showing the school campus boundary.
+     * Officers/admins are automatically set on-duty when inside this circle.
+     */
+    private fun drawGeofenceCircle() {
+        val gMap = map ?: return
+
+        // Remove existing circle if any
+        geofenceCircle?.remove()
+
+        val schoolCenter = LatLng(SCHOOL_CENTER_LAT, SCHOOL_CENTER_LNG)
+
+        // Draw the geofence circle
+        geofenceCircle = gMap.addCircle(
+            CircleOptions()
+                .center(schoolCenter)
+                .radius(GEOFENCE_RADIUS_METERS)
+                .strokeColor(Color.argb(180, 66, 133, 244))  // Blue stroke
+                .strokeWidth(3f)
+                .fillColor(Color.argb(40, 66, 133, 244))     // Semi-transparent blue fill
+        )
     }
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
@@ -769,5 +809,6 @@ class MapHomeFragment : Fragment(R.layout.fragment_map_home), OnMapReadyCallback
         stopOfficerGpsTracking()
         otherOfficerMarkers.values.forEach { it.remove() }
         otherOfficerMarkers.clear()
+        geofenceCircle?.remove()
     }
 }

@@ -101,23 +101,39 @@
             android:paddingVertical="12dp"
             android:background="@color/lightGray">
 
-            <!-- Header Row with Export Button -->
+            <!-- Header Row with Filter and Export Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Filters"
+                    android:text="Incident Logs"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/darkGray"
                     android:fontFamily="@font/inter_bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/filter_button"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="FILTER"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/inter_bold"
+                    android:paddingHorizontal="16dp"
+                    android:backgroundTint="@color/primaryColor"
+                    app:cornerRadius="8dp"
+                    app:rippleColor="#33FFFFFF"
+                    android:elevation="2dp"
+                    android:layout_marginEnd="8dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/export_button"
@@ -136,151 +152,6 @@
                     android:elevation="2dp" />
 
             </LinearLayout>
-
-            <!-- Horizontal Scrollable Filter Chips -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:fillViewport="false">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingEnd="16dp">
-
-                    <!-- Date Filter Chips -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_all_time"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All Time"
-                        android:checked="true"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_today"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Today"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_this_week"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="This Week"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_this_month"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="This Month"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_this_year"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="This Year"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_custom_date"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Custom Range"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="12dp" />
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="32dp"
-                        android:background="@color/gray"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginEnd="12dp" />
-
-                    <!-- Status Filter Chips -->
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_all_status"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All Status"
-                        android:checked="true"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_ongoing"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Ongoing"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000"
-                        android:layout_marginEnd="6dp" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_resolved"
-                        style="@style/Widget.MaterialComponents.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Resolved"
-                        android:textColor="@color/primaryColor"
-                        app:chipBackgroundColor="@android:color/white"
-                        app:chipStrokeColor="@color/primaryColor"
-                        app:chipStrokeWidth="2dp"
-                        app:rippleColor="#22000000" />
-
-                </LinearLayout>
-
-            </HorizontalScrollView>
 
         </LinearLayout>
 

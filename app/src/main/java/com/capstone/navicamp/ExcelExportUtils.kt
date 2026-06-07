@@ -16,6 +16,10 @@ object ExcelExportUtils {
         }
     }
 
+    fun exportIncidentDataToExcelStream(outputStream: OutputStream, data: List<List<String>>, officerName: String) {
+        createProperExcelFile(outputStream, data, officerName)
+    }
+
     private fun createProperExcelFile(outputStream: OutputStream, data: List<List<String>>, officerName: String) {
         val workbook = XSSFWorkbook()
         val sheet = workbook.createSheet("Incident Log")
